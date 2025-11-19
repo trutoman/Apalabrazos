@@ -1,0 +1,34 @@
+.root {
+    -fx-font-family: "Segoe UI", sans-serif;
+}
+
+.rosco-letter {
+    -fx-pref-width: 40px;
+    -fx-pref-height: 40px;
+    -fx-background-radius: 20px;
+    -fx-background-color: #e0e0e0;
+    -fx-font-weight: bold;
+}
+
+.letter-pending {
+    -fx-background-color: #f0f0f0;
+    -fx-text-fill: #333333;
+}
+
+.letter-correct {
+    -fx-background-color: #4caf50;
+    -fx-text-fill: white;
+}
+
+.letter-incorrect {
+    -fx-background-color: #f44336;
+    -fx-text-fill: white;
+}
+
+.question-area {
+    -fx-padding: 20px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cccccc;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
