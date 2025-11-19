@@ -1,0 +1,67 @@
+# ----------------------------------------------------------------------
+# JAVA (General)
+# ----------------------------------------------------------------------
+*.class
+*.log
+*.ctxt
+
+# Archivos de empaquetado (No subir JARs si usas Maven)
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ----------------------------------------------------------------------
+# MAVEN (Construcción y Dependencias)
+# ----------------------------------------------------------------------
+# Directorio principal de salida (Aquí van los compilados de Java y JavaFX)
+target/
+
+# Archivos generados por plugins de Maven
+dependency-reduced-pom.xml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+
+# ----------------------------------------------------------------------
+# ECLIPSE (IDE Metadata)
+# ----------------------------------------------------------------------
+# Al usar Maven, estos archivos son generados localmente y NO deben subirse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+
+# Configuración específica del proyecto Eclipse
+.classpath
+.project
+.settings/
+.loadpath
+.factorypath
+.recommenders
+.springBeans
+
+# ----------------------------------------------------------------------
+# JAVAFX (Específico)
+# ----------------------------------------------------------------------
+# Si usas herramientas que generan instaladores nativos fuera de /target
+dist/
+deploy/
+build/
+
+# ----------------------------------------------------------------------
+# SISTEMA OPERATIVO
+# ----------------------------------------------------------------------
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

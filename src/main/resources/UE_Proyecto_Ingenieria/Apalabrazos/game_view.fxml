@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/8"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.ui.GameController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- Top: turno y letra -->
+    <top>
+        <HBox alignment="CENTER" spacing="20">
+            <Label fx:id="lblCurrentPlayer" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+            <Label fx:id="lblCurrentLetter" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+        </HBox>
+    </top>
+
+    <!-- Centro: pregunta + opciones -->
+    <center>
+        <VBox alignment="TOP_CENTER" spacing="20">
+            <Label fx:id="lblQuestion" wrapText="true" style="-fx-font-size: 18px;"/>
+
+            <GridPane hgap="10" vgap="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <Button fx:id="btnOption0" text="Opción 1" onAction="#handleOption0"
+                        GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <Button fx:id="btnOption1" text="Opción 2" onAction="#handleOption1"
+                        GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                <Button fx:id="btnOption2" text="Opción 3" onAction="#handleOption2"
+                        GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <Button fx:id="btnOption3" text="Opción 4" onAction="#handleOption3"
+                        GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            </GridPane>
+        </VBox>
+    </center>
+
+    <!-- Izquierda: rosco jugador 1 -->
+    <left>
+        <VBox alignment="TOP_CENTER" spacing="10">
+            <Label fx:id="lblPlayer1Name" text="Jugador 1" style="-fx-font-weight: bold;"/>
+            <FlowPane fx:id="roscoPlayer1Pane" hgap="5" vgap="5"
+                      prefWrapLength="160">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+            </FlowPane>
+        </VBox>
+    </left>
+
+    <!-- Derecha: rosco jugador 2 -->
+    <right>
+        <VBox alignment="TOP_CENTER" spacing="10">
+            <Label fx:id="lblPlayer2Name" text="Jugador 2" style="-fx-font-weight: bold;"/>
+            <FlowPane fx:id="roscoPlayer2Pane" hgap="5" vgap="5"
+                      prefWrapLength="160">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+            </FlowPane>
+        </VBox>
+    </right>
+
+    <!-- Bottom: botón volver -->
+    <bottom>
+        <HBox alignment="CENTER_RIGHT">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Button text="Volver al menú" onAction="#handleBackToMenu"/>
+        </HBox>
+    </bottom>
+</BorderPane>
