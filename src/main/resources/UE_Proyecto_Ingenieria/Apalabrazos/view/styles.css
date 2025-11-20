@@ -1,5 +1,6 @@
 .root {
     -fx-font-family: "Segoe UI", sans-serif;
+    -fx-background-color: linear-gradient(to bottom, #ecf0f1, #bdc3c7);
 }
 
 .rosco-letter {
@@ -31,4 +32,18 @@
     -fx-border-color: #cccccc;
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
+}
+
+/* Estilos adicionales para los botones del menú */
+.menu-button {
+    -fx-font-size: 16px;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 5, 0, 0, 2);
+}
+
+.menu-button:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0, 0, 3);
+    -fx-scale-y: 1.05;
+    -fx-scale-x: 1.05;
 }
