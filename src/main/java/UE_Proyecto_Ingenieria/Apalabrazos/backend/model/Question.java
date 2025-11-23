@@ -16,7 +16,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * Contiene el texto de la pregunta, la lista de respuestas posibles,
  * el índice de la respuesta correcta, el estado y el nivel.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Question implements Serializable {
     private static final long serialVersionUID = 1L;
 
