@@ -1,59 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
-<?import javafx.geometry.Pos?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.shape.Circle?>
 
-<BorderPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController"
-            prefHeight="600.0" prefWidth="800.0" stylesheets="@styles.css">
-    
-    <!-- Perfil de usuario (arriba a la derecha) -->
-    <top>
-        <HBox alignment="TOP_RIGHT" spacing="10" style="-fx-padding: 20;">
-            <VBox alignment="CENTER" spacing="5">
-                <ImageView fx:id="profileImage" fitHeight="60.0" fitWidth="60.0" 
-                          preserveRatio="true" style="-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 2);">
-                    <image>
-                        <Image url="@../images/default-profile.png" />
-                    </image>
-                </ImageView>
-                <Label fx:id="usernameLabel" text="Usuario" 
-                       style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
-            </VBox>
-        </HBox>
-    </top>
-    
-    <!-- Menú central con botones verticales -->
-    <center>
-        <VBox alignment="CENTER" spacing="20" style="-fx-padding: 40;">
-            <Label text="Apalabrazos 2D" 
-                   style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-            
-            <VBox spacing="15" alignment="CENTER" style="-fx-padding: 30 0 0 0;">
-                <Button fx:id="singlePlayerButton" text="Jugar Solo" 
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #3498db; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
-                
-                <Button fx:id="multiplayerButton" text="Jugar Multijugador" 
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #2ecc71; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
-                
-                <Button fx:id="scoresButton" text="Ver Puntuaciones" 
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #f39c12; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
-                
-                <Button fx:id="exitButton" text="Salir" 
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #e74c3c; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
-            </VBox>
-        </VBox>
-    </center>
-    
-</BorderPane>
+<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController"
+      alignment="CENTER" spacing="12" stylesheets="@styles.css">
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40" />
+    </padding>
+    <Label text="Apalabrados 2D" style="-fx-font-size: 28px; -fx-font-weight: bold;" />
+    <Label text="Introduce los nombres de los jugadores" />
+    <TextField fx:id="playerOneField" promptText="Nombre del Jugador 1" />
+    <TextField fx:id="playerTwoField" promptText="Nombre del Jugador 2" />
+    <Button fx:id="startButton" text="Comenzar partida" />
+</VBox>

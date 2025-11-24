@@ -27,10 +27,18 @@ public class QuestionList implements Serializable {
 
     private final List<Question> questionList = new ArrayList<>();
 
+    /**
+     * Default constructor with default maximum length
+     */
     public QuestionList() {
         this.max_length = LENGTH;
     }
 
+    /**
+     * Constructor with custom maximum length
+     * @param questions Initial list of questions
+     * @param max_length Maximum length for the list (defaults to LENGTH if null)
+     */
     @JsonCreator
     public QuestionList(@JsonProperty("questionList") List<Question> questions,
                         @JsonProperty("max_length") Integer max_length) {
@@ -38,11 +46,19 @@ public class QuestionList implements Serializable {
         setQuestionList(questions);
     }
 
+    /**
+     * Get the list of questions
+     * @return Immutable copy of the question list
+     */
     public List<Question> getQuestionList() {
         // Devuelve una copia para no exponer la lista interna.
         return List.copyOf(questionList);
     }
 
+    /**
+     * Set the list of questions
+     * @param questions List of questions (cannot exceed max_length)
+     */
     public void setQuestionList(List<Question> questions) {
         this.questionList.clear();
         if (questions == null) {
@@ -55,6 +71,11 @@ public class QuestionList implements Serializable {
         this.questionList.addAll(questions);
     }
 
+    /**
+     * Get the question at the specified index
+     * @param index The index of the question
+     * @return The question at the specified index
+     */
     public Question getQuestionAt(int index) {
         if (index < 0 || index >= questionList.size()) {
             throw new IndexOutOfBoundsException("Index out of bounds: " + index
@@ -65,13 +86,10 @@ public class QuestionList implements Serializable {
     }
 
     /**
-     * Añade una pregunta siempre que no  exceda la longitud máxima `LENGTH`.
-     *
-     * @param q pregunta a añadir
+     * Add a question to the list if maximum length not exceeded
+     * @param q The question to add
      */
-
     public void addQuestion(Question q) {
-        // sugerencia LLM en una sola linea se encarga en caso de null de lanzar la excepcion adecuada
         Objects.requireNonNull(q, "question cannot be null");
         if (this.questionList.size() >= this.max_length) {
             throw new IllegalStateException("Cannot add more than " + this.max_length + " questions");
@@ -80,10 +98,8 @@ public class QuestionList implements Serializable {
     }
 
     /**
-     * Devuelve la longitud actual de la lista de preguntas (número de elementos
-     * almacenados en esta instancia).
-     *
-     * @return número de preguntas actualmente en la lista
+     * Get the current number of questions in the list
+     * @return The number of questions currently stored
      */
     @JsonIgnore
     public int getCurrentLength() {
@@ -91,9 +107,8 @@ public class QuestionList implements Serializable {
     }
 
     /**
-     * Devuelve la longitud máxima configurada para esta instancia.
-     *
-     * @return longitud máxima (por defecto `LENGTH`)
+     * Get the maximum length configured for this instance
+     * @return The maximum length (defaults to LENGTH)
      */
     @JsonProperty("max_length")
     public int getMax_length() {

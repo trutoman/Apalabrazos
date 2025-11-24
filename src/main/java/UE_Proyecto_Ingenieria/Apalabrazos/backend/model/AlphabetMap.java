@@ -3,13 +3,14 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
 import java.util.Map;
 
 /**
- * Mapa inmutable que asocia índices (0..26) a las letras del abecedario
- * en español sin las letras "ch" ni "ll". Incluye la "ñ"
- *
- * Esta clase está pensada solo para consulta (static helpers).
+ * Immutable map that associates indices (0..26) with letters of the Spanish alphabet.
+ * Excludes "ch" and "ll", includes "ñ".
+ * This class is designed for static lookup only.
  */
 public final class AlphabetMap {
-    private AlphabetMap() { }
+
+    private AlphabetMap() {
+    }
 
     public static final Map<Integer, String> MAP = Map.ofEntries(
             Map.entry(0, "a"),
@@ -42,20 +43,24 @@ public final class AlphabetMap {
     );
 
     /**
-     * Devuelve el mapa inmutable (0..26 -> letra).
+     * Get the immutable map of indices to letters
+     * @return The map (0..26 -> letter)
      */
     public static Map<Integer, String> getMap() {
         return MAP;
     }
 
     /**
-     * Devuelve la letra asociada al índice (0..26).
-     * Lanza IndexOutOfBoundsException si el índice está fuera de rango.
+     * Get the letter associated with the given index
+     * @param index The index (0..26)
+     * @return The corresponding letter
+     * @throws IndexOutOfBoundsException if index is out of range
      */
     public static String getLetter(int index) {
         String s = MAP.get(index);
-        if (s == null)
+        if (s == null) {
             throw new IndexOutOfBoundsException("Index must be between 0 and 26: " + index);
+        }
         return s;
     }
 }

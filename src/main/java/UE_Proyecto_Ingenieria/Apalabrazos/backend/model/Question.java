@@ -12,24 +12,32 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Representa una pregunta del juego Apalabrazos.
- * Contiene el texto de la pregunta, la lista de respuestas posibles,
- * el índice de la respuesta correcta, el estado y el nivel.
+ * Represents a question in the Apalabrazos game.
+ * Contains the question text, list of possible answers, correct answer index, status and level.
  */
 public class Question implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private String questionText; // max 128 chars
+    private String questionText;
     private final List<String> questionResponsesList = new ArrayList<>();
     private int correctQuestionIndex = -1;
     private QuestionStatus questionStatus = QuestionStatus.INIT;
     private QuestionLevel questionLevel = QuestionLevel.EASY;
 
+    /**
+     * Default constructor
+     */
     public Question() {
-        // constructor por defecto
     }
 
-    // Constructor basico con todos los campos
+    /**
+     * Constructor with all fields
+     * @param questionText The question text (max 128 characters)
+     * @param responses List of 4 possible answers
+     * @param correctIndex Index of the correct answer (0-3)
+     * @param status The question status
+     * @param level The question difficulty level
+     */
     @JsonCreator
     public Question(@JsonProperty("questionText") String questionText,
                     @JsonProperty("questionResponsesList") List<String> responses,
@@ -39,45 +47,63 @@ public class Question implements Serializable {
         setQuestionText(questionText);
         setQuestionResponsesList(responses);
         setCorrectQuestionIndex(correctIndex);
-        if (status == null)
+        if (status == null) {
             throw new IllegalArgumentException("questionStatus cannot be null");
+        }
         this.questionStatus = status;
-        if (level == null)
+        if (level == null) {
             throw new IllegalArgumentException("questionLevel cannot be null");
+        }
         this.questionLevel = level;
     }
 
-    // Constructor basico sin estado ni nivel (por defecto INIT y EASY)
+    /**
+     * Constructor without status or level (defaults to INIT and EASY)
+     * @param questionText The question text
+     * @param responses List of 4 possible answers
+     * @param correctIndex Index of the correct answer (0-3)
+     */
     public Question(String questionText, List<String> responses, int correctIndex) {
         this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY);
     }
 
-    // Getters y Setters con validaciones
-    // Utilizamos public void y lanazando excepciones en caso de error para compatibilidad
-    // con otros frameworks como JavaBeans. y Spring,
-    // visto que quizas en el futuro usaremos Sproing para gestionar estos objetos.
-    // aceptamos esta recomendacion en lugar de usar constructores con validaciones y
-    // valores de retorno booleanos que evita el uso de excepciones y hace todo mas semcillo.
-
+    /**
+     * Get the question text
+     * @return The question text
+     */
     @JsonProperty("questionText")
     public String getQuestionText() {
         return questionText;
     }
 
+    /**
+     * Set the question text
+     * @param questionText The question text (max 128 characters)
+     */
     @JsonProperty("questionText")
     public void setQuestionText(String questionText) {
-        if (questionText == null)
+        if (questionText == null) {
             throw new IllegalArgumentException("questionText cannot be null");
-        if (questionText.length() > 128)
+        }
+        if (questionText.length() > 128) {
             throw new IllegalArgumentException("questionText max 128 characters");
+        }
         this.questionText = questionText;
     }
 
+    /**
+     * Get the list of possible answers
+     * @return Unmodifiable list of answers
+     */
     @JsonProperty("questionResponsesList")
     public List<String> getQuestionResponsesList() {
         return Collections.unmodifiableList(questionResponsesList);
     }
 
+    /**
+     * Set the list of possible answers
+     * @param responses List of exactly 4 answers (max 128 characters each)
+     */
     @JsonProperty("questionResponsesList")
     public void setQuestionResponsesList(List<String> responses) {
         this.questionResponsesList.clear();
@@ -89,47 +115,76 @@ public class Question implements Serializable {
         }
         // valida cada string respuesta
         for (String r : responses) {
-            if (r == null)
+            if (r == null) {
                 throw new IllegalArgumentException("response entries cannot be null");
-            if (r.length() > 128)
+            }
+            if (r.length() > 128) {
                 throw new IllegalArgumentException("each response text cannot exceed 128 characters");
+            }
         }
         this.questionResponsesList.addAll(responses);
     }
 
+    /**
+     * Get the index of the correct answer
+     * @return The correct answer index (0-3)
+     */
     @JsonProperty("correctQuestionIndex")
     public int getCorrectQuestionIndex() {
         return correctQuestionIndex;
     }
 
+    /**
+     * Set the index of the correct answer
+     * @param correctQuestionIndex The correct answer index (0-3)
+     */
     @JsonProperty("correctQuestionIndex")
     public void setCorrectQuestionIndex(int correctQuestionIndex) {
-        if (correctQuestionIndex < 0 || correctQuestionIndex >= questionResponsesList.size())
+        if (correctQuestionIndex < 0 || correctQuestionIndex >= questionResponsesList.size()) {
             throw new IndexOutOfBoundsException("correctQuestionIndex out of range");
+        }
         this.correctQuestionIndex = correctQuestionIndex;
     }
 
+    /**
+     * Get the question status
+     * @return The current status
+     */
     @JsonProperty("questionStatus")
     public QuestionStatus getQuestionStatus() {
         return questionStatus;
     }
 
+    /**
+     * Set the question status
+     * @param questionStatus The new status
+     */
     @JsonProperty("questionStatus")
     public void setQuestionStatus(QuestionStatus questionStatus) {
-        if (questionStatus == null)
+        if (questionStatus == null) {
             throw new IllegalArgumentException("questionStatus cannot be null");
+        }
         this.questionStatus = questionStatus;
     }
 
+    /**
+     * Get the question difficulty level
+     * @return The difficulty level
+     */
     @JsonProperty("questionLevel")
     public QuestionLevel getQuestionLevel() {
         return questionLevel;
     }
 
+    /**
+     * Set the question difficulty level
+     * @param questionLevel The new difficulty level
+     */
     @JsonProperty("questionLevel")
     public void setQuestionLevel(QuestionLevel questionLevel) {
-        if (questionLevel == null)
+        if (questionLevel == null) {
             throw new IllegalArgumentException("questionLevel cannot be null");
+        }
         this.questionLevel = questionLevel;
     }
 
@@ -141,12 +196,14 @@ public class Question implements Serializable {
     }
 
     /**
-     * Devuelve la respuesta correcta.
+     * Get the correct answer text
+     * @return The correct answer or null if not set
      */
     @JsonIgnore
     public String getCorrectResponse() {
-        if (correctQuestionIndex < 0)
+        if (correctQuestionIndex < 0) {
             return null;
+        }
         return questionResponsesList.get(correctQuestionIndex);
     }
 

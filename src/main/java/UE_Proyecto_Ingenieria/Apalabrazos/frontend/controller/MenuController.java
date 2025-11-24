@@ -2,102 +2,42 @@ package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.image.ImageView;
+import javafx.scene.control.TextField;
 
 /**
- * Controller for the main menu with game mode selection.
+ * Controller for the initial menu where player names are entered.
  */
 public class MenuController {
 
     @FXML
-    private ImageView profileImage;
+    private TextField playerOneField;
 
     @FXML
-    private Label usernameLabel;
+    private TextField playerTwoField;
 
     @FXML
-    private Button singlePlayerButton;
-
-    @FXML
-    private Button multiplayerButton;
-
-    @FXML
-    private Button scoresButton;
-
-    @FXML
-    private Button exitButton;
+    private Button startButton;
 
     private ViewNavigator navigator;
-    private String username = "Jugador1"; // Por defecto
 
     public void setNavigator(ViewNavigator navigator) {
         this.navigator = navigator;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-        usernameLabel.setText(username);
-    }
-
     @FXML
     public void initialize() {
-        // Configurar el nombre de usuario por defecto
-        usernameLabel.setText(username);
-        
-        // Configurar los eventos de los botones
-        singlePlayerButton.setOnAction(event -> handleSinglePlayer());
-        multiplayerButton.setOnAction(event -> handleMultiplayer());
-        scoresButton.setOnAction(event -> handleViewScores());
-        exitButton.setOnAction(event -> handleExit());
-        
-        // Efectos hover para los botones
-        setupButtonHoverEffects(singlePlayerButton, "#2980b9");
-        setupButtonHoverEffects(multiplayerButton, "#27ae60");
-        setupButtonHoverEffects(scoresButton, "#e67e22");
-        setupButtonHoverEffects(exitButton, "#c0392b");
+        startButton.setOnAction(event -> handleStartGame());
     }
 
-    private void setupButtonHoverEffects(Button button, String hoverColor) {
-        String originalStyle = button.getStyle();
-        button.setOnMouseEntered(e -> {
-            button.setStyle(originalStyle + "; -fx-background-color: " + hoverColor + ";");
-        });
-        button.setOnMouseExited(e -> {
-            button.setStyle(originalStyle);
-        });
-    }
-
-    private void handleSinglePlayer() {
-        System.out.println("Iniciando modo Un Jugador...");
-        // Navegar al juego en modo un jugador
-        if (navigator != null) {
-            navigator.startGame("Jugador 1", "CPU");
-        }
-    }
-
-    private void handleMultiplayer() {
-        System.out.println("Iniciando modo Multijugador...");
-        // Navegar al juego en modo multijugador
-        if (navigator != null) {
-            navigator.startGame("Jugador 1", "Jugador 2");
-        }
-    }
-
-    private void handleViewScores() {
-        System.out.println("Mostrando puntuaciones...");
-        // Navegar a la vista de puntuaciones
-        if (navigator != null) {
-            navigator.showResults();
-        }
-    }
-
-    private void handleExit() {
-        System.out.println("Saliendo de la aplicación...");
-        Platform.exit();
-        System.exit(0);
+    private void handleStartGame() {
+        String playerOne = playerOneField.getText() == null || playerOneField.getText().trim().isEmpty()
+                ? "Jugador 1"
+                : playerOneField.getText().trim();
+        String playerTwo = playerTwoField.getText() == null || playerTwoField.getText().trim().isEmpty()
+                ? "Jugador 2"
+                : playerTwoField.getText().trim();
+        navigator.startGame(playerOne, playerTwo);
     }
 }

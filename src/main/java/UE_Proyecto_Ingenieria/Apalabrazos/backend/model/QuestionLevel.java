@@ -18,18 +18,29 @@ public enum QuestionLevel {
         this.value = value;
     }
 
+    /**
+     * Get the string value representation
+     * @return The level value
+     */
     @JsonValue
     public String getValue() {
         return value;
     }
 
+    /**
+     * Create a QuestionLevel from a string value
+     * @param value The string value to parse
+     * @return The corresponding QuestionLevel
+     */
     @JsonCreator
     public static QuestionLevel fromValue(String value) {
-        if (value == null)
+        if (value == null) {
             throw new IllegalArgumentException("QuestionLevel cannot be null");
+        }
         for (QuestionLevel l : values()) {
-            if (l.value.equalsIgnoreCase(value) || l.name().equalsIgnoreCase(value))
+            if (l.value.equalsIgnoreCase(value) || l.name().equalsIgnoreCase(value)) {
                 return l;
+            }
         }
         throw new IllegalArgumentException("Unknown QuestionLevel: " + value);
     }
