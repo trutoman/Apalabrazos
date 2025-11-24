@@ -29,6 +29,7 @@ public class GameGlobal {
     private List<GamePlayer> players;
     private GameState state;
     private GameType gameType;
+    private int currentPlayerIndex;  // Índice del jugador actual (0 o 1)
 
     /**
      * Default constructor
@@ -37,16 +38,19 @@ public class GameGlobal {
         this.players = new ArrayList<>();
         this.state = GameState.READY;
         this.gameType = GameType.FIRST_WINS;
+        this.currentPlayerIndex = 0;
     }
 
     /**
-     * Constructor with game type
-     * @param gameType The type of game
+     * Constructor with all parameters
+     * @param players List of GamePlayer instances
+     * @param state The initial game state
+     * @param gameType The game type
      */
-    public GameGlobal(GameType gameType) {
-        this.players = new ArrayList<>();
-        this.state = GameState.READY;
-        this.gameType = gameType;
+    public GameGlobal(List<GamePlayer> players, GameState state, GameType gameType) {
+        this.players = players != null ? players : new ArrayList<>();
+        this.state = state != null ? state : GameState.READY;
+        this.gameType = gameType != null ? gameType : GameType.FIRST_WINS;
     }
 
     /**
@@ -151,5 +155,76 @@ public class GameGlobal {
      */
     public int getPlayerCount() {
         return players.size();
+    }
+
+    /**
+     * Get the current player index
+     * @return The index of the current player
+     */
+    public int getCurrentPlayerIndex() {
+        return currentPlayerIndex;
+    }
+
+    /**
+     * Set the current player index
+     * @param currentPlayerIndex The index of the current player
+     */
+    public void setCurrentPlayerIndex(int currentPlayerIndex) {
+        this.currentPlayerIndex = currentPlayerIndex;
+    }
+
+    /**
+     * Get player 1 (convenience method)
+     * @return The first player or null if not available
+     */
+    public GamePlayer getGamePlayer1() {
+        return players.size() > 0 ? players.get(0) : null;
+    }
+
+    /**
+     * Get player 2 (convenience method)
+     * @return The second player or null if not available
+     */
+    public GamePlayer getGamePlayer2() {
+        return players.size() > 1 ? players.get(1) : null;
+    }
+
+    /**
+     * Set player 1 (convenience method)
+     * @param player The player to set as player 1
+     */
+    public void setGamePlayer1(GamePlayer player) {
+        if (players.isEmpty()) {
+            players.add(player);
+        } else {
+            players.set(0, player);
+        }
+    }
+
+    /**
+     * Set player 2 (convenience method)
+     * @param player The player to set as player 2
+     */
+    public void setGamePlayer2(GamePlayer player) {
+        if (players.size() < 2) {
+            // Ensure we have player 1 first
+            while (players.size() < 1) {
+                players.add(null);
+            }
+            players.add(player);
+        } else {
+            players.set(1, player);
+        }
+    }
+
+    /**
+     * Get the current player
+     * @return The current GamePlayer
+     */
+    public GamePlayer getCurrentPlayer() {
+        if (currentPlayerIndex >= 0 && currentPlayerIndex < players.size()) {
+            return players.get(currentPlayerIndex);
+        }
+        return null;
     }
 }

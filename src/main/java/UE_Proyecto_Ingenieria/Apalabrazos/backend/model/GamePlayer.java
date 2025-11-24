@@ -6,50 +6,47 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
  */
 public class GamePlayer {
 
-    private long timeCounter;  // Tiempo en milisegundos
+    private int timeCounter;  // Tiempo en milisegundos
     private QuestionList questionList;
     private GameRecord gameResult;
     private Player player;
+    private int timer = 240 /*seconds */;
+    private int currentQuestionIndex;  // Índice de la pregunta actual
 
     /**
      * Default constructor
      */
     public GamePlayer() {
-        this.timeCounter = 0;
+        this.timeCounter = this.timer;
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
         this.player = new Player();
+        this.currentQuestionIndex = 0;
     }
 
     /**
-     * Constructor with player name
-     * @param playerName The name of the player
+     *
+     * @param timer in seconds
+     * @param questionList The list of questions for the game
+     * @param gameResult The result of the game
+     * @param player The player participating in the game
      */
-    public GamePlayer(Player player) {
-        this.timeCounter = 0;
-        this.questionList = new QuestionList();
-        this.gameResult = new GameRecord();
-        this.player = player;
-    }
-
-    /**
-     * Constructor with player name and question list
-     * @param playerName The name of the player
-     * @param questionList The question list for this player
-     */
-    public GamePlayer(Player player, QuestionList questionList) {
-        this.timeCounter = 0;
+    public GamePlayer(int timer,
+            QuestionList questionList,
+            GameRecord gameResult,
+            Player player) {
+        this.timeCounter = timer;
         this.questionList = questionList;
-        this.gameResult = new GameRecord();
+        this.gameResult = gameResult;
         this.player = player;
+        this.currentQuestionIndex = 0;
     }
-
 
     /**
      * Get the time counter in milliseconds
      * @return The time counter
      */
-    public long getTimeCounter() {
+    public int getTimeCounter() {
         return timeCounter;
     }
 
@@ -57,19 +54,16 @@ public class GamePlayer {
      * Set the time counter
      * @param timeCounter The time counter in milliseconds
      */
-    public void setTimeCounter(long timeCounter) {
+    public void setTimeCounter(int timeCounter) {
         this.timeCounter = timeCounter;
     }
 
-    public void incrementTimeCounter(long increment) {
+    public void incrementTimeCounter(int increment) {
         this.timeCounter += increment;
     }
 
-    /**
-     * Reset the time counter to zero
-     */
-    public void resetTimeCounter() {
-        this.timeCounter = 0;
+    public void decrementTimeCounter(int decrement) {
+        this.timeCounter -= decrement;
     }
 
     /**
@@ -121,13 +115,18 @@ public class GamePlayer {
     }
 
     /**
-     * Get the time counter formatted as mm:ss
-     * @return The formatted time string
+     * Get the current question index
+     * @return The index of the current question
      */
-    public String getFormattedTime() {
-        long seconds = timeCounter / 1000;
-        long minutes = seconds / 60;
-        seconds = seconds % 60;
-        return String.format("%02d:%02d", minutes, seconds);
+    public int getCurrentQuestionIndex() {
+        return currentQuestionIndex;
+    }
+
+    /**
+     * Set the current question index
+     * @param currentQuestionIndex The index of the question to set as current
+     */
+    public void setCurrentQuestionIndex(int currentQuestionIndex) {
+        this.currentQuestionIndex = currentQuestionIndex;
     }
 }
