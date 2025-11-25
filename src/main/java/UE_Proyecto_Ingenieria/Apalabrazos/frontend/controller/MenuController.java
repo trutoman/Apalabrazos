@@ -1,52 +1,103 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameStartedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
+import javafx.scene.control.Label;
+import javafx.scene.image.ImageView;
 
 /**
- * Controller for the initial menu where player names are entered.
+ * Controller for the main menu with game mode selection.
  */
 public class MenuController {
 
     @FXML
-    private TextField playerOneField;
+    private ImageView profileImage;
 
     @FXML
-    private TextField playerTwoField;
+    private Label usernameLabel;
 
     @FXML
-    private Button startButton;
+    private Button singlePlayerButton;
+
+    @FXML
+    private Button multiplayerButton;
+
+    @FXML
+    private Button scoresButton;
+
+    @FXML
+    private Button exitButton;
 
     private ViewNavigator navigator;
-    private EventBus eventBus;
+    private String username = "Jugador1"; // Por defecto
 
     public void setNavigator(ViewNavigator navigator) {
         this.navigator = navigator;
     }
 
-    @FXML
-    public void initialize() {
-        this.eventBus = EventBus.getInstance();
-        startButton.setOnAction(event -> handleStartGame());
+    public void setUsername(String username) {
+        this.username = username;
+        usernameLabel.setText(username);
     }
 
-    private void handleStartGame() {
-        String playerOne = playerOneField.getText() == null || playerOneField.getText().trim().isEmpty()
-                ? "Jugador 1"
-                : playerOneField.getText().trim();
-        String playerTwo = playerTwoField.getText() == null || playerTwoField.getText().trim().isEmpty()
-                ? "Jugador 2"
-                : playerTwoField.getText().trim();
+    @FXML
+    public void initialize() {
+        // Configurar el nombre de usuario por defecto
+        usernameLabel.setText(username);
+        
+        // Configurar los eventos de los botones
+        singlePlayerButton.setOnAction(event -> handleSinglePlayer());
+        multiplayerButton.setOnAction(event -> handleMultiplayer());
+        scoresButton.setOnAction(event -> handleViewScores());
+        exitButton.setOnAction(event -> handleExit());
+        
+        // Efectos hover para los botones
+        setupButtonHoverEffects(singlePlayerButton, "#2980b9");
+        setupButtonHoverEffects(multiplayerButton, "#27ae60");
+        setupButtonHoverEffects(scoresButton, "#e67e22");
+        setupButtonHoverEffects(exitButton, "#c0392b");
+    }
 
-        // Publish event instead of calling navigator directly
-        eventBus.publish(new GameStartedEvent(playerOne, playerTwo));
+    private void setupButtonHoverEffects(Button button, String hoverColor) {
+        String originalStyle = button.getStyle();
+        button.setOnMouseEntered(e -> {
+            button.setStyle(originalStyle + "; -fx-background-color: " + hoverColor + ";");
+        });
+        button.setOnMouseExited(e -> {
+            button.setStyle(originalStyle);
+        });
+    }
 
-        // Navigate to game view
-        navigator.startGame(playerOne, playerTwo);
+    private void handleSinglePlayer() {
+        System.out.println("Iniciando modo Un Jugador...");
+        // Navegar al juego en modo un jugador
+        if (navigator != null) {
+            navigator.startGame("Jugador 1", "CPU");
+        }
+    }
+
+    private void handleMultiplayer() {
+        System.out.println("Iniciando modo Multijugador...");
+        // Navegar al juego en modo multijugador
+        if (navigator != null) {
+            navigator.startGame("Jugador 1", "Jugador 2");
+        }
+    }
+
+    private void handleViewScores() {
+        System.out.println("Mostrando puntuaciones...");
+        // Navegar a la vista de puntuaciones
+        if (navigator != null) {
+            navigator.showResults();
+        }
+    }
+
+    private void handleExit() {
+        System.out.println("Saliendo de la aplicación...");
+        Platform.exit();
+        System.exit(0);
     }
 }
