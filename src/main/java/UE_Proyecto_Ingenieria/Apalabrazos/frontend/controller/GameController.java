@@ -19,6 +19,7 @@ public class GameController implements EventListener {
     @FXML
     private Label timerLabel;
 
+    // Utilizamos el event bus unico para suscribirnos y publicar eventos
     private EventBus eventBus;
     private ViewNavigator navigator;
     private int currentPlayerIndex;
