@@ -6,6 +6,9 @@ import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 
 /**
  * Controller responsible for the gameplay view.
@@ -18,6 +21,12 @@ public class GameController implements EventListener {
 
     @FXML
     private Label timerLabel;
+
+    @FXML
+    private Canvas playerOneCanvas;
+
+    @FXML
+    private Canvas playerTwoCanvas;
 
     // Utilizamos el event bus unico para suscribirnos y publicar eventos
     private EventBus eventBus;
@@ -33,6 +42,36 @@ public class GameController implements EventListener {
         this.eventBus = EventBus.getInstance();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
+
+        // Dibujar círculos centrados en los canvas (y redibujar en cambios de tamaño)
+        setupCanvasCircle(playerOneCanvas);
+    }
+
+    private void setupCanvasCircle(Canvas canvas) {
+        if (canvas == null) return;
+        Runnable draw = () -> drawCenteredCircle(canvas);
+        // Dibujo inicial
+        draw.run();
+        // Redibujar si cambia el tamaño
+        canvas.widthProperty().addListener((obs, o, n) -> draw.run());
+        canvas.heightProperty().addListener((obs, o, n) -> draw.run());
+    }
+
+    private void drawCenteredCircle(Canvas canvas) {
+        double w = canvas.getWidth();
+        double h = canvas.getHeight();
+        double d = Math.min(w, h); // diámetro máximo que cabe
+        double x = (w - d) / 2.0;
+        double y = (h - d) / 2.0;
+
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        // Limpiar
+        gc.clearRect(0, 0, w, h);
+        // Estilo del círculo
+        gc.setStroke(Color.web("#3498db"));
+        gc.setLineWidth(4.0);
+        // Dibujar contorno del círculo ocupando todo el canvas
+        gc.strokeOval(x, y, d, d);
     }
 
     /**
@@ -87,9 +126,7 @@ public class GameController implements EventListener {
         if (event.getPlayerIndex() == currentPlayerIndex) {
             Platform.runLater(() -> {
                 if (timerLabel != null) {
-                    int minutes = event.getRemainingSeconds() / 60;
-                    int seconds = event.getRemainingSeconds() % 60;
-                    timerLabel.setText(String.format("%02d:%02d", minutes, seconds));
+                    timerLabel.setText(String.valueOf(event.getRemainingSeconds()));
                 }
             });
         }
