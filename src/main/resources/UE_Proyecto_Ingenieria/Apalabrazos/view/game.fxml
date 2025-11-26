@@ -30,26 +30,41 @@
     <!-- Columna derecha (sidebar) ocupa las 3 filas -->
     <children>
         <!-- Sidebar derecha con dos filas: 25% (contador), 75% (contenido adicional) -->
-        <GridPane GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.rowSpan="3"
-                  prefWidth="320" minWidth="320" maxWidth="320">
+        <GridPane GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.rowSpan="3">
             <rowConstraints>
                 <RowConstraints percentHeight="25.0" />
-                <RowConstraints percentHeight="75.0" />
+                <RowConstraints percentHeight="25.0" />
+                <RowConstraints percentHeight="50.0" />
             </rowConstraints>
             <children>
                 <!-- Parte superior: rectángulo con contador de tiempo -->
-                <StackPane GridPane.rowIndex="0" style="-fx-padding: 16;">
+                <StackPane GridPane.rowIndex="0" style="-fx-padding: 16; -fx-border-color: #000000; -fx-border-width: 2.5; -fx-border-radius: 7;">
                     <children>
-                        <Rectangle width="300" height="140" arcWidth="14" arcHeight="14"
+                        <Rectangle  arcWidth="14" arcHeight="14"
                                    stroke="#000000" strokeWidth="2.5" fill="#ecf0f1"/>
                         <VBox alignment="CENTER" spacing="10">
-                            <Label text="Tiempo restante" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-                            <Label fx:id="timerLabel" text="180" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                            <Label text="Tiempo" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                            <Label fx:id="timerLabel" text="180" style="-fx-font-size: 52px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
                         </VBox>
                     </children>
                 </StackPane>
-                <!-- Parte inferior: placeholder para futuros contenidos de la barra lateral -->
-                <VBox GridPane.rowIndex="1" spacing="10"/>
+                <!-- Parte inferior: botones de estadísticas -->
+                <StackPane GridPane.rowIndex="1" style="-fx-padding: 16;">
+                    <HBox spacing="8" alignment="CENTER">
+                        <Button text="Aciertos" prefWidth="90" prefHeight="60"
+                                style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-background-color: #ecf0f1; -fx-border-color: #000000; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;"/>
+                        <Button text="Fallos" prefWidth="90" prefHeight="60"
+                                style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-background-color: #ecf0f1; -fx-border-color: #000000; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;"/>
+                        <Button text="Pasadas" prefWidth="90" prefHeight="60"
+                                style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-background-color: #ecf0f1; -fx-border-color: #000000; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;"/>
+                    </HBox>
+                </StackPane>
+                <!-- Canvas rival en la tercera fila del sidebar -->
+                <StackPane GridPane.rowIndex="2" style="-fx-border-color: #000000; -fx-padding: 16;">
+                <children>
+                    <Canvas fx:id="rivalCanvas" />
+                </children>
+                </StackPane>
             </children>
         </GridPane>
 

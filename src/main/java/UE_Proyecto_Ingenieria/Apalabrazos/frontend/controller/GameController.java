@@ -26,7 +26,7 @@ public class GameController implements EventListener {
     private Canvas playerOneCanvas;
 
     @FXML
-    private Canvas playerTwoCanvas;
+    private Canvas rivalCanvas;
 
     // Utilizamos el event bus unico para suscribirnos y publicar eventos
     private EventBus eventBus;
@@ -45,6 +45,7 @@ public class GameController implements EventListener {
 
         // Dibujar círculos centrados en los canvas (y redibujar en cambios de tamaño)
         setupCanvasCircle(playerOneCanvas);
+        setupCanvasCircle(rivalCanvas);
     }
 
     private void setupCanvasCircle(Canvas canvas) {
