@@ -79,11 +79,13 @@
 
         <!-- Contenido principal (fila 1, columna 0): canvas centrado -->
         <StackPane GridPane.columnIndex="0" GridPane.rowIndex="1">
-            <Canvas fx:id="playerOneCanvas" width="360" height="360" />
+            <Canvas fx:id="playerOneCanvas" width="360" height="360" visible="false" managed="false" />
+            <Button fx:id="startButton" text="Empezar" prefWidth="200" prefHeight="80"
+                    style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-background-color: #27ae60; -fx-text-fill: white; -fx-border-radius: 10; -fx-background-radius: 10;" />
         </StackPane>
 
         <!-- Zona de preguntas (fila 2, columna 1) -->
-        <VBox GridPane.columnIndex="0" GridPane.rowIndex="2" spacing="10" alignment="CENTER" styleClass="question-area">
+        <VBox fx:id="questionArea" GridPane.columnIndex="0" GridPane.rowIndex="2" spacing="10" alignment="CENTER" styleClass="question-area" visible="false" managed="false">
             <Label fx:id="questionPromptLabel" wrapText="true" style="-fx-font-size: 16px;" text="Pregunta" />
             <Label fx:id="feedbackLabel" style="-fx-text-fill: #555555;" />
             <HBox spacing="10" alignment="CENTER">

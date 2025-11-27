@@ -1,7 +1,6 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;

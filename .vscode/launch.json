@@ -1,0 +1,41 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug Apalabrazos (Recomendado)",
+            "request": "launch",
+            "mainClass": "UE_Proyecto_Ingenieria.Apalabrazos.MainApp",
+            "projectName": "Apalabrazos",
+            "vmArgs": "--module-path /home/alvaro/.m2/repository/org/openjfx/javafx-controls/13:/home/alvaro/.m2/repository/org/openjfx/javafx-fxml/13:/home/alvaro/.m2/repository/org/openjfx/javafx-graphics/13:/home/alvaro/.m2/repository/org/openjfx/javafx-base/13 --add-modules javafx.controls,javafx.fxml",
+            "console": "internalConsole"
+        },
+        {
+            "type": "java",
+            "name": "Attach to Maven Debug",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 8000
+        },
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "QuestionJsonTest",
+            "request": "launch",
+            "mainClass": "UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionJsonTest",
+            "projectName": "Apalabrazos"
+        },
+        {
+            "type": "java",
+            "name": "QuestionJsonGenerator",
+            "request": "launch",
+            "mainClass": "UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionJsonGenerator",
+            "projectName": "Apalabrazos"
+        }
+    ]
+}

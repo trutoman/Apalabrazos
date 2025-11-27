@@ -2,7 +2,9 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.service;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.*;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionFileLoader;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -13,9 +15,10 @@ import java.util.List;
 public class GameService implements EventListener {
 
     private final EventBus eventBus;
-    private GameGlobal gameGlobal;
+    private GameSingleInstance singleGameInstance;
 
     public GameService() {
+        this.singleGameInstance = new GameSingleInstance();
         this.eventBus = EventBus.getInstance();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
@@ -38,43 +41,37 @@ public class GameService implements EventListener {
      * Initialize a new game
      */
     private void handleGameStarted(GameStartedEvent event) {
-        // Create players
+         // Create players from event TODO: players are generated before event
         Player playerOne = new Player();
-        playerOne.setName(event.getPlayerOneName());
+        playerOne.setName(event.getGamePlayerConfig().getPlayerName());
+        singleGameInstance.setPlayer(playerOne);
+        singleGameInstance.setTimeCounter(event.getGamePlayerConfig().getTimerSeconds());
 
-        Player playerTwo = new Player();
-        playerTwo.setName(event.getPlayerTwoName());
-
-        // Create game players with question lists
-        GamePlayer gamePlayerOne = new GamePlayer();
-        gamePlayerOne.setPlayer(playerOne);
-        gamePlayerOne.setQuestionList(new QuestionList()); // TODO: Load questions
-
-        GamePlayer gamePlayerTwo = new GamePlayer();
-        gamePlayerTwo.setPlayer(playerTwo);
-        gamePlayerTwo.setQuestionList(new QuestionList()); // TODO: Load questions
-
-        // Initialize global game
-        this.gameGlobal = new GameGlobal();
-        this.gameGlobal.setGamePlayer1(gamePlayerOne);
-        this.gameGlobal.setGamePlayer2(gamePlayerTwo);
-        this.gameGlobal.setCurrentPlayerIndex(0); // Start with player 1
+        // Cargar preguntas desde el archivo
+        try {
+            QuestionFileLoader loader = new QuestionFileLoader();
+            QuestionList questions = loader.loadQuestions(); // Usa archivo por defecto
+            singleGameInstance.setQuestionList(questions);
+        } catch (IOException e) {
+            System.err.println("Error cargando preguntas: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
 
         // Notify that first question is ready
-        notifyQuestionChanged(0);
+        notifyQuestionChanged();
     }
 
     /**
      * Handle answer submission
      */
     private void handleAnswerSubmitted(AnswerSubmittedEvent event) {
-        if (gameGlobal == null) {
+        if (singleGameInstance == null) {
             return;
         }
 
-        GamePlayer currentPlayer = event.getPlayerIndex() == 0
-            ? gameGlobal.getGamePlayer1()
-            : gameGlobal.getGamePlayer2();
+        // En modo single player, siempre usamos singleGameInstance
+        GameSingleInstance currentPlayer = singleGameInstance;
 
         // Get the current question
         int questionIndex = currentPlayer.getCurrentQuestionIndex();
@@ -128,7 +125,7 @@ public class GameService implements EventListener {
         currentPlayer.setCurrentQuestionIndex(questionIndex + 1);
 
         if (questionIndex + 1 < questionList.getCurrentLength()) {
-            notifyQuestionChanged(event.getPlayerIndex());
+            notifyQuestionChanged();
         } else {
             // All questions answered, end turn
             endTurn(event.getPlayerIndex());
@@ -139,50 +136,36 @@ public class GameService implements EventListener {
      * End the current player's turn
      */
     private void endTurn(int playerIndex) {
-        GamePlayer player = playerIndex == 0
-            ? gameGlobal.getGamePlayer1()
-            : gameGlobal.getGamePlayer2();
-
-        GameRecord record = player.getGameResult();
+        GameRecord record = singleGameInstance.getGameResult();
 
         // Publish turn ended event
         eventBus.publish(new TurnEndedEvent(
             playerIndex,
             record.getCorrectAnswers(),
-            player.getQuestionList().getCurrentLength()
+            singleGameInstance.getQuestionList().getCurrentLength()
         ));
 
-        // Check if both players finished
-        if (playerIndex == 0) {
-            // Switch to player 2
-            gameGlobal.setCurrentPlayerIndex(1);
-            notifyQuestionChanged(1);
-        } else {
-            // Game finished
-            endGame();
-        }
+        // Game finished (single player mode)
+        endGame();
     }
 
     /**
      * End the game and publish final results
      */
     private void endGame() {
+        // En modo single player, el segundo record es null
         eventBus.publish(new GameFinishedEvent(
-            gameGlobal.getGamePlayer1().getGameResult(),
-            gameGlobal.getGamePlayer2().getGameResult()
+            singleGameInstance.getGameResult(),
+            null  // No hay segundo jugador en modo single player
         ));
     }
 
     /**
-     * Notify that the current question has changed
+     * Notify that the current question has changed for a player
      */
-    private void notifyQuestionChanged(int playerIndex) {
-        GamePlayer player = playerIndex == 0
-            ? gameGlobal.getGamePlayer1()
-            : gameGlobal.getGamePlayer2();
-
-        int questionIndex = player.getCurrentQuestionIndex();
-        QuestionList questionList = player.getQuestionList();
+    private void notifyQuestionChanged() {
+        int questionIndex = singleGameInstance.getCurrentQuestionIndex();
+        QuestionList questionList = singleGameInstance.getQuestionList();
 
         if (questionIndex < questionList.getCurrentLength()) {
             // Get the letter from AlphabetMap using the question index
@@ -190,7 +173,7 @@ public class GameService implements EventListener {
             char letter = letterStr.charAt(0);
 
             eventBus.publish(new QuestionChangedEvent(
-                playerIndex,
+                0,  // Single player is always index 0
                 questionIndex,
                 letter
             ));
@@ -200,7 +183,7 @@ public class GameService implements EventListener {
     /**
      * Get the current game state
      */
-    public GameGlobal getGameGlobal() {
-        return gameGlobal;
+    public GameSingleInstance getGameInstance() {
+        return singleGameInstance;
     }
 }

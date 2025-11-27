@@ -4,7 +4,7 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
  * Represents the game instance for a single player.
  * Contains the player's timer, question list, and game result.
  */
-public class GamePlayer {
+public class GameSingleInstance {
 
     private int timeCounter;  // Tiempo en milisegundos
     private QuestionList questionList;
@@ -16,7 +16,7 @@ public class GamePlayer {
     /**
      * Default constructor
      */
-    public GamePlayer() {
+    public GameSingleInstance() {
         this.timeCounter = this.timer;
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
@@ -31,7 +31,7 @@ public class GamePlayer {
      * @param gameResult The result of the game
      * @param player The player participating in the game
      */
-    public GamePlayer(int timer,
+    public GameSingleInstance(int timer,
             QuestionList questionList,
             GameRecord gameResult,
             Player player) {

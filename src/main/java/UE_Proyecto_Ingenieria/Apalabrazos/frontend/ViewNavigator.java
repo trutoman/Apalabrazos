@@ -5,6 +5,9 @@ import UE_Proyecto_Ingenieria.Apalabrazos.MainApp;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.ResultsController;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -32,6 +35,8 @@ public class ViewNavigator {
         this.stage.setResizable(false);
     }
 
+
+    // Función de entrada de la aplicación para mostrar el menú principal
     public void showMenu() {
         try {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/menu.fxml"));
@@ -46,16 +51,22 @@ public class ViewNavigator {
         }
     }
 
-    public void startGame(String playerOneName, String playerTwoName) {
-        showGame();
+    // Esta función se llama desde el controlador de menu cuando se pulsa singleplayer button
+    public void startGame(GamePlayerConfig playerOneConfig) {
+        showGame(playerOneConfig);
     }
 
-    public void showGame() {
+    public void showGame(GamePlayerConfig playerOneConfig) {
         try {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
             Parent root = loader.load();
             GameController controller = loader.getController();
             controller.setNavigator(this);
+            // Crear el servicio de juego para que se suscriba al EventBus
+            GameService gameService = new GameService();
+            // Pasar configuración del jugador al controlador
+            GamePlayerConfig config = new GamePlayerConfig(playerOneConfig.getPlayerName(), "resources/images/default-profile.png", 180);
+            controller.setPlayerConfig(config);
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
             stage.show();

@@ -1,6 +1,7 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -38,22 +39,17 @@ public class MenuController {
         this.navigator = navigator;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-        usernameLabel.setText(username);
-    }
-
     @FXML
     public void initialize() {
         // Configurar el nombre de usuario por defecto
         usernameLabel.setText(username);
-        
+
         // Configurar los eventos de los botones
         singlePlayerButton.setOnAction(event -> handleSinglePlayer());
         multiplayerButton.setOnAction(event -> handleMultiplayer());
         scoresButton.setOnAction(event -> handleViewScores());
         exitButton.setOnAction(event -> handleExit());
-        
+
         // Efectos hover para los botones
         setupButtonHoverEffects(singlePlayerButton, "#2980b9");
         setupButtonHoverEffects(multiplayerButton, "#27ae60");
@@ -75,16 +71,17 @@ public class MenuController {
         System.out.println("Iniciando modo Un Jugador...");
         // Navegar al juego en modo un jugador
         if (navigator != null) {
-            navigator.startGame("Jugador 1", "CPU");
+            GamePlayerConfig playerOneConfig = new GamePlayerConfig("Jugador 1", "images/default-profile.png", 180);
+            navigator.startGame(playerOneConfig);
         }
     }
 
     private void handleMultiplayer() {
         System.out.println("Iniciando modo Multijugador...");
-        // Navegar al juego en modo multijugador
-        if (navigator != null) {
-            navigator.startGame("Jugador 1", "Jugador 2");
-        }
+        // // Navegar al juego en modo multijugador
+        // if (navigator != null) {
+        //     navigator.startGame("Jugador 1", "Jugador 2");
+        // }
     }
 
     private void handleViewScores() {

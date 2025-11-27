@@ -22,11 +22,11 @@ public class GameGlobal {
      * Enum representing the type of game
      */
     public enum GameType {
-        FIRST_WINS,  // El primer jugador que termina gana
+        HIGHER_POINTS_WINS,  // El primer jugador que termina gana
         NUMBER_WINS  // Gana quien tenga más aciertos
     }
 
-    private List<GamePlayer> players;
+    private List<GameSingleInstance> players;
     private GameState state;
     private GameType gameType;
     private int currentPlayerIndex;  // Índice del jugador actual (0 o 1)
@@ -37,51 +37,51 @@ public class GameGlobal {
     public GameGlobal() {
         this.players = new ArrayList<>();
         this.state = GameState.READY;
-        this.gameType = GameType.FIRST_WINS;
+        this.gameType = GameType.HIGHER_POINTS_WINS;
         this.currentPlayerIndex = 0;
     }
 
     /**
      * Constructor with all parameters
-     * @param players List of GamePlayer instances
+     * @param players List of GameSingleInstance instances
      * @param state The initial game state
      * @param gameType The game type
      */
-    public GameGlobal(List<GamePlayer> players, GameState state, GameType gameType) {
+    public GameGlobal(List<GameSingleInstance> players, GameState state, GameType gameType) {
         this.players = players != null ? players : new ArrayList<>();
         this.state = state != null ? state : GameState.READY;
-        this.gameType = gameType != null ? gameType : GameType.FIRST_WINS;
+        this.gameType = gameType != null ? gameType : GameType.HIGHER_POINTS_WINS;
     }
 
     /**
      * Add a player to the game
      * @param player The GamePlayer to add
      */
-    public void addPlayer(GamePlayer player) {
+    public void addPlayer(GameSingleInstance player) {
         this.players.add(player);
     }
 
     /**
      * Remove a player from the game
-     * @param player The GamePlayer to remove
+     * @param player The GameSingleInstance to remove
      */
-    public void removePlayer(GamePlayer player) {
+    public void removePlayer(GameSingleInstance player) {
         this.players.remove(player);
     }
 
     /**
      * Get all players
-     * @return List of GamePlayer instances
+     * @return List of GameSingleInstance instances
      */
-    public List<GamePlayer> getPlayers() {
+    public List<GameSingleInstance> getPlayers() {
         return players;
     }
 
     /**
      * Set the list of players
-     * @param players List of GamePlayer instances
+     * @param players List of GameSingleInstance instances
      */
-    public void setPlayers(List<GamePlayer> players) {
+    public void setPlayers(List<GameSingleInstance> players) {
         this.players = players;
     }
 
@@ -177,51 +177,26 @@ public class GameGlobal {
      * Get player 1 (convenience method)
      * @return The first player or null if not available
      */
-    public GamePlayer getGamePlayer1() {
+    public GameSingleInstance getGamePlayer1() {
         return players.size() > 0 ? players.get(0) : null;
-    }
-
-    /**
-     * Get player 2 (convenience method)
-     * @return The second player or null if not available
-     */
-    public GamePlayer getGamePlayer2() {
-        return players.size() > 1 ? players.get(1) : null;
     }
 
     /**
      * Set player 1 (convenience method)
      * @param player The player to set as player 1
      */
-    public void setGamePlayer1(GamePlayer player) {
+    public void setGamePlayer1(GameSingleInstance player) {
         if (players.isEmpty()) {
             players.add(player);
         } else {
             players.set(0, player);
         }
     }
-
-    /**
-     * Set player 2 (convenience method)
-     * @param player The player to set as player 2
-     */
-    public void setGamePlayer2(GamePlayer player) {
-        if (players.size() < 2) {
-            // Ensure we have player 1 first
-            while (players.size() < 1) {
-                players.add(null);
-            }
-            players.add(player);
-        } else {
-            players.set(1, player);
-        }
-    }
-
     /**
      * Get the current player
-     * @return The current GamePlayer
+     * @return The current GameSingleInstance
      */
-    public GamePlayer getCurrentPlayer() {
+    public GameSingleInstance getCurrentPlayer() {
         if (currentPlayerIndex >= 0 && currentPlayerIndex < players.size()) {
             return players.get(currentPlayerIndex);
         }
