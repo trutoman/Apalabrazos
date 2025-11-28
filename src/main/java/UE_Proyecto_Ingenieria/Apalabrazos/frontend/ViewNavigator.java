@@ -11,7 +11,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * Utility class that orchestrates switching between main application views.
+ * Gestiona la navegación entre las vistas de la aplicación.
  */
 public class ViewNavigator {
 

@@ -9,7 +9,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
 
 /**
- * Controller for the main menu with game mode selection.
+ * Controlador del menú principal.
  */
 public class MenuController {
 

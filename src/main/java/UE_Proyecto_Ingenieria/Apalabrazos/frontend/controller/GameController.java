@@ -5,7 +5,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 
 
 /**
- * Controller responsible for the gameplay view.
+ * Controlador de la vista del juego.
  */
 public class GameController {
 
