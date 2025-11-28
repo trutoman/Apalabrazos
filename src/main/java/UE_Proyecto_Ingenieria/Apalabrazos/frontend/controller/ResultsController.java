@@ -7,7 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 
 /**
- * Controller for displaying the final scores of the match.
+ * Controlador de la vista de resultados.
  */
 public class ResultsController {
 
