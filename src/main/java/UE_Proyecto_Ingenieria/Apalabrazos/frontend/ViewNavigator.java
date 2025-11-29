@@ -17,20 +17,18 @@ import javafx.stage.Stage;
 public class ViewNavigator {
 
     private final Stage stage;
-    private static final int SCENE_WIDTH = 1280;
-    private static final int SCENE_HEIGHT = 720;
+    private static final int SCENE_WIDTH = 1024;
+    private static final int SCENE_HEIGHT = 600;
 
     public ViewNavigator(Stage stage) {
         this.stage = stage;
         this.stage.setTitle("Apalabrazos 2D");
-        // Fijar tamaño inicial y evitar cambios al sustituir escenas.
+        // Configuración de ventana adaptable
         this.stage.setWidth(SCENE_WIDTH);
         this.stage.setHeight(SCENE_HEIGHT);
-        this.stage.setMinWidth(SCENE_WIDTH);
-        this.stage.setMinHeight(SCENE_HEIGHT);
-        this.stage.setMaxWidth(SCENE_WIDTH);
-        this.stage.setMaxHeight(SCENE_HEIGHT);
-        this.stage.setResizable(false);
+        this.stage.setResizable(true);
+        // Permitir ventana completa
+        this.stage.setMaximized(false);
     }
 
 
@@ -62,8 +60,10 @@ public class ViewNavigator {
             // Pasar configuración del jugador al controlador
             GamePlayerConfig config = new GamePlayerConfig(playerOneConfig.getPlayerName(), "resources/images/default-profile.png", 180);
             controller.setPlayerConfig(config);
+            controller.setNavigator(this);
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
+            stage.setMaximized(true);
             stage.show();
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo cargar la vista del juego", e);
