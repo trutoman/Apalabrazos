@@ -1,23 +1,19 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.events;
 
 /**
- * Event fired periodically to update timer.
+ * Evento publicado cada segundo por el servicio de tiempo.
+ * Representa que ha pasado un segundo desde el último tick.
+ * Contiene el contador de segundos transcurridos desde el inicio.
  */
 public class TimerTickEvent extends GameEvent {
-    private final int playerIndex;
-    private final int remainingSeconds;
+    private final int elapsedSeconds;
 
-    public TimerTickEvent(int playerIndex, int remainingSeconds) {
+    public TimerTickEvent(int elapsedSeconds) {
         super();
-        this.playerIndex = playerIndex;
-        this.remainingSeconds = remainingSeconds;
+        this.elapsedSeconds = elapsedSeconds;
     }
 
-    public int getPlayerIndex() {
-        return playerIndex;
-    }
-
-    public int getRemainingSeconds() {
-        return remainingSeconds;
+    public int getElapsedSeconds() {
+        return elapsedSeconds;
     }
 }

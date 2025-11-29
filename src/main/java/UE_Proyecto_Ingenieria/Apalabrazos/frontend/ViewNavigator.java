@@ -62,8 +62,6 @@ public class ViewNavigator {
             Parent root = loader.load();
             GameController controller = loader.getController();
             controller.setNavigator(this);
-            // Crear el servicio de juego para que se suscriba al EventBus
-            GameService gameService = new GameService();
             // Pasar configuración del jugador al controlador
             GamePlayerConfig config = new GamePlayerConfig(playerOneConfig.getPlayerName(), "resources/images/default-profile.png", 180);
             controller.setPlayerConfig(config);

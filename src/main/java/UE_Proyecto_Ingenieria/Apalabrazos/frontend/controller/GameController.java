@@ -3,7 +3,7 @@ package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
-
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -43,6 +43,9 @@ public class GameController implements EventListener {
     private int currentPlayerIndex = 0;
     private GamePlayerConfig playerConfig;
 
+    // El gameController contiene e instancia el gameservice ... discutible
+    private GameService gameService;
+
     public void setNavigator(ViewNavigator navigator) {
         this.navigator = navigator;
     }
@@ -53,9 +56,9 @@ public class GameController implements EventListener {
 
     @FXML
     public void initialize() {
-        this.eventBus = EventBus.getInstance();
-        // Registrarse como listener de eventos
-        eventBus.addListener(this);
+        // Iniciiamos el gameService
+        gameService = new GameService();
+        gameService.addListener(this);
 
         // Configurar el botón de inicio
         if (startButton != null) {
@@ -71,27 +74,23 @@ public class GameController implements EventListener {
      * Handle start game button click
      */
     private void handleStartGame() {
-
         // Ocultar el botón de inicio
         if (startButton != null) {
             startButton.setVisible(false);
             startButton.setManaged(false);
         }
-
         // Mostrar el canvas del juego
         if (playerOneCanvas != null) {
             playerOneCanvas.setVisible(true);
             playerOneCanvas.setManaged(true);
         }
-
         // Mostrar la zona de preguntas
         if (questionArea != null) {
             questionArea.setVisible(true);
             questionArea.setManaged(true);
         }
-
         // Publicar evento de inicio de juego
-        eventBus.publish(new GameStartedEvent(this.playerConfig));
+        gameService.publish(new GameStartedEvent(this.playerConfig));
     }
 
     private void setupCanvasCircle(Canvas canvas) {
@@ -132,86 +131,9 @@ public class GameController implements EventListener {
     @Override
     public void onEvent(GameEvent event) {
         // Verificar el tipo de evento y llamar al método apropiado
-        if (event instanceof QuestionChangedEvent) {
-            onQuestionChanged((QuestionChangedEvent) event);
-        } else if (event instanceof AnswerValidatedEvent) {
-            onAnswerValidated((AnswerValidatedEvent) event);
-        } else if (event instanceof TimerTickEvent) {
-            onTimerTick((TimerTickEvent) event);
-        } else if (event instanceof TurnEndedEvent) {
-            onTurnEnded((TurnEndedEvent) event);
-        } else if (event instanceof GameFinishedEvent) {
-            onGameFinished((GameFinishedEvent) event);
+        if (event instanceof TimerTickEvent) {
+            int remaining = ((TimerTickEvent) event).getElapsedSeconds();
+            Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
         }
-    }
-
-    /**
-     * Handle question changed event
-     */
-    private void onQuestionChanged(QuestionChangedEvent event) {
-        Platform.runLater(() -> {
-            currentPlayerIndex = event.getPlayerIndex();
-            if (questionLabel != null) {
-                questionLabel.setText("Letra: " + event.getLetter() +
-                                    " - Pregunta " + (event.getQuestionIndex() + 1));
-            }
-        });
-    }
-
-    /**
-     * Handle answer validated event
-     */
-    private void onAnswerValidated(AnswerValidatedEvent event) {
-        Platform.runLater(() -> {
-            String message = event.isCorrect()
-                ? "¡Correcto!"
-                : "Incorrecto. La respuesta era: " + event.getCorrectAnswer();
-            // TODO: Show feedback to user (toast, dialog, etc.)
-            System.out.println(message);
-        });
-    }
-
-    /**
-     * Handle timer tick event
-     */
-    private void onTimerTick(TimerTickEvent event) {
-        if (event.getPlayerIndex() == currentPlayerIndex) {
-            Platform.runLater(() -> {
-                if (timerLabel != null) {
-                    timerLabel.setText(String.valueOf(event.getRemainingSeconds()));
-                }
-            });
-        }
-    }
-
-    /**
-     * Handle turn ended event
-     */
-    private void onTurnEnded(TurnEndedEvent event) {
-        Platform.runLater(() -> {
-            String message = String.format("Turno finalizado. Aciertos: %d/%d",
-                event.getCorrectAnswers(), event.getTotalQuestions());
-            System.out.println(message);
-            // TODO: Show turn summary
-        });
-    }
-
-    /**
-     * Handle game finished event
-     */
-    private void onGameFinished(GameFinishedEvent event) {
-        Platform.runLater(() -> {
-            // Navigate to results screen
-            if (navigator != null) {
-                navigator.showResults();
-            }
-        });
-    }
-
-    /**
-     * Called when user submits an answer
-     */
-    public void submitAnswer(String answer) {
-        eventBus.publish(new AnswerSubmittedEvent(currentPlayerIndex, 'a', answer));
     }
 }

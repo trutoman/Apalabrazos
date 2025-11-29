@@ -5,6 +5,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionFileLoader;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -16,12 +17,40 @@ public class GameService implements EventListener {
 
     private final EventBus eventBus;
     private GameSingleInstance singleGameInstance;
+    private TimeService timeService;
+    private List<EventListener> listeners;
 
     public GameService() {
         this.singleGameInstance = new GameSingleInstance();
         this.eventBus = EventBus.getInstance();
+        // Yo tambien tengo mis listeners, el gamecontroller
+        this.listeners = new ArrayList<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
+    }
+
+    /**
+     * Añadir un listener que escuchará eventos desde este servicio
+     */
+    public void addListener(EventListener listener) {
+        listeners.add(listener);
+    }
+
+    /**
+     * Eliminar un listener (útil al cerrar vistas)
+     */
+    public void removeListener(EventListener listener) {
+        listeners.remove(listener);
+    }
+
+    /**
+     * Publicar un evento al servicio (no al bus directamente)
+     * El GameController invoca este método para enviar eventos al servicio
+     * que los procesará localmente
+     */
+    public void publish(GameEvent event) {
+        // Procesar el evento localmente en lugar de publicarlo al bus
+        onEvent(event);
     }
 
     /**
@@ -32,8 +61,12 @@ public class GameService implements EventListener {
         // Verificar el tipo de evento y llamar al método apropiado
         if (event instanceof GameStartedEvent) {
             handleGameStarted((GameStartedEvent) event);
-        } else if (event instanceof AnswerSubmittedEvent) {
-            handleAnswerSubmitted((AnswerSubmittedEvent) event);
+        } else if (event instanceof TimerTickEvent) {
+            this.singleGameInstance.decrementTimeCounter(1);
+            TimerTickEvent controllerTickEvent = new TimerTickEvent( this.singleGameInstance.getTimeCounter());
+            for (EventListener l : listeners) {
+                l.onEvent(controllerTickEvent);
+            }
         }
     }
 
@@ -46,6 +79,10 @@ public class GameService implements EventListener {
         playerOne.setName(event.getGamePlayerConfig().getPlayerName());
         singleGameInstance.setPlayer(playerOne);
         singleGameInstance.setTimeCounter(event.getGamePlayerConfig().getTimerSeconds());
+
+        // Iniciar servicio de tiempo
+        timeService = new TimeService();
+        timeService.start();
 
         // Cargar preguntas desde el archivo
         try {
@@ -153,6 +190,10 @@ public class GameService implements EventListener {
      * End the game and publish final results
      */
     private void endGame() {
+        // Parar servicio de tiempo si está activo
+        if (timeService != null) {
+            timeService.stop();
+        }
         // En modo single player, el segundo record es null
         eventBus.publish(new GameFinishedEvent(
             singleGameInstance.getGameResult(),
@@ -185,5 +226,12 @@ public class GameService implements EventListener {
      */
     public GameSingleInstance getGameInstance() {
         return singleGameInstance;
+    }
+
+    /**
+     * Exponer segundos transcurridos (si el servicio está activo)
+     */
+    public int getElapsedSeconds() {
+        return timeService != null ? timeService.getElapsedSeconds() : 0;
     }
 }
