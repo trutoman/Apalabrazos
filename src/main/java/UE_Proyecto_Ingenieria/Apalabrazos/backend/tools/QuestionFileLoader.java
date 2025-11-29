@@ -13,7 +13,7 @@ import java.io.IOException;
 public class QuestionFileLoader {
 
     // Ruta por defecto del archivo de preguntas
-    private String archivoPreguntas = "src/main/resources/UE_Proyecto_Ingenieria/Apalabrazos/data/questions.json";
+    private String defaultQuestionsFile = "src/main/resources/UE_Proyecto_Ingenieria/Apalabrazos/data/questions.json";
 
     /**
      * Carga las preguntas desde el archivo por defecto.
@@ -22,8 +22,8 @@ public class QuestionFileLoader {
      * @throws IOException Si hay un error al leer el archivo (no existe, permisos, etc.)
      */
     public QuestionList loadQuestions() throws IOException {
-        // Llamamos al otro método usando la ruta por defecto
-        return loadQuestions(archivoPreguntas);
+        // Use the default file path
+        return loadQuestions(defaultQuestionsFile);
     }
 
     /**
@@ -33,12 +33,46 @@ public class QuestionFileLoader {
      * @return Lista de preguntas cargadas desde el archivo JSON
      * @throws IOException Si hay un error al leer el archivo (no existe, permisos, etc.)
      */
-    public QuestionList loadQuestions(String rutaArchivo) throws IOException {
-        // Creamos el objeto que convierte JSON a Java
-        ObjectMapper conversorJSON = new ObjectMapper();
-        File archivo = new File(rutaArchivo);
-        QuestionList preguntas = conversorJSON.readValue(archivo, QuestionList.class);
-        // Devolvemos las preguntas cargadas
-        return preguntas;
+    public QuestionList loadQuestions(String filePath) throws IOException {
+        // Create JSON -> Java converter
+        ObjectMapper objectMapper = new ObjectMapper();
+        File file = new File(filePath);
+        QuestionList questions = objectMapper.readValue(file, QuestionList.class);
+        // Return loaded questions
+        return questions;
+    }
+
+    /**
+     * Carga exactamente "numero" preguntas del archivo indicado.
+     * Si el archivo contiene menos de ese número, lanza excepción.
+     *
+     * @param rutaArchivo Ruta del JSON de preguntas
+     * @param numero Número exacto de preguntas a cargar
+     * @return Una nueva instancia de QuestionList con exactamente "numero" preguntas
+     * @throws IOException Si hay problemas leyendo el archivo
+     * @throws IllegalArgumentException Si el archivo no contiene suficientes preguntas
+     */
+    public QuestionList loadQuestions(String filePath, int count) throws IOException {
+        if (count <= 0) {
+            throw new IllegalArgumentException("El número de preguntas debe ser mayor que 0");
+        }
+        QuestionList all = loadQuestions(filePath);
+        int available = all.getCurrentLength();
+        if (available < count) {
+            throw new IllegalArgumentException(
+                    "El archivo solo contiene " + available + " preguntas, se solicitaron " + count);
+        }
+        // Take the first "count" questions
+        java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> subset =
+                all.getQuestionList().subList(0, count);
+        // Create a QuestionList with limit equal to "count"
+        return new UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionList(subset, count);
+    }
+
+    /**
+     * Versión usando la ruta por defecto del archivo.
+     */
+    public QuestionList loadQuestions(int count) throws IOException {
+        return this.loadQuestions(defaultQuestionsFile, count);
     }
 }

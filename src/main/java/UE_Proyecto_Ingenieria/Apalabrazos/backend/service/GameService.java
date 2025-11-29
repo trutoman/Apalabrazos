@@ -74,26 +74,24 @@ public class GameService implements EventListener {
      * Initialize a new game
      */
     private void handleGameStarted(GameStartedEvent event) {
-         // Create players from event TODO: players are generated before event
-        Player playerOne = new Player();
-        playerOne.setName(event.getGamePlayerConfig().getPlayerName());
-        singleGameInstance.setPlayer(playerOne);
+
+        // Create players from event
+        singleGameInstance.setPlayer(event.getGamePlayerConfig().getPlayer());
         singleGameInstance.setTimeCounter(event.getGamePlayerConfig().getTimerSeconds());
-
-        // Iniciar servicio de tiempo
-        timeService = new TimeService();
-        timeService.start();
-
+        singleGameInstance.setCurrentQuestionIndex(0);
         // Cargar preguntas desde el archivo
         try {
             QuestionFileLoader loader = new QuestionFileLoader();
-            QuestionList questions = loader.loadQuestions(); // Usa archivo por defecto
+            QuestionList questions = loader.loadQuestions(event.getGamePlayerConfig().getQuestionNumber());
             singleGameInstance.setQuestionList(questions);
         } catch (IOException e) {
             System.err.println("Error cargando preguntas: " + e.getMessage());
             e.printStackTrace();
             return;
         }
+        // Iniciar servicio de tiempo
+        timeService = new TimeService();
+        timeService.start();
 
         // Notify that first question is ready
         notifyQuestionChanged();
