@@ -6,8 +6,6 @@ import javafx.stage.Stage;
 
 public class MainApp extends Application {
 
-    private Stage primaryStage;
-
     @Override
     public void start(Stage primaryStage) {
     	ViewNavigator navigator = new ViewNavigator(primaryStage);

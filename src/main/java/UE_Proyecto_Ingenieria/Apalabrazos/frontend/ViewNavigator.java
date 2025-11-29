@@ -5,8 +5,6 @@ import UE_Proyecto_Ingenieria.Apalabrazos.MainApp;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.ResultsController;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -61,7 +59,6 @@ public class ViewNavigator {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
             Parent root = loader.load();
             GameController controller = loader.getController();
-            controller.setNavigator(this);
             // Pasar configuración del jugador al controlador
             GamePlayerConfig config = new GamePlayerConfig(playerOneConfig.getPlayerName(), "resources/images/default-profile.png", 180);
             controller.setPlayerConfig(config);

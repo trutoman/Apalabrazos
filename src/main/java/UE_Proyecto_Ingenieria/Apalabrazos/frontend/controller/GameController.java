@@ -1,9 +1,9 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
-import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
+import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
@@ -37,14 +37,12 @@ public class GameController implements EventListener {
     @FXML
     private VBox questionArea;
 
-    // Utilizamos el event bus unico para suscribirnos y publicar eventos
-    private EventBus eventBus;
-    private ViewNavigator navigator;
-    private int currentPlayerIndex = 0;
     private GamePlayerConfig playerConfig;
 
     // El gameController contiene e instancia el gameservice ... discutible
     private GameService gameService;
+
+    private ViewNavigator navigator;
 
     public void setNavigator(ViewNavigator navigator) {
         this.navigator = navigator;
