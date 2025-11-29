@@ -58,6 +58,14 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>maven-exec-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionJsonGenerator</mainClass>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

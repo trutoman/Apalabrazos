@@ -4,12 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Estado de una pregunta dentro del juego.
- * Valores  posibles:
- *   - responsed_ok
- *   - responsed_fail
- *   - init
- *   - passed
+ * Represents the status of a question within the game.
  */
 public enum QuestionStatus {
     RESPONDED_OK("responsed_ok"),
@@ -23,18 +18,29 @@ public enum QuestionStatus {
         this.value = value;
     }
 
+    /**
+     * Get the string value representation
+     * @return The status value
+     */
     @JsonValue
     public String getValue() {
         return value;
     }
 
+    /**
+     * Create a QuestionStatus from a string value
+     * @param v The string value to parse
+     * @return The corresponding QuestionStatus
+     */
     @JsonCreator
     public static QuestionStatus fromValue(String v) {
-        if (v == null)
+        if (v == null) {
             throw new IllegalArgumentException("QuestionStatus cannot be null");
+        }
         for (QuestionStatus s : values()) {
-            if (s.value.equalsIgnoreCase(v) || s.name().equalsIgnoreCase(v))
+            if (s.value.equalsIgnoreCase(v) || s.name().equalsIgnoreCase(v)) {
                 return s;
+            }
         }
         throw new IllegalArgumentException("Unknown QuestionStatus: " + v);
     }
