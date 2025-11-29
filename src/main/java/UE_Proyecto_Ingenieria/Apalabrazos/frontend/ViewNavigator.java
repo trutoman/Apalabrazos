@@ -59,9 +59,8 @@ public class ViewNavigator {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
             Parent root = loader.load();
             GameController controller = loader.getController();
-            // Pasar configuración del jugador al controlador
-            GamePlayerConfig config = new GamePlayerConfig(playerOneConfig.getPlayerName(), "resources/images/default-profile.png", 180);
-            controller.setPlayerConfig(config);
+            controller.setNavigator(this);
+            controller.setPlayerConfig(playerOneConfig);
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
             stage.show();
