@@ -79,6 +79,7 @@ public class GameService implements EventListener {
         singleGameInstance.setPlayer(event.getGamePlayerConfig().getPlayer());
         singleGameInstance.setTimeCounter(event.getGamePlayerConfig().getTimerSeconds());
         singleGameInstance.setCurrentQuestionIndex(0);
+        singleGameInstance.setDifficulty(event.getGamePlayerConfig().getDifficultyLevel());
         // Cargar preguntas desde el archivo
         try {
             QuestionFileLoader loader = new QuestionFileLoader();
