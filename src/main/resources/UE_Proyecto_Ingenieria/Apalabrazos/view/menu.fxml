@@ -11,53 +11,60 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.shape.Circle?>
 
-<!-- El fichero FXML contiene la definiciín de su controller    -->
+<!-- ===== VISTA DE MENÚ PRINCIPAL ===== -->
 <BorderPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController"
             prefHeight="600.0" prefWidth="800.0" stylesheets="@styles.css">
-    <!-- Perfil de usuario (arriba a la derecha) -->
+            
+    <!-- ===== PERFIL DE USUARIO (arriba a la derecha) ===== -->
     <top>
-        <HBox alignment="TOP_RIGHT" spacing="10" style="-fx-padding: 20;">
+        <HBox alignment="TOP_RIGHT" spacing="10" styleClass="profile-container">
             <VBox alignment="CENTER" spacing="5">
                 <ImageView fx:id="profileImage" fitHeight="60.0" fitWidth="60.0"
-                          preserveRatio="true" style="-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 2);">
+                          preserveRatio="true" styleClass="profile-image">
                     <image>
                         <Image url="@../images/default-profile.png" />
                     </image>
                 </ImageView>
-                <Label fx:id="usernameLabel" text="Usuario"
-                       style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                <Label fx:id="usernameLabel" text="Usuario" styleClass="username-label"/>
             </VBox>
         </HBox>
     </top>
 
-    <!-- Menú central con botones verticales -->
+    <!-- ===== MENÚ CENTRAL - TÍTULO Y BOTONES ===== -->
     <center>
-        <VBox alignment="CENTER" spacing="20" style="-fx-padding: 40;">
-            <Label text="Apalabrazos 2D"
-                   style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+        <VBox alignment="CENTER" spacing="20" styleClass="menu-container">
+            <!-- Título del juego -->
+            <Label text="Apalabrazos" styleClass="menu-title"/>
 
-            <VBox spacing="15" alignment="CENTER" style="-fx-padding: 30 0 0 0;">
+            <!-- ===== BOTONES DEL MENÚ ===== -->
+            <VBox spacing="15" alignment="CENTER" styleClass="menu-buttons-container">
+                <!-- Botón: Modo Un Jugador -->
                 <Button fx:id="singlePlayerButton" text="Jugar Solo"
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #3498db; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                        prefWidth="450.0" prefHeight="150.0"
+                        styleClass="menu-button, single-player-button"/>
 
+                <!-- Campo de texto para nombre del jugador -->
                 <TextField fx:id="playerNameInput" promptText="Nombre"
-                        prefWidth="250.0" prefHeight="50.0" maxWidth="250.0" minWidth="250.0"
+                        prefWidth="450.0" prefHeight="150.0" maxWidth="450.0" minWidth="450.0"
                         visible="false" managed="false"
-                        style="-fx-font-size: 16px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #3498db; -fx-border-width: 2px; -fx-padding: 10; -fx-prompt-text-fill: #95a5a6;"/>
+                        styleClass="player-name-input"/>
 
-                <Button fx:id="multiplayerButton" text="Jugar Multijugador"
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #2ecc71; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                <!-- Botón: Modo Multijugador (Deshabilitado) -->
+                <Button fx:id="multiplayerButton" text="Jugar Multijugador (Próximamente)"
+                        prefWidth="450.0" prefHeight="150.0"
+                        styleClass="menu-button, multiplayer-button"
+                        disable="true"/>
 
+                <!-- Botón: Ver Puntuaciones -->
                 <Button fx:id="scoresButton" text="Ver Puntuaciones"
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #f39c12; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                        prefWidth="450.0" prefHeight="150.0"
+                        styleClass="menu-button, scores-button"/>
 
+                <!-- Botón: Salir del juego -->
                 <Button fx:id="exitButton" text="Salir"
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #e74c3c; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
+                        prefWidth="450.0" prefHeight="150.0"
+                        styleClass="menu-button, exit-button"/>
             </VBox>
         </VBox>
     </center>

@@ -9,18 +9,15 @@ import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
+import javafx.scene.control.Button;
 
 /**
- * Controller for displaying the final scores of the match.
+ * Controller for displaying the top 5 leaderboard.
  */
 public class ResultsController implements EventListener {
-
+    
     @FXML
-    private Label playerOneResultLabel;
-
-    @FXML
-    private Label playerTwoResultLabel;
+    private Button goToMenuButton;
 
     private ViewNavigator navigator;
     private EventBus eventBus;
@@ -34,6 +31,17 @@ public class ResultsController implements EventListener {
         this.eventBus = EventBus.getInstance();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
+        
+        // Configurar botón
+        if (goToMenuButton != null) {
+            goToMenuButton.setOnAction(event -> handleGoToMenu());
+        }
+    }
+    
+    private void handleGoToMenu() {
+        if (navigator != null) {
+            navigator.showMenu();
+        }
     }
 
     /**
@@ -58,24 +66,12 @@ public class ResultsController implements EventListener {
 
     /**
      * Display the results
+     * Por ahora muestra datos de ejemplo
+     * TODO: Implementar carga de datos reales desde el sistema de guardado
      */
     private void displayResults(GameRecord playerOne, GameRecord playerTwo) {
-        if (playerOneResultLabel != null) {
-            playerOneResultLabel.setText(formatResult(playerOne));
-        }
-        if (playerTwoResultLabel != null) {
-            playerTwoResultLabel.setText(formatResult(playerTwo));
-        }
-    }
-
-    /**
-     * Format a game record for display
-     */
-    private String formatResult(GameRecord record) {
-        return String.format("Aciertos: %d | Fallos: %d | Puntuación: %.1f%%",
-            record.getCorrectAnswers(),
-            record.getIncorrectAnswers(),
-            record.getScorePercentage());
+        // Cuando implementes el sistema de guardado, aquí cargarás los datos reales
+        // y actualizarás los labels de la tabla dinámicamente
     }
 
     public void showResults() {

@@ -55,22 +55,6 @@ public class MenuController {
         multiplayerButton.setOnAction(event -> handleMultiplayer());
         scoresButton.setOnAction(event -> handleViewScores());
         exitButton.setOnAction(event -> handleExit());
-
-        // Efectos hover para los botones
-        setupButtonHoverEffects(singlePlayerButton, "#2980b9");
-        setupButtonHoverEffects(multiplayerButton, "#27ae60");
-        setupButtonHoverEffects(scoresButton, "#e67e22");
-        setupButtonHoverEffects(exitButton, "#c0392b");
-    }
-
-    private void setupButtonHoverEffects(Button button, String hoverColor) {
-        String originalStyle = button.getStyle();
-        button.setOnMouseEntered(e -> {
-            button.setStyle(originalStyle + "; -fx-background-color: " + hoverColor + ";");
-        });
-        button.setOnMouseExited(e -> {
-            button.setStyle(originalStyle);
-        });
     }
 
     private void handleSinglePlayer() {
@@ -88,10 +72,12 @@ public class MenuController {
             String name = playerNameInput.getText().trim();
             if (name.isEmpty()) {
                 // No permitir avanzar si el nombre está vacío
-                playerNameInput
-                        .setStyle(playerNameInput.getStyle() + "; -fx-border-color: red; -fx-border-width: 2px;");
+                playerNameInput.getStyleClass().add("player-name-input-error");
                 return;
             }
+            // Remover clase de error si había
+            playerNameInput.getStyleClass().remove("player-name-input-error");
+            
             System.out.println("Iniciando modo Un Jugador con nombre: " + name);
             // Navegar al juego en modo un jugador
             if (navigator != null) {

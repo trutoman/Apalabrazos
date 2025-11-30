@@ -79,6 +79,7 @@ public class ViewNavigator {
 
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
+            stage.setMaximized(true);
             stage.show();
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo cargar la vista de resultados", e);

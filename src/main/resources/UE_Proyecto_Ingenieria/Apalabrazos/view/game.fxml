@@ -7,6 +7,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.Pane?>
 
+<!-- ===== VISTA DE JUEGO ===== -->
 <StackPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController"
            stylesheets="@styles.css"
@@ -17,45 +18,45 @@
             <Insets top="20" right="20" bottom="20" left="20" />
         </padding>
         
-        <!-- Header -->
+        <!-- ===== HEADER - TÍTULO Y TEMPORIZADOR ===== -->
         <VBox alignment="CENTER" spacing="5">
             <Label text="Apalabrazos" styleClass="game-title" />
             <Label fx:id="timerLabel" text="180" styleClass="timer-label" />
         </VBox>
         
-        <!-- Área del rosco con botones de respuesta -->
+        <!-- ===== ÁREA DEL ROSCO CON BOTONES DE RESPUESTA ===== -->
         <HBox spacing="30" alignment="CENTER">
-            <!-- Botones izquierda -->
+            <!-- ===== BOTONES DE OPCIONES - IZQUIERDA ===== -->
             <VBox fx:id="leftButtonsArea" spacing="15" alignment="CENTER" visible="false" managed="false">
                 <Button fx:id="option1Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
                 <Button fx:id="option2Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
             </VBox>
             
-            <!-- Rosco central -->
+            <!-- ===== ROSCO CENTRAL ===== -->
             <StackPane alignment="CENTER">
-                <!-- Panel para posicionar las letras en círculo -->
+                <!-- Panel circular con letras del alfabeto -->
                 <Pane fx:id="roscoPane" prefWidth="400" prefHeight="400" maxWidth="400" maxHeight="400" />
                 
-                <!-- Botón de inicio (encima del rosco) -->
+                <!-- Botón de inicio del juego -->
                 <Button fx:id="startButton" text="Empezar" 
                         prefWidth="150" prefHeight="60"
                         styleClass="start-button" />
                 
-                <!-- Botón PASAPALABRA circular dentro del rosco -->
+                <!-- Botón PASAPALABRA (circular, dentro del rosco) -->
                 <Button fx:id="skipButton" text="PASAPALABRA" 
                         prefWidth="120" prefHeight="120"
                         visible="false" managed="false"
                         styleClass="skip-button" />
             </StackPane>
             
-            <!-- Botones derecha -->
+            <!-- ===== BOTONES DE OPCIONES - DERECHA ===== -->
             <VBox fx:id="rightButtonsArea" spacing="15" alignment="CENTER" visible="false" managed="false">
                 <Button fx:id="option3Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
                 <Button fx:id="option4Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
             </VBox>
         </HBox>
         
-        <!-- Zona de pregunta debajo del rosco -->
+        <!-- ===== ÁREA DE PREGUNTA (debajo del rosco) ===== -->
         <VBox fx:id="questionArea" spacing="10" alignment="CENTER" maxWidth="700"
               visible="false" managed="false"
               styleClass="question-area">
