@@ -42,6 +42,12 @@ public class GameController implements EventListener {
     private VBox questionArea;
     
     @FXML
+    private VBox leftButtonsArea;
+    
+    @FXML
+    private VBox rightButtonsArea;
+    
+    @FXML
     private Button option1Button;
     
     @FXML
@@ -54,7 +60,7 @@ public class GameController implements EventListener {
     private Button option4Button;
     
     @FXML
-    private Button pasapalabraButton;
+    private Button skipButton;
 
     private GamePlayerConfig playerConfig;
 
@@ -140,15 +146,8 @@ public class GameController implements EventListener {
             btn.setLayoutX(x);
             btn.setLayoutY(y);
             
-            // Estilo del botón (circular y gris por defecto)
-            btn.setStyle("-fx-background-radius: 50%; " +
-                        "-fx-border-radius: 50%; " +
-                        "-fx-background-color: #1722c3ff; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-border-color: #020009ff; " +
-                        "-fx-border-width: 2px;");
+            // Aplicar clase CSS base del rosco
+            btn.getStyleClass().addAll("rosco-letter", "rosco-letter-pending");
             
             // Guardar referencia al botón
             letterButtons.put(letter, btn);
@@ -187,6 +186,22 @@ public class GameController implements EventListener {
             questionArea.setVisible(true);
             questionArea.setManaged(true);
             System.out.println("[DEBUG] Área de preguntas mostrada");
+        }
+        
+        // Mostrar las áreas de botones
+        if (leftButtonsArea != null) {
+            leftButtonsArea.setVisible(true);
+            leftButtonsArea.setManaged(true);
+        }
+        if (rightButtonsArea != null) {
+            rightButtonsArea.setVisible(true);
+            rightButtonsArea.setManaged(true);
+        }
+        
+        // Mostrar el botón de pasapalabra
+        if (skipButton != null) {
+            skipButton.setVisible(true);
+            skipButton.setManaged(true);
         }
         
         // Mostrar la primera pregunta pendiente
@@ -242,8 +257,8 @@ public class GameController implements EventListener {
         if (option4Button != null) {
             option4Button.setOnAction(event -> handleAnswer(3));
         }
-        if (pasapalabraButton != null) {
-            pasapalabraButton.setOnAction(event -> handlePasapalabra());
+        if (skipButton != null) {
+            skipButton.setOnAction(event -> handlePasapalabra());
         }
     }
     
@@ -361,7 +376,7 @@ public class GameController implements EventListener {
         if (option2Button != null) option2Button.setDisable(false);
         if (option3Button != null) option3Button.setDisable(false);
         if (option4Button != null) option4Button.setDisable(false);
-        if (pasapalabraButton != null) pasapalabraButton.setDisable(false);
+        if (skipButton != null) skipButton.setDisable(false);
     }
     
     /**
@@ -372,7 +387,7 @@ public class GameController implements EventListener {
         if (option2Button != null) option2Button.setDisable(true);
         if (option3Button != null) option3Button.setDisable(true);
         if (option4Button != null) option4Button.setDisable(true);
-        if (pasapalabraButton != null) pasapalabraButton.setDisable(true);
+        if (skipButton != null) skipButton.setDisable(true);
     }
     
     /**
@@ -444,36 +459,23 @@ public class GameController implements EventListener {
         Button btn = letterButtons.get(letter.toUpperCase());
         if (btn != null) {
             Platform.runLater(() -> {
+                // Remover todas las clases de estado previas
+                btn.getStyleClass().removeAll("rosco-letter-pending", "rosco-letter-correct", 
+                                              "rosco-letter-incorrect", "rosco-letter-current");
+                
+                // Agregar la clase correspondiente al nuevo estado
                 switch (state.toLowerCase()) {
                     case "correct":
-                        btn.setStyle("-fx-background-radius: 50%; " +
-                                   "-fx-border-radius: 50%; " +
-                                   "-fx-background-color: #2ecc71; " +
-                                   "-fx-text-fill: white; " +
-                                   "-fx-font-weight: bold; " +
-                                   "-fx-font-size: 14px; " +
-                                   "-fx-border-color: #27ae60; " +
-                                   "-fx-border-width: 2px;");
+                        btn.getStyleClass().add("rosco-letter-correct");
                         break;
                     case "incorrect":
-                        btn.setStyle("-fx-background-radius: 50%; " +
-                                   "-fx-border-radius: 50%; " +
-                                   "-fx-background-color: #e74c3c; " +
-                                   "-fx-text-fill: white; " +
-                                   "-fx-font-weight: bold; " +
-                                   "-fx-font-size: 14px; " +
-                                   "-fx-border-color: #c0392b; " +
-                                   "-fx-border-width: 2px;");
+                        btn.getStyleClass().add("rosco-letter-incorrect");
                         break;
                     case "current":
-                        btn.setStyle("-fx-background-radius: 50%; " +
-                                   "-fx-border-radius: 50%; " +
-                                   "-fx-background-color: #3498db; " +
-                                   "-fx-text-fill: white; " +
-                                   "-fx-font-weight: bold; " +
-                                   "-fx-font-size: 14px; " +
-                                   "-fx-border-color: #2980b9; " +
-                                   "-fx-border-width: 3px;");
+                        btn.getStyleClass().add("rosco-letter-current");
+                        break;
+                    case "pending":
+                        btn.getStyleClass().add("rosco-letter-pending");
                         break;
                 }
             });
