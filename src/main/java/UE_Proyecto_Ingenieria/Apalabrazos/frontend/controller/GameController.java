@@ -2,6 +2,7 @@ package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.AlphabetMap;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import javafx.application.Platform;
@@ -9,9 +10,10 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Controller responsible for the gameplay view.
@@ -37,12 +39,37 @@ public class GameController implements EventListener {
     @FXML
     private VBox questionArea;
 
+    @FXML
+    private Pane roscoPane;
+
+    @FXML
+    private VBox leftButtonsArea;
+
+    @FXML
+    private VBox rightButtonsArea;
+
+    @FXML
+    private Button option1Button;
+
+    @FXML
+    private Button option2Button;
+
+    @FXML
+    private Button option3Button;
+
+    @FXML
+    private Button option4Button;
+
+    @FXML
+    private Button skipButton;
+
     private GamePlayerConfig playerConfig;
 
     // El gameController contiene e instancia el gameservice ... discutible
     private GameService gameService;
-
     private ViewNavigator navigator;
+    // Mapa de botones por letra del rosco
+    private Map<String, Button> letterButtons = new HashMap<>();
 
     public void setNavigator(ViewNavigator navigator) {
         this.navigator = navigator;
@@ -62,20 +89,58 @@ public class GameController implements EventListener {
         if (startButton != null) {
             startButton.setOnAction(event -> handleStartGame());
         }
+    }
 
-        // Dibujar círculos centrados en los canvas (y redibujar en cambios de tamaño)
-        setupCanvasCircle(playerOneCanvas);
-        setupCanvasCircle(rivalCanvas);
+    /**
+     * Crear el rosco de letras en forma circular
+    */
+    private void createRosco() {
+        int numLetters = this.playerConfig.getQuestionNumber();
+        double centerX = 200; // Centro del rosco
+        double centerY = 200;
+        double radius = 180; // Radio del círculo
+        double buttonSize = 42; // Tamaño de cada botón
+
+        for (int i = 0; i < numLetters; i++) {
+            String letter = AlphabetMap.getLetter(i);
+
+            // Calcular posición en círculo (empezar desde arriba, -90 grados)
+            double angle = Math.toRadians((360.0 / numLetters) * i - 90);
+            double x = centerX + radius * Math.cos(angle) - buttonSize / 2;
+            double y = centerY + radius * Math.sin(angle) - buttonSize / 2;
+
+            // Crear botón circular
+            Button btn = new Button(letter);
+            btn.setPrefSize(buttonSize, buttonSize);
+            btn.setMinSize(buttonSize, buttonSize);
+            btn.setMaxSize(buttonSize, buttonSize);
+            btn.setLayoutX(x);
+            btn.setLayoutY(y);
+
+            // Aplicar clase CSS base del rosco
+            btn.getStyleClass().addAll("rosco-letter", "rosco-letter-pending");
+
+            // Guardar referencia al botón
+            letterButtons.put(letter, btn);
+
+            // Agregar al panel
+            roscoPane.getChildren().add(btn);
+        }
     }
 
     /**
      * Handle start game button click
-     */
+    */
     private void handleStartGame() {
         // Ocultar el botón de inicio
         if (startButton != null) {
             startButton.setVisible(false);
             startButton.setManaged(false);
+        }
+        // Mostrar el rosco
+        if (roscoPane != null) {
+            roscoPane.setVisible(true);
+            roscoPane.setManaged(true);
         }
         // Mostrar el canvas del juego
         if (playerOneCanvas != null) {
@@ -87,40 +152,12 @@ public class GameController implements EventListener {
             questionArea.setVisible(true);
             questionArea.setManaged(true);
         }
+
+        // Crear el rosco con botones circulares, lo pongo aqui porque me aseguro
+        // que ya existe la config. Necesito la config para pintar  el rosco
+        createRosco();
         // Publicar evento de inicio de juego
         gameService.publish(new GameStartedEvent(this.playerConfig));
-    }
-
-    private void setupCanvasCircle(Canvas canvas) {
-        if (canvas == null) return;
-        Runnable draw = () -> drawCenteredCircle(canvas);
-        // Dibujo inicial
-        draw.run();
-        // Redibujar si cambia el tamaño
-        canvas.widthProperty().addListener((obs, o, n) -> draw.run());
-        canvas.heightProperty().addListener((obs, o, n) -> draw.run());
-    }
-
-    private void drawCenteredCircle(Canvas canvas) {
-        double w = canvas.getWidth();
-        double h = canvas.getHeight();
-
-        // Avoid drawing (and creating RT textures) with non-positive sizes
-        if (w <= 0 || h <= 0) {
-            return;
-        }
-        double d = Math.min(w, h); // diámetro máximo que cabe
-        double x = (w - d) / 2.0;
-        double y = (h - d) / 2.0;
-
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        // Limpiar
-        gc.clearRect(0, 0, w, h);
-        // Estilo del círculo
-        gc.setStroke(Color.web("#3498db"));
-        gc.setLineWidth(4.0);
-        // Dibujar contorno del círculo ocupando todo el canvas
-        gc.strokeOval(x, y, d, d);
     }
 
     /**
