@@ -20,17 +20,28 @@
         <ColumnConstraints percentWidth="75.0" />
         <ColumnConstraints percentWidth="25.0" />
     </columnConstraints>
-    <!-- 3 filas: cabecera, contenido principal, zona de preguntas -->
-    <rowConstraints>
-        <RowConstraints percentHeight="15.0" />
-        <RowConstraints percentHeight="60.0" />
-        <RowConstraints percentHeight="25.0" />
-    </rowConstraints>
 
     <!-- Columna derecha (sidebar) ocupa las 3 filas -->
     <children>
+
+        <GridPane GridPane.columnIndex="0">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="25.0" />
+                    <ColumnConstraints percentWidth="50.0" />
+                    <ColumnConstraints percentWidth="25.0" />
+                </columnConstraints>
+                <rowConstraints>
+                    <RowConstraints percentHeight="50.0" />
+                    <RowConstraints percentHeight="50.0" />
+                </rowConstraints>
+
+                <children>
+
+                </children>
+        </GridPane>
+
         <!-- Sidebar derecha con dos filas: 25% (contador), 75% (contenido adicional) -->
-        <GridPane GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.rowSpan="3">
+        <GridPane GridPane.columnIndex="1">
             <rowConstraints>
                 <RowConstraints percentHeight="25.0" />
                 <RowConstraints percentHeight="25.0" />
@@ -68,50 +79,5 @@
             </children>
         </GridPane>
 
-        <!-- Cabecera (fila 0, columna 1) -->
-        <VBox GridPane.columnIndex="0" GridPane.rowIndex="0" alignment="CENTER" spacing="10">
-            <padding>
-                <Insets top="20" right="20" bottom="20" left="20" />
-            </padding>
-            <Label text="Rosco de preguntas" style="-fx-font-size: 24px; -fx-font-weight: bold;" />
-            <Label fx:id="currentPlayerLabel" text="Turno" style="-fx-font-size: 18px;" />
-        </VBox>
-
-        <!-- Contenido principal (fila 1, columna 0): canvas centrado + botones de letras -->
-        <StackPane GridPane.columnIndex="0" GridPane.rowIndex="1" alignment="CENTER">
-            <children>
-                <!-- Canvas principal del jugador -->
-                <Canvas fx:id="playerOneCanvas" />
-                <!-- Zona de letras (ejemplo reducido) -->
-                <FlowPane hgap="6" vgap="6" alignment="CENTER">
-                    <children>
-                        <Button fx:id="A" text="A" />
-                        <Button fx:id="B" text="B" />
-                        <Button fx:id="C" text="C" />
-                        <Button fx:id="D" text="D" />
-                        <Button fx:id="E" text="E" />
-                        <Button fx:id="F" text="F" />
-                        <Button fx:id="G" text="G" />
-                    </children>
-                </FlowPane>
-                <!-- Botón de inicio centrado por encima -->
-                <Button fx:id="startButton" text="Empezar" prefWidth="200" prefHeight="80"
-                        style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-background-color: #27ae60; -fx-text-fill: white; -fx-border-radius: 10; -fx-background-radius: 10;" />
-            </children>
-        </StackPane>
-
-        <!-- Zona de preguntas (fila 2, columna 1) -->
-        <VBox fx:id="questionArea" GridPane.columnIndex="0" GridPane.rowIndex="2" spacing="10" alignment="CENTER" styleClass="question-area" visible="false" managed="false">
-            <Label fx:id="questionPromptLabel" wrapText="true" style="-fx-font-size: 16px;" text="Pregunta" />
-            <Label fx:id="feedbackLabel" style="-fx-text-fill: #555555;" />
-            <HBox spacing="10" alignment="CENTER">
-                <Button fx:id="optionButtonOne" text="Opción 1" prefWidth="140" wrapText="true" />
-                <Button fx:id="optionButtonTwo" text="Opción 2" prefWidth="140" wrapText="true" />
-            </HBox>
-            <HBox spacing="10" alignment="CENTER">
-                <Button fx:id="optionButtonThree" text="Opción 3" prefWidth="140" wrapText="true" />
-                <Button fx:id="optionButtonFour" text="Opción 4" prefWidth="140" wrapText="true" />
-            </HBox>
-        </VBox>
     </children>
 </GridPane>
