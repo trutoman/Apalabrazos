@@ -31,13 +31,48 @@
                     <ColumnConstraints percentWidth="25.0" />
                 </columnConstraints>
                 <rowConstraints>
-                    <RowConstraints percentHeight="50.0" />
-                    <RowConstraints percentHeight="50.0" />
+                    <RowConstraints percentHeight="80.0" />
+                    <RowConstraints percentHeight="20.0" />
                 </rowConstraints>
-
                 <children>
 
-                </children>
+                    <!-- ===== BOTONES DE OPCIONES - IZQUIERDA ===== -->
+                    <VBox fx:id="leftButtonsArea" spacing="15" GridPane.rowIndex="0" GridPane.columnIndex="0" alignment="CENTER" visible="false" managed="false">
+                        <Button fx:id="option1Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
+                        <Button fx:id="option2Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
+                    </VBox>
+
+                    <!-- ===== ROSCO CENTRAL ===== -->
+                    <StackPane alignment="CENTER" GridPane.rowIndex="0" GridPane.columnIndex="1" >
+                        <!-- Panel circular con letras del alfabeto -->
+                        <Pane fx:id="roscoPane" prefWidth="400" prefHeight="400" maxWidth="400" maxHeight="400" />
+
+                        <!-- Botón de inicio del juego -->
+                        <Button fx:id="startButton" text="Empezar"
+                                prefWidth="150" prefHeight="60"
+                                styleClass="start-button" />
+
+                        <!-- Botón PASAPALABRA (circular, dentro del rosco) -->
+                        <Button fx:id="skipButton" text="PASAPALABRA"
+                                prefWidth="120" prefHeight="120"
+                                visible="false" managed="false"
+                                styleClass="skip-button" />
+                    </StackPane>
+
+                    <!-- ===== BOTONES DE OPCIONES - DERECHA ===== -->
+                    <VBox fx:id="rightButtonsArea" spacing="15" GridPane.rowIndex="0" GridPane.columnIndex="2"  alignment="CENTER" visible="false" managed="false">
+                        <Button fx:id="option3Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
+                        <Button fx:id="option4Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
+                    </VBox>
+
+                    <!-- ===== ÁREA DE PREGUNTA (debajo del rosco) ===== -->
+                    <VBox fx:id="questionArea" spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="0"  GridPane.columnSpan="3" alignment="CENTER" maxWidth="700"
+                        visible="false" managed="false"
+                        styleClass="question-area">
+                        <Label fx:id="questionLabel" wrapText="true" styleClass="question-label" />
+                    </VBox>
+
+            </children>
         </GridPane>
 
         <!-- Sidebar derecha con dos filas: 25% (contador), 75% (contenido adicional) -->
