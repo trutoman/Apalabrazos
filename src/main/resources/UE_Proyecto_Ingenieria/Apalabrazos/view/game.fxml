@@ -11,6 +11,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.shape.Rectangle?>
+<?import javafx.scene.layout.Pane?>
 
 <GridPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
           fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController"
