@@ -98,26 +98,16 @@ public class GameController implements EventListener {
     */
     private void createRosco() {
         int numLetters = this.playerConfig.getQuestionNumber();
-        double centerX = 200; // Centro del rosco
-        double centerY = 200;
-        double radius = 180; // Radio del círculo
         double buttonSize = 42; // Tamaño de cada botón
 
         for (int i = 0; i < numLetters; i++) {
             String letter = AlphabetMap.getLetter(i);
-
-            // Calcular posición en círculo (empezar desde arriba, -90 grados)
-            double angle = Math.toRadians((360.0 / numLetters) * i - 90);
-            double x = centerX + radius * Math.cos(angle) - buttonSize / 2;
-            double y = centerY + radius * Math.sin(angle) - buttonSize / 2;
 
             // Crear botón circular
             Button btn = new Button(letter);
             btn.setPrefSize(buttonSize, buttonSize);
             btn.setMinSize(buttonSize, buttonSize);
             btn.setMaxSize(buttonSize, buttonSize);
-            btn.setLayoutX(x);
-            btn.setLayoutY(y);
 
             // Aplicar clase CSS base del rosco
             btn.getStyleClass().addAll("rosco-letter", "rosco-letter-pending");
@@ -125,6 +115,41 @@ public class GameController implements EventListener {
             letterButtons.put(letter, btn);
             // Agregar al panel
             roscoPane.getChildren().add(btn);
+        }
+        
+        // Calcular posiciones iniciales
+        updateRoscoLayout();
+        
+        // Escuchar cambios de tamaño del roscoPane para recalcular posiciones
+        roscoPane.widthProperty().addListener((obs, oldVal, newVal) -> updateRoscoLayout());
+        roscoPane.heightProperty().addListener((obs, oldVal, newVal) -> updateRoscoLayout());
+    }
+    
+    /**
+     * Actualizar la posición de los botones del rosco según el tamaño del contenedor
+     */
+    private void updateRoscoLayout() {
+        if (letterButtons.isEmpty() || roscoPane.getWidth() <= 0 || roscoPane.getHeight() <= 0) {
+            return;
+        }
+        
+        int numLetters = letterButtons.size();
+        double centerX = roscoPane.getWidth() / 2;
+        double centerY = roscoPane.getHeight() / 2;
+        // Radio proporcional al tamaño más pequeño del contenedor
+        double radius = Math.min(centerX, centerY) * 0.8;
+        double buttonSize = 42;
+        
+        int index = 0;
+        for (Button btn : letterButtons.values()) {
+            // Calcular posición en círculo (empezar desde arriba, -90 grados)
+            double angle = Math.toRadians((360.0 / numLetters) * index - 90);
+            double x = centerX + radius * Math.cos(angle) - buttonSize / 2;
+            double y = centerY + radius * Math.sin(angle) - buttonSize / 2;
+            
+            btn.setLayoutX(x);
+            btn.setLayoutY(y);
+            index++;
         }
     }
 

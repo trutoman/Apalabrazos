@@ -18,7 +18,7 @@ public class ViewNavigator {
 
     private final Stage stage;
     private static final int SCENE_WIDTH = 1280;
-    private static final int SCENE_HEIGHT = 720;
+    private static final int SCENE_HEIGHT = 550;
 
     public ViewNavigator(Stage stage) {
         this.stage = stage;
