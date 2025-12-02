@@ -1,14 +1,17 @@
 .root {
     -fx-font-family: "Segoe UI", sans-serif;
-    -fx-background-image: url('../images/game_background.png');
-    -fx-background-size: cover;
-    -fx-background-position: center;
-    -fx-background-repeat: no-repeat;
 }
 
 /* ===== LAYOUT PRINCIPAL ===== */
 .game-container {
     -fx-background-color: #ecf0f1;
+}
+
+.main-grid-pane {
+    -fx-background-image: url('../images/game_background.png');
+    -fx-background-size: cover;
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
 }
 
 /* ===== HEADER ===== */

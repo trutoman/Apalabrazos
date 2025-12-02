@@ -2,6 +2,7 @@ package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionStatus;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.AlphabetMap;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
@@ -13,6 +14,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -119,10 +121,8 @@ public class GameController implements EventListener {
 
             // Aplicar clase CSS base del rosco
             btn.getStyleClass().addAll("rosco-letter", "rosco-letter-pending");
-
             // Guardar referencia al botón
             letterButtons.put(letter, btn);
-
             // Agregar al panel
             roscoPane.getChildren().add(btn);
         }
@@ -152,6 +152,20 @@ public class GameController implements EventListener {
             questionArea.setVisible(true);
             questionArea.setManaged(true);
         }
+        // Mostrar área de botones de opciones
+        if (leftButtonsArea != null) {
+            leftButtonsArea.setVisible(true);
+            leftButtonsArea.setManaged(true);
+        }
+        if (rightButtonsArea != null) {
+            rightButtonsArea.setVisible(true);
+            rightButtonsArea.setManaged(true);
+        }
+        // Mostrar botón pasapalabra
+        if (skipButton != null) {
+            skipButton.setVisible(true);
+            skipButton.setManaged(true);
+        }
 
         // Crear el rosco con botones circulares, lo pongo aqui porque me aseguro
         // que ya existe la config. Necesito la config para pintar  el rosco
@@ -169,6 +183,47 @@ public class GameController implements EventListener {
         if (event instanceof TimerTickEvent) {
             int remaining = ((TimerTickEvent) event).getElapsedSeconds();
             Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
+        } else if (event instanceof QuestionChangedEvent) {
+            QuestionChangedEvent questionEvent = (QuestionChangedEvent) event;
+            String letter = AlphabetMap.getLetter(questionEvent.getQuestionIndex());
+            QuestionStatus status = questionEvent.getStatus();
+
+            // Actualizar el botón del rosco según el estado de la pregunta
+            Button letterButton = letterButtons.get(letter);
+            if (letterButton != null) {
+                Platform.runLater(() -> {
+                    letterButton.getStyleClass().removeAll("rosco-letter-pending", "rosco-letter-correct", "rosco-letter-wrong", "rosco-letter-current");
+                    switch (status) {
+                        case INIT:
+                            letterButton.getStyleClass().add("rosco-letter-current");
+                            break;
+                        case PASSED:
+                            letterButton.getStyleClass().add("rosco-letter-pending");
+                            break;
+                        case RESPONDED_OK:
+                            letterButton.getStyleClass().add("rosco-letter-correct");
+                            break;
+                        case RESPONDED_FAIL:
+                            letterButton.getStyleClass().add("rosco-letter-wrong");
+                            break;
+                        default:
+                            letterButton.getStyleClass().add("rosco-letter-pending");
+                    }
+                });
+            }
+
+            // Obtener texto de la pregunta y respuestas
+            String questionText = questionEvent.getQuestion().getQuestionText();
+            List<String> responses = questionEvent.getQuestion().getQuestionResponsesList();
+
+            // Solo actualizar el contenido de texto
+            Platform.runLater(() -> {
+                questionLabel.setText(questionText);
+                option1Button.setText(responses.get(0));
+                option2Button.setText(responses.get(1));
+                option3Button.setText(responses.get(2));
+                option4Button.setText(responses.get(3));
+            });
         }
     }
 }

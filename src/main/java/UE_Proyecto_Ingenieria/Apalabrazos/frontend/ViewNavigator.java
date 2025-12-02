@@ -23,14 +23,9 @@ public class ViewNavigator {
     public ViewNavigator(Stage stage) {
         this.stage = stage;
         this.stage.setTitle("Apalabrazos 2D");
-        // Fijar tamaño inicial y evitar cambios al sustituir escenas.
-        this.stage.setWidth(SCENE_WIDTH);
-        this.stage.setHeight(SCENE_HEIGHT);
-        this.stage.setMinWidth(SCENE_WIDTH);
-        this.stage.setMinHeight(SCENE_HEIGHT);
-        this.stage.setMaxWidth(SCENE_WIDTH);
-        this.stage.setMaxHeight(SCENE_HEIGHT);
-        this.stage.setResizable(false);
+        // Permitir que la ventana se ajuste al contenido
+        this.stage.setResizable(true);
+        this.stage.sizeToScene();
     }
 
 

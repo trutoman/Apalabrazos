@@ -25,7 +25,7 @@
     <!-- Columna derecha (sidebar) ocupa las 3 filas -->
     <children>
 
-        <GridPane GridPane.columnIndex="0">
+        <GridPane fx:id="MainGridPane" GridPane.columnIndex="0" styleClass="main-grid-pane">
                 <columnConstraints>
                     <ColumnConstraints percentWidth="25.0" />
                     <ColumnConstraints percentWidth="50.0" />
@@ -67,7 +67,7 @@
                     </VBox>
 
                     <!-- ===== ÁREA DE PREGUNTA (debajo del rosco) ===== -->
-                    <VBox fx:id="questionArea" spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="0"  GridPane.columnSpan="3" alignment="CENTER" maxWidth="700"
+                    <VBox fx:id="questionArea" spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.columnSpan="3" GridPane.halignment="CENTER" alignment="CENTER" maxWidth="700"
                         visible="false" managed="false"
                         styleClass="question-area">
                         <Label fx:id="questionLabel" wrapText="true" styleClass="question-label" />

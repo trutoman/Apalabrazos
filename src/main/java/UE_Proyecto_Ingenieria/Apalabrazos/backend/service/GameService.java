@@ -73,12 +73,12 @@ public class GameService implements EventListener {
             e.printStackTrace();
             return;
         }
+        // Notify that first question is ready
+        notifyQuestionChanged();
+
         // Iniciar servicio de tiempo
         timeService = new TimeService();
         timeService.start();
-
-        // Notify that first question is ready
-        notifyQuestionChanged();
     }
 
     /**
