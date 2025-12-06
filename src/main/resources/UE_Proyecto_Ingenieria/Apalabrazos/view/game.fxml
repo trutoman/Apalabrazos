@@ -44,7 +44,7 @@
                                    stroke="#000000" strokeWidth="2.5" fill="#ecf0f1"/>
                         <VBox alignment="CENTER" spacing="10">
                             <Label text="Tiempo" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
-                            <Label fx:id="timerLabel" text="180" style="-fx-font-size: 52px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+                            <Label fx:id="timerLabel" text="240" style="-fx-font-size: 52px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
                         </VBox>
                     </children>
                 </StackPane>

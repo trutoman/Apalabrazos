@@ -7,6 +7,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionFileLoader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Service that manages the game logic and publishes events.
@@ -14,6 +15,11 @@ import java.util.List;
  * and publishes state change events.
  */
 public class GameService implements EventListener {
+
+    // Número de preguntas disponibles por cada letra en el JSON
+    // De momento 3, porque en el JSON que te paso hay 3 por letra.
+    // Si más adelante metes 10 por letra en el JSON, solo cambia este valor a 10.
+    private static final int QUESTIONS_PER_LETTER = 3;
 
     private final EventBus eventBus;
     private GameSingleInstance singleGameInstance;
@@ -66,8 +72,15 @@ public class GameService implements EventListener {
         // Cargar preguntas desde el archivo
         try {
             QuestionFileLoader loader = new QuestionFileLoader();
-            QuestionList questions = loader.loadQuestions(event.getGamePlayerConfig().getQuestionNumber());
-            singleGameInstance.setQuestionList(questions);
+
+            // 1) Cargamos TODO el banco de preguntas del JSON
+            QuestionList allQuestions = loader.loadQuestions();
+
+            // 2) Construimos el rosco: 1 pregunta aleatoria por letra
+            int requested = event.getGamePlayerConfig().getQuestionNumber();
+            QuestionList roscoQuestions = buildRoscoQuestions(allQuestions, requested);
+
+            singleGameInstance.setQuestionList(roscoQuestions);
         } catch (IOException e) {
             System.err.println("Error cargando preguntas: " + e.getMessage());
             e.printStackTrace();
@@ -145,6 +158,50 @@ public class GameService implements EventListener {
             TimerTickEvent controllerTickEvent = new TimerTickEvent(this.singleGameInstance.getTimeCounter());
             gameBusPublish(controllerTickEvent);
         }
+    }
+    /**
+     * Construye la lista de preguntas del rosco: una pregunta aleatoria por letra.
+     *
+     * Convención:
+     *  - El JSON contiene todas las preguntas ordenadas por letras.
+     *  - Para cada letra hay QUESTIONS_PER_LETTER preguntas seguidas.
+     *  - A: índices   0 .. (QUESTIONS_PER_LETTER-1)
+     *  - B: índices   QUESTIONS_PER_LETTER .. (2*QUESTIONS_PER_LETTER -1)
+     *  - ...
+     *
+     * @param allQuestions Banco completo de preguntas cargado del JSON.
+     * @param questionNumber Número de preguntas que se quieren usar (por ejemplo 27).
+     * @return QuestionList con una pregunta por letra.
+     */
+    private QuestionList buildRoscoQuestions(QuestionList allQuestions, int questionNumber) {
+        int totalLetters = AlphabetMap.MAP.size(); // Normalmente 27 (incluye ñ)
+        // No permitimos más preguntas que letras disponibles
+        int roscoSize = Math.min(questionNumber, totalLetters);
+
+        int available = allQuestions.getCurrentLength();
+        int needed = roscoSize * QUESTIONS_PER_LETTER;
+        if (available < needed) {
+            throw new IllegalStateException(
+                    "No hay suficientes preguntas en el JSON. Necesarias: "
+                            + needed + ", disponibles: " + available);
+        }
+
+        List<Question> source = allQuestions.getQuestionList();
+        List<Question> selected = new ArrayList<>(roscoSize);
+        Random random = new Random();
+
+        for (int letterIndex = 0; letterIndex < roscoSize; letterIndex++) {
+            int start = letterIndex * QUESTIONS_PER_LETTER;
+            int end = start + QUESTIONS_PER_LETTER; // exclusivo
+
+            // Sublista de preguntas correspondientes a esa letra
+            List<Question> pool = source.subList(start, end);
+            Question chosen = pool.get(random.nextInt(pool.size()));
+            selected.add(chosen);
+        }
+
+        // max_length lo ponemos al tamaño real del rosco
+        return new QuestionList(selected, roscoSize);
     }
 
 }

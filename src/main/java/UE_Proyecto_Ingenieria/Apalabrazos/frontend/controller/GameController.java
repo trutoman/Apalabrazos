@@ -1,137 +1,155 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventListener;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameStartedEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.QuestionChangedEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.TimerTickEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
-import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
 import javafx.scene.control.Button;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 
-/**
- * Controller responsible for the gameplay view.
- * Listens to game events and updates the UI accordingly.
- */
+import java.util.List;
+
 public class GameController implements EventListener {
 
-    @FXML
-    private Label questionLabel;
+    // Navegador (MainApp); no lo usamos ahora pero lo necesita showGame(...)
+    private Object navigator;
 
-    @FXML
-    private Label timerLabel;
+    // Config de la partida, viene desde showGame(...)
+    private GamePlayerConfig playerConfig;
 
-    @FXML
-    private Canvas playerOneCanvas;
+    // Servicio de juego
+    private final GameService gameService = new GameService();
 
-    @FXML
-    private Canvas rivalCanvas;
-
-    @FXML
-    private Button startButton;
+    // --- FXML ---
 
     @FXML
     private VBox questionArea;
 
-    private GamePlayerConfig playerConfig;
+    @FXML
+    private Label questionPromptLabel;
 
-    // El gameController contiene e instancia el gameservice ... discutible
-    private GameService gameService;
+    @FXML
+    private Label feedbackLabel;
 
-    private ViewNavigator navigator;
+    @FXML
+    private Button optionButtonOne;
 
-    public void setNavigator(ViewNavigator navigator) {
-        this.navigator = navigator;
-    }
+    @FXML
+    private Button optionButtonTwo;
 
-    public void setPlayerConfig(GamePlayerConfig playerConfig) {
-        this.playerConfig = playerConfig;
-    }
+    @FXML
+    private Button optionButtonThree;
+
+    @FXML
+    private Button optionButtonFour;
+
+    @FXML
+    private Button startButton;   // Botón verde "Empezar"
+
+    @FXML
+    private Label timerLabel;     // Label del contador (fx:id="timerLabel" en game.fxml)
 
     @FXML
     public void initialize() {
-        // Iniciiamos el gameService
-        gameService = new GameService();
+        // Registrar este controlador como listener del GameService
         gameService.addListener(this);
 
-        // Configurar el botón de inicio
-        if (startButton != null) {
-            startButton.setOnAction(event -> handleStartGame());
+        // Ocultar el área de preguntas al principio
+        if (questionArea != null) {
+            questionArea.setVisible(false);
+            questionArea.setManaged(false);
         }
 
-        // Dibujar círculos centrados en los canvas (y redibujar en cambios de tamaño)
-        setupCanvasCircle(playerOneCanvas);
-        setupCanvasCircle(rivalCanvas);
+        // Conectar el botón "Empezar" a nuestro manejador
+        if (startButton != null) {
+            startButton.setOnAction(e -> handleStartButton());
+        }
     }
 
-    /**
-     * Handle start game button click
-     */
-    private void handleStartGame() {
-        // Ocultar el botón de inicio
-        if (startButton != null) {
-            startButton.setVisible(false);
-            startButton.setManaged(false);
+    // Lo llama MainApp en showGame(...)
+    public void setNavigator(Object navigator) {
+        this.navigator = navigator;
+    }
+
+    // Lo llama MainApp en showGame(...)
+    public void setPlayerConfig(GamePlayerConfig playerConfig) {
+        // Solo guardamos la config; NO empezamos la partida aún
+        this.playerConfig = playerConfig;
+    }
+
+    // Pulsar el botón "Empezar" -> arranca la partida
+    private void handleStartButton() {
+        if (playerConfig == null) {
+            System.out.println("[GameController] playerConfig es null, no se puede empezar.");
+            return;
         }
-        // Mostrar el canvas del juego
-        if (playerOneCanvas != null) {
-            playerOneCanvas.setVisible(true);
-            playerOneCanvas.setManaged(true);
+
+        // Lanzamos el evento de inicio hacia el GameService
+        GameStartedEvent startEvent = new GameStartedEvent(playerConfig);
+        gameService.onEvent(startEvent);
+
+        // Ocultamos/desactivamos el botón de empezar
+        startButton.setDisable(true);
+        startButton.setVisible(false);
+    }
+
+    @Override
+    public void onEvent(GameEvent event) {
+
+        if (event instanceof QuestionChangedEvent) {
+            QuestionChangedEvent qEvent = (QuestionChangedEvent) event;
+            Question question = qEvent.getQuestion();
+            Platform.runLater(() -> updateQuestion(question));
+        } else if (event instanceof TimerTickEvent) {
+            TimerTickEvent tickEvent = (TimerTickEvent) event;
+            // Este TimerTickEvent ya viene del GameService con el tiempo restante
+            int seconds = tickEvent.getElapsedSeconds();
+            Platform.runLater(() -> updateTimer(seconds));
         }
-        // Mostrar la zona de preguntas
+    }
+
+    // Pinta el enunciado y las cuatro opciones
+    private void updateQuestion(Question question) {
+        if (question == null) {
+            return;
+        }
+
+        // Mostrar área de preguntas
         if (questionArea != null) {
             questionArea.setVisible(true);
             questionArea.setManaged(true);
         }
-        // Publicar evento de inicio de juego
-        gameService.publish(new GameStartedEvent(this.playerConfig));
-    }
 
-    private void setupCanvasCircle(Canvas canvas) {
-        if (canvas == null) return;
-        Runnable draw = () -> drawCenteredCircle(canvas);
-        // Dibujo inicial
-        draw.run();
-        // Redibujar si cambia el tamaño
-        canvas.widthProperty().addListener((obs, o, n) -> draw.run());
-        canvas.heightProperty().addListener((obs, o, n) -> draw.run());
-    }
-
-    private void drawCenteredCircle(Canvas canvas) {
-        double w = canvas.getWidth();
-        double h = canvas.getHeight();
-
-        // Avoid drawing (and creating RT textures) with non-positive sizes
-        if (w <= 0 || h <= 0) {
-            return;
+        // Enunciado
+        if (questionPromptLabel != null) {
+            questionPromptLabel.setText(question.getQuestionText());
         }
-        double d = Math.min(w, h); // diámetro máximo que cabe
-        double x = (w - d) / 2.0;
-        double y = (h - d) / 2.0;
 
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        // Limpiar
-        gc.clearRect(0, 0, w, h);
-        // Estilo del círculo
-        gc.setStroke(Color.web("#3498db"));
-        gc.setLineWidth(4.0);
-        // Dibujar contorno del círculo ocupando todo el canvas
-        gc.strokeOval(x, y, d, d);
+        // Opciones
+        List<String> responses = question.getQuestionResponsesList();
+        if (responses != null && responses.size() >= 4) {
+            optionButtonOne.setText(responses.get(0));
+            optionButtonTwo.setText(responses.get(1));
+            optionButtonThree.setText(responses.get(2));
+            optionButtonFour.setText(responses.get(3));
+        }
+
+        if (feedbackLabel != null) {
+            feedbackLabel.setText("");
+        }
     }
 
-    /**
-     * Recibir y procesar eventos del juego
-     */
-    @Override
-    public void onEvent(GameEvent event) {
-        // Verificar el tipo de evento y llamar al método apropiado
-        if (event instanceof TimerTickEvent) {
-            int remaining = ((TimerTickEvent) event).getElapsedSeconds();
-            Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
+    // Actualiza el contador de tiempo
+    private void updateTimer(int seconds) {
+        if (timerLabel != null) {
+            timerLabel.setText(String.valueOf(seconds));
         }
     }
 }
