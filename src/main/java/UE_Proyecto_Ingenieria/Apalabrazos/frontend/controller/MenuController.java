@@ -3,6 +3,8 @@ package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameType;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionLevel;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -41,6 +43,9 @@ public class MenuController {
     private ComboBox<String> difficultyInput;
 
     @FXML
+    private ComboBox<String> gameTypeInput;
+
+    @FXML
     private VBox singlePlayerInputs;
 
     @FXML
@@ -69,6 +74,13 @@ public class MenuController {
             difficultyInput.getItems().clear();
             difficultyInput.getItems().addAll("EASY", "MEDIUM", "HARD");
             difficultyInput.setValue("EASY"); // Valor por defecto
+        }
+
+        // Poblar tipo de partida
+        if (gameTypeInput != null) {
+            gameTypeInput.getItems().clear();
+            gameTypeInput.getItems().addAll("HIGHER_POINTS_WINS", "NUMBER_WINS");
+            gameTypeInput.setValue("HIGHER_POINTS_WINS"); // Valor por defecto
         }
 
         // Configurar los eventos de los botones
@@ -113,6 +125,7 @@ public class MenuController {
         String questionsStr = questionCountInput.getText().trim();
         String durationStr = durationSecondsInput.getText().trim();
         String difficultyStr = difficultyInput.getValue() == null ? "" : difficultyInput.getValue().trim().toUpperCase();
+        String gameTypeStr = gameTypeInput.getValue() == null ? "" : gameTypeInput.getValue().trim().toUpperCase();
 
         boolean error = false;
         if (name.isEmpty()) {
@@ -129,20 +142,38 @@ public class MenuController {
             markErrorCombo(difficultyInput);
             error = true;
         }
+        if (!(gameTypeStr.equals("HIGHER_POINTS_WINS") || gameTypeStr.equals("NUMBER_WINS"))) {
+            markErrorCombo(gameTypeInput);
+            error = true;
+        }
         if (error) {
             return; // Hay errores, no continuar
         }
 
-        System.out.println("Single player -> name=" + name + ", questions=" + questionCount + ", duration=" + durationSeconds + ", difficulty=" + difficultyStr);
+        System.out.println("Single player -> name=" + name + ", questions=" + questionCount + ", duration=" + durationSeconds + ", difficulty=" + difficultyStr + ", gameType=" + gameTypeStr);
 
-        if (navigator != null) {
-            Player player = new Player(name, "resources/images/default-profile.png");
+        try {
+            // Nowadays here we create the unique player ID structure
+            Player player = new Player(name);
+            System.out.println("Player created: " + player.getName() + " with ID: " + player.getPlayerID());
+            
             GamePlayerConfig playerOneConfig = new GamePlayerConfig();
             playerOneConfig.setPlayer(player);
             playerOneConfig.setQuestionNumber(questionCount);
             playerOneConfig.setTimerSeconds(durationSeconds);
-            playerOneConfig.setDifficultyLevel(UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionLevel.valueOf(difficultyStr));
-            navigator.startGame(playerOneConfig);
+            playerOneConfig.setGameType(GameType.valueOf(gameTypeStr));
+            playerOneConfig.setDifficultyLevel(QuestionLevel.valueOf(difficultyStr));
+            System.out.println("GamePlayerConfig created successfully");
+            
+            if (navigator != null) {
+                System.out.println("Navigator is not null, starting game...");
+                navigator.startGame(playerOneConfig);
+            } else {
+                System.err.println("ERROR: Navigator is null!");
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR in handleSinglePlayer: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

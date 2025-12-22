@@ -43,22 +43,25 @@
                         <Button fx:id="option2Button" prefWidth="200" prefHeight="50" styleClass="option-button" />
                     </VBox>
 
-                    <!-- ===== ROSCO CENTRAL ===== -->
-                    <StackPane alignment="CENTER" GridPane.rowIndex="0" GridPane.columnIndex="1" >
-                        <!-- Panel circular con letras del alfabeto -->
-                        <Pane fx:id="roscoPane" prefWidth="400" prefHeight="400" maxWidth="400" maxHeight="400" />
+                        <!-- ===== ROSCO CENTRAL ===== -->
+                        <VBox alignment="CENTER" spacing="8" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                        <Label fx:id="playerNameLabel" text="Jugador" styleClass="question-label" visible="false" managed="false" />
+                        <StackPane alignment="CENTER">
+                            <!-- Panel circular con letras del alfabeto -->
+                            <Pane fx:id="roscoPane" prefWidth="400" prefHeight="400" maxWidth="400" maxHeight="400" />
 
-                        <!-- Botón de inicio del juego -->
-                        <Button fx:id="startButton" text="Empezar"
+                            <!-- Botón de inicio del juego -->
+                            <Button fx:id="startButton" text="Empezar"
                                 prefWidth="150" prefHeight="60"
                                 styleClass="start-button" />
 
-                        <!-- Botón PASAPALABRA (circular, dentro del rosco) -->
-                        <Button fx:id="skipButton" text="PASAPALABRA"
+                            <!-- Botón PASAPALABRA (circular, dentro del rosco) -->
+                            <Button fx:id="skipButton" text="PASAPALABRA"
                                 prefWidth="120" prefHeight="120"
                                 visible="false" managed="false"
                                 styleClass="skip-button" />
-                    </StackPane>
+                        </StackPane>
+                        </VBox>
 
                     <!-- ===== BOTONES DE OPCIONES - DERECHA ===== -->
                     <VBox fx:id="rightButtonsArea" spacing="15" GridPane.rowIndex="0" GridPane.columnIndex="2"  alignment="CENTER" visible="false" managed="false">

@@ -10,9 +10,13 @@ import java.util.List;
  */
 public class GameInstance {
 
+    /**
+     * Enum representing the game state
+     */
     public enum GameState {
         PENDING,
         PLAYING,
+        PAUSED,
         FINISHED
     }
 
@@ -25,6 +29,7 @@ public class GameInstance {
     private QuestionLevel difficulty;  // Dificultad del juego
     private List<Player> players;  // Lista de jugadores que forman parte de la partida
     private GameState state; // Estado de la partida
+    private GameType type;
 
     /**
      * Default constructor
@@ -38,10 +43,10 @@ public class GameInstance {
         this.difficulty = QuestionLevel.EASY;
         this.players = new ArrayList<>();
         this.state = GameState.PENDING;
+        this.type = GameType.HIGHER_POINTS_WINS;
     }
 
     /**
-     *
      * @param timer in seconds
      * @param questionList The list of questions for the game
      * @param gameResult The result of the game
@@ -223,4 +228,37 @@ public class GameInstance {
     public void setState(GameState state) {
         this.state = state;
     }
+
+    /**
+     * Start the game
+     */
+    public void start() {
+        this.state = GameState.PLAYING;
+    }
+
+    /**
+     * Pause the game
+     */
+    public void pause() {
+        if (this.state == GameState.PLAYING) {
+            this.state = GameState.PAUSED;
+        }
+    }
+
+    /**
+     * Resume the game
+     */
+    public void resume() {
+        if (this.state == GameState.PAUSED) {
+            this.state = GameState.PLAYING;
+        }
+    }
+
+    /**
+     * Reset the game to ready state
+     */
+    public void reset() {
+        this.state = GameState.PENDING;
+    }
+
 }

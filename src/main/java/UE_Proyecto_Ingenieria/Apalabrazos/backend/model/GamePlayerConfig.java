@@ -6,12 +6,15 @@ public class GamePlayerConfig {
     private int timerSeconds;
     private QuestionLevel difficultyLevel;
     private int questionNumber;
+    private GameType gameType;
+
 
     public GamePlayerConfig() {
         this.player = new Player("Jugador1", "default_avatar.png");
         this.timerSeconds = 240;
         this.difficultyLevel = QuestionLevel.EASY;
         this.questionNumber = 27;
+        this.gameType = GameType.HIGHER_POINTS_WINS;
     }
 
     public GamePlayerConfig(Player player, int timerSeconds, QuestionLevel difficultyLevel, int questionNumber) {
@@ -19,6 +22,7 @@ public class GamePlayerConfig {
         this.timerSeconds = timerSeconds;
         this.difficultyLevel = difficultyLevel;
         this.questionNumber = questionNumber;
+        this.gameType = GameType.HIGHER_POINTS_WINS;
     }
     public Player getPlayer() {
         return player;
@@ -50,5 +54,13 @@ public class GamePlayerConfig {
 
     public int getTimerSeconds() {
         return timerSeconds;
+    }
+
+    public GameType getGameType() {
+        return gameType;
+    }
+
+    public void setGameType(GameType gameType) {
+        this.gameType = gameType;
     }
 }

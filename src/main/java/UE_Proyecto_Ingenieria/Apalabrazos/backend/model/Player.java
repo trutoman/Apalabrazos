@@ -30,7 +30,7 @@ public class Player {
      */
     public Player(String name) {
         this.name = name;
-        this.imageResource = null;
+        this.imageResource = "resources/images/default-profile.png";
         this.playerID = generatePlayerID(name);
     }
 

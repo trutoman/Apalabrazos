@@ -60,6 +60,8 @@
                                                                      style="-fx-font-size: 14px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #3498db; -fx-border-width: 2px; -fx-padding: 8; -fx-prompt-text-fill: #95a5a6;"/>
                                                 <ComboBox fx:id="difficultyInput" promptText="Dificultad" prefWidth="250.0" maxWidth="250.0" minWidth="250.0"
                                                           style="-fx-font-size: 14px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #3498db; -fx-border-width: 2px; -fx-padding: 2;" />
+                                                <ComboBox fx:id="gameTypeInput" promptText="Tipo de Juego" prefWidth="250.0" maxWidth="250.0" minWidth="250.0"
+                                                          style="-fx-font-size: 14px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #3498db; -fx-border-width: 2px; -fx-padding: 2;" />
                                         </children>
                                 </VBox>
 

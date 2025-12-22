@@ -30,6 +30,9 @@ public class GameController implements EventListener {
     private Label timerLabel;
 
     @FXML
+    private Label playerNameLabel;
+
+    @FXML
     private Canvas playerOneCanvas;
 
     @FXML
@@ -116,15 +119,15 @@ public class GameController implements EventListener {
             // Agregar al panel
             roscoPane.getChildren().add(btn);
         }
-        
+
         // Calcular posiciones iniciales
         updateRoscoLayout();
-        
+
         // Escuchar cambios de tamaño del roscoPane para recalcular posiciones
         roscoPane.widthProperty().addListener((obs, oldVal, newVal) -> updateRoscoLayout());
         roscoPane.heightProperty().addListener((obs, oldVal, newVal) -> updateRoscoLayout());
     }
-    
+
     /**
      * Actualizar la posición de los botones del rosco según el tamaño del contenedor
      */
@@ -132,21 +135,21 @@ public class GameController implements EventListener {
         if (letterButtons.isEmpty() || roscoPane.getWidth() <= 0 || roscoPane.getHeight() <= 0) {
             return;
         }
-        
+
         int numLetters = letterButtons.size();
         double centerX = roscoPane.getWidth() / 2;
         double centerY = roscoPane.getHeight() / 2;
         // Radio proporcional al tamaño más pequeño del contenedor
         double radius = Math.min(centerX, centerY) * 0.8;
         double buttonSize = 42;
-        
+
         int index = 0;
         for (Button btn : letterButtons.values()) {
             // Calcular posición en círculo (empezar desde arriba, -90 grados)
             double angle = Math.toRadians((360.0 / numLetters) * index - 90);
             double x = centerX + radius * Math.cos(angle) - buttonSize / 2;
             double y = centerY + radius * Math.sin(angle) - buttonSize / 2;
-            
+
             btn.setLayoutX(x);
             btn.setLayoutY(y);
             index++;
@@ -190,6 +193,13 @@ public class GameController implements EventListener {
         if (skipButton != null) {
             skipButton.setVisible(true);
             skipButton.setManaged(true);
+        }
+
+        // Mostrar el nombre del jugador configurado
+        if (playerNameLabel != null && playerConfig != null && playerConfig.getPlayer() != null) {
+            playerNameLabel.setVisible(true);
+            playerNameLabel.setManaged(true);
+            playerNameLabel.setText(playerConfig.getPlayer().getName());
         }
 
         // Crear el rosco con botones circulares, lo pongo aqui porque me aseguro
