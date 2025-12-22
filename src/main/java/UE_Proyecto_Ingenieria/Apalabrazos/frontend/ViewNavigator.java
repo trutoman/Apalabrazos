@@ -6,6 +6,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.ResultsController;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -46,6 +47,13 @@ public class ViewNavigator {
 
     // Esta función se llama desde el controlador de menu cuando se pulsa singleplayer button
     public void startGame(GamePlayerConfig playerOneConfig) {
+        GameService gameService = new GameService();
+
+        // Agregar el jugador al GameInstance del servicio
+        if (playerOneConfig != null && playerOneConfig.getPlayer() != null) {
+            gameService.getGameInstance().addPlayer(playerOneConfig.getPlayer());
+        }
+        
         showGame(playerOneConfig);
     }
 

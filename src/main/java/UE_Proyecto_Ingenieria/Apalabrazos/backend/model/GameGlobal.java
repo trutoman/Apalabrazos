@@ -26,7 +26,7 @@ public class GameGlobal {
         NUMBER_WINS  // Gana quien tenga más aciertos
     }
 
-    private List<GameSingleInstance> players;
+    private List<GameInstance> players;
     private GameState state;
     private GameType gameType;
     private int currentPlayerIndex;  // Índice del jugador actual (0 o 1)
@@ -47,7 +47,7 @@ public class GameGlobal {
      * @param state The initial game state
      * @param gameType The game type
      */
-    public GameGlobal(List<GameSingleInstance> players, GameState state, GameType gameType) {
+    public GameGlobal(List<GameInstance> players, GameState state, GameType gameType) {
         this.players = players != null ? players : new ArrayList<>();
         this.state = state != null ? state : GameState.READY;
         this.gameType = gameType != null ? gameType : GameType.HIGHER_POINTS_WINS;
@@ -57,7 +57,7 @@ public class GameGlobal {
      * Add a player to the game
      * @param player The GamePlayer to add
      */
-    public void addPlayer(GameSingleInstance player) {
+    public void addPlayer(GameInstance player) {
         this.players.add(player);
     }
 
@@ -65,7 +65,7 @@ public class GameGlobal {
      * Remove a player from the game
      * @param player The GameSingleInstance to remove
      */
-    public void removePlayer(GameSingleInstance player) {
+    public void removePlayer(GameInstance player) {
         this.players.remove(player);
     }
 
@@ -73,7 +73,7 @@ public class GameGlobal {
      * Get all players
      * @return List of GameSingleInstance instances
      */
-    public List<GameSingleInstance> getPlayers() {
+    public List<GameInstance> getPlayers() {
         return players;
     }
 
@@ -81,7 +81,7 @@ public class GameGlobal {
      * Set the list of players
      * @param players List of GameSingleInstance instances
      */
-    public void setPlayers(List<GameSingleInstance> players) {
+    public void setPlayers(List<GameInstance> players) {
         this.players = players;
     }
 
@@ -177,7 +177,7 @@ public class GameGlobal {
      * Get player 1 (convenience method)
      * @return The first player or null if not available
      */
-    public GameSingleInstance getGamePlayer1() {
+    public GameInstance getGamePlayer1() {
         return players.size() > 0 ? players.get(0) : null;
     }
 
@@ -185,7 +185,7 @@ public class GameGlobal {
      * Set player 1 (convenience method)
      * @param player The player to set as player 1
      */
-    public void setGamePlayer1(GameSingleInstance player) {
+    public void setGamePlayer1(GameInstance player) {
         if (players.isEmpty()) {
             players.add(player);
         } else {
@@ -196,7 +196,7 @@ public class GameGlobal {
      * Get the current player
      * @return The current GameSingleInstance
      */
-    public GameSingleInstance getCurrentPlayer() {
+    public GameInstance getCurrentPlayer() {
         if (currentPlayerIndex >= 0 && currentPlayerIndex < players.size()) {
             return players.get(currentPlayerIndex);
         }

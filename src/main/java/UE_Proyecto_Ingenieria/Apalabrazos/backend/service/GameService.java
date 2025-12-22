@@ -7,6 +7,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionFileLoader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Service that manages the game logic and publishes events.
@@ -16,15 +17,17 @@ import java.util.List;
 public class GameService implements EventListener {
 
     private final EventBus eventBus;
-    private GameSingleInstance singleGameInstance;
+    private GameInstance singleGameInstance;
     private TimeService timeService;
     private List<EventListener> listeners;
+    private String gameSessionId; // UUID único para la partida
 
     public GameService() {
-        this.singleGameInstance = new GameSingleInstance();
+        this.singleGameInstance = new GameInstance();
         this.eventBus = EventBus.getInstance();
         // Yo tambien tengo mis listeners, el gamecontroller
         this.listeners = new ArrayList<>();
+        this.gameSessionId = generateGameSessionId();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
     }
@@ -102,7 +105,7 @@ public class GameService implements EventListener {
     /**
      * Get the current game state
      */
-    public GameSingleInstance getGameInstance() {
+    public GameInstance getGameInstance() {
         return singleGameInstance;
     }
 
@@ -111,6 +114,28 @@ public class GameService implements EventListener {
      */
     public int getElapsedSeconds() {
         return timeService != null ? timeService.getElapsedSeconds() : 0;
+    }
+
+    /**
+     * Obtener el ID único de esta sesión de juego
+     * @return String con 16 caracteres alfanuméricos
+     */
+    public String getGameSessionId() {
+        return gameSessionId;
+    }
+
+    /**
+     * Generar un UUID único para la partida: 16 caracteres alfanuméricos
+     * @return String con 16 caracteres (mayúsculas, minúsculas y dígitos)
+     */
+    private String generateGameSessionId() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sessionId = new StringBuilder();
+        Random random = new Random();
+        for (int i = 0; i < 8; i++) {
+            sessionId.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sessionId.toString();
     }
 
     /**

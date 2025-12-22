@@ -1,10 +1,20 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Represents the game instance for a single player.
  * Contains the player's timer, question list, and game result.
  */
-public class GameSingleInstance {
+public class GameInstance {
+
+    public enum GameState {
+        PENDING,
+        PLAYING,
+        FINISHED
+    }
 
     private int timeCounter;  // Tiempo en milisegundos
     private QuestionList questionList;
@@ -13,17 +23,21 @@ public class GameSingleInstance {
     private int timer = 240 /*seconds */;
     private int currentQuestionIndex;  // Índice de la pregunta actual
     private QuestionLevel difficulty;  // Dificultad del juego
+    private List<Player> players;  // Lista de jugadores que forman parte de la partida
+    private GameState state; // Estado de la partida
 
     /**
      * Default constructor
      */
-    public GameSingleInstance() {
+    public GameInstance() {
         this.timeCounter = this.timer;
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
         this.player = new Player();
         this.currentQuestionIndex = 0;
         this.difficulty = QuestionLevel.EASY;
+        this.players = new ArrayList<>();
+        this.state = GameState.PENDING;
     }
 
     /**
@@ -34,7 +48,7 @@ public class GameSingleInstance {
      * @param player The player participating in the game
      * @param difficulty The difficulty level of the game
      */
-    public GameSingleInstance(int timer,
+    public GameInstance(int timer,
             QuestionList questionList,
             GameRecord gameResult,
             Player player,
@@ -45,6 +59,8 @@ public class GameSingleInstance {
         this.player = player;
         this.currentQuestionIndex = 0;
         this.difficulty = difficulty != null ? difficulty : QuestionLevel.EASY;
+        this.players = new ArrayList<>();
+        this.state = GameState.PENDING;
     }
 
     /**
@@ -149,5 +165,62 @@ public class GameSingleInstance {
      */
     public void setDifficulty(QuestionLevel difficulty) {
         this.difficulty = difficulty;
+    }
+
+    /**
+     * Obtener la lista de jugadores que forman parte de la partida
+     * @return Lista inmutable de jugadores
+     */
+    public List<Player> getPlayers() {
+        return Collections.unmodifiableList(players);
+    }
+
+    /**
+     * Agregar un jugador a la partida
+     * @param player El jugador a agregar
+     */
+    public void addPlayer(Player player) {
+        if (player != null && !players.contains(player)) {
+            players.add(player);
+        }
+    }
+
+    /**
+     * Remover un jugador de la partida
+     * @param player El jugador a remover
+     */
+    public void removePlayer(Player player) {
+        players.remove(player);
+    }
+
+    /**
+     * Obtener el número de jugadores en la partida
+     * @return Cantidad de jugadores
+     */
+    public int getPlayerCount() {
+        return players.size();
+    }
+
+    /**
+     * Limpiar la lista de jugadores
+     */
+    public void clearPlayers() {
+        players.clear();
+    }
+
+    /**
+     * Obtener el estado de la partida
+     * @return estado actual
+     */
+    public GameState getState() {
+        return state;
+    }
+
+    /**
+     * Establecer el estado de la partida
+     * @param state nuevo estado
+     */
+    public void setState(GameState state) {
+        this.state = state;
     }
 }
