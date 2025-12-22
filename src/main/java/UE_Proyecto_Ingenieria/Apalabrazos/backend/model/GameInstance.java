@@ -23,7 +23,6 @@ public class GameInstance {
     private int timeCounter;  // Tiempo en milisegundos
     private QuestionList questionList;
     private GameRecord gameResult;
-    private Player player;
     private int timer = 240 /*seconds */;
     private int currentQuestionIndex;  // Índice de la pregunta actual
     private QuestionLevel difficulty;  // Dificultad del juego
@@ -38,10 +37,10 @@ public class GameInstance {
         this.timeCounter = this.timer;
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
-        this.player = new Player();
         this.currentQuestionIndex = 0;
         this.difficulty = QuestionLevel.EASY;
         this.players = new ArrayList<>();
+        this.players.add(new Player());
         this.state = GameState.PENDING;
         this.type = GameType.HIGHER_POINTS_WINS;
     }
@@ -54,19 +53,46 @@ public class GameInstance {
      * @param difficulty The difficulty level of the game
      */
     public GameInstance(int timer,
-            QuestionList questionList,
-            GameRecord gameResult,
-            Player player,
-            QuestionLevel difficulty) {
+                        QuestionList questionList,
+                        GameRecord gameResult,
+                        Player player,
+                        QuestionLevel difficulty) {
         this.timeCounter = timer;
         this.questionList = questionList;
         this.gameResult = gameResult;
-        this.player = player;
         this.currentQuestionIndex = 0;
         this.difficulty = difficulty != null ? difficulty : QuestionLevel.EASY;
         this.players = new ArrayList<>();
+        this.players.add(player);
         this.state = GameState.PENDING;
     }
+
+    /**
+     * Convenience constructor to initialize a game instance directly from configuration.
+     *
+     * @param timerSeconds    initial timer in seconds
+     * @param player          the player participating in the game
+     * @param difficultyLevel difficulty level selected
+     * @param questionNumber  number of questions to load (used externally by service)
+     * @param gameType        game type/rule set
+     */
+    public GameInstance(int timerSeconds,
+                        Player player,
+                        QuestionLevel difficultyLevel,
+                        int questionNumber,
+                        GameType gameType) {
+        this.timeCounter = timerSeconds;
+        this.questionList = new QuestionList();
+        this.gameResult = new GameRecord();
+        this.currentQuestionIndex = 0;
+        this.difficulty = difficultyLevel != null ? difficultyLevel : QuestionLevel.EASY;
+        this.players = new ArrayList<>();
+        this.players.add(player);
+        this.state = GameState.PENDING;
+        this.type = gameType != null ? gameType : GameType.HIGHER_POINTS_WINS;
+        // questionNumber parameter is intentionally not stored; GameService loads questions using it
+    }
+
 
     /**
      * Get the time counter in milliseconds
@@ -125,22 +151,6 @@ public class GameInstance {
     }
 
     /**
-     * Get the player name
-     * @return The player name
-     */
-    public Player getPlayer() {
-        return player;
-    }
-
-    /**
-     * Set the player name
-     * @param playerName The new player name
-     */
-    public void setPlayer(Player player) {
-        this.player = player;
-    }
-
-    /**
      * Get the current question index
      * @return The index of the current question
      */
@@ -170,6 +180,14 @@ public class GameInstance {
      */
     public void setDifficulty(QuestionLevel difficulty) {
         this.difficulty = difficulty;
+    }
+
+    /**
+     * Set the game type
+     * @param gameType The difficulty level
+     */
+    public void setGameType(GameType gameType) {
+        this.type = gameType;
     }
 
     /**

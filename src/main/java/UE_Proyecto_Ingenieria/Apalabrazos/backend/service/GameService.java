@@ -60,17 +60,17 @@ public class GameService implements EventListener {
      * Initialize a new game
      */
     private void handleGameStarted(GameStartedEvent event) {
-
-        // Create players from event
-        singleGameInstance.setPlayer(event.getGamePlayerConfig().getPlayer());
-        singleGameInstance.setTimeCounter(event.getGamePlayerConfig().getTimerSeconds());
-        singleGameInstance.setCurrentQuestionIndex(0);
-        singleGameInstance.setDifficulty(event.getGamePlayerConfig().getDifficultyLevel());
         // Cargar preguntas desde el archivo
         try {
             QuestionFileLoader loader = new QuestionFileLoader();
             QuestionList questions = loader.loadQuestions(event.getGamePlayerConfig().getQuestionNumber());
-            singleGameInstance.setQuestionList(questions);
+            this.singleGameInstance.setQuestionList(questions);
+            this.singleGameInstance.setTimeCounter(event.getGamePlayerConfig().getTimerSeconds());
+            this.singleGameInstance.setCurrentQuestionIndex(0);
+            this.singleGameInstance.setDifficulty(event.getGamePlayerConfig().getDifficultyLevel());
+            this.singleGameInstance.setGameType(event.getGamePlayerConfig().getGameType());
+            this.singleGameInstance.addPlayer(event.getGamePlayerConfig().getPlayer());
+
         } catch (IOException e) {
             System.err.println("Error cargando preguntas: " + e.getMessage());
             e.printStackTrace();
