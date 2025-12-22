@@ -117,6 +117,7 @@ public class MenuController {
             singlePlayerInputs.setVisible(true);
             singlePlayerInputs.setManaged(true);
             playerNameInput.requestFocus();
+            // Sale la primera vez que se pulse pues solo extiende el menu
             return;
         }
 
@@ -150,30 +151,19 @@ public class MenuController {
             return; // Hay errores, no continuar
         }
 
-        System.out.println("Single player -> name=" + name + ", questions=" + questionCount + ", duration=" + durationSeconds + ", difficulty=" + difficultyStr + ", gameType=" + gameTypeStr);
+        System.out.println("Single player -> name=" + name + ", questions=" + questionCount + ", duration=" + durationSeconds + ", difficulty=" + difficultyStr);
 
-        try {
+        if (navigator != null) {
             // Nowadays here we create the unique player ID structure
             Player player = new Player(name);
-            System.out.println("Player created: " + player.getName() + " with ID: " + player.getPlayerID());
-            
+            //
             GamePlayerConfig playerOneConfig = new GamePlayerConfig();
             playerOneConfig.setPlayer(player);
             playerOneConfig.setQuestionNumber(questionCount);
             playerOneConfig.setTimerSeconds(durationSeconds);
             playerOneConfig.setGameType(GameType.valueOf(gameTypeStr));
             playerOneConfig.setDifficultyLevel(QuestionLevel.valueOf(difficultyStr));
-            System.out.println("GamePlayerConfig created successfully");
-            
-            if (navigator != null) {
-                System.out.println("Navigator is not null, starting game...");
-                navigator.startGame(playerOneConfig);
-            } else {
-                System.err.println("ERROR: Navigator is null!");
-            }
-        } catch (Exception e) {
-            System.err.println("ERROR in handleSinglePlayer: " + e.getMessage());
-            e.printStackTrace();
+            navigator.startGame(playerOneConfig);
         }
     }
 

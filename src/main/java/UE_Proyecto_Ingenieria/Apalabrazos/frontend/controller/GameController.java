@@ -69,9 +69,11 @@ public class GameController implements EventListener {
     private Button skipButton;
 
     private GamePlayerConfig playerConfig;
+    private String localPlayerId;
 
-    // El gameController contiene e instancia el gameservice ... discutible
+    //
     private GameService gameService;
+    private boolean listenerRegistered = false;
     private ViewNavigator navigator;
     // Mapa de botones por letra del rosco
     private Map<String, Button> letterButtons = new HashMap<>();
@@ -82,13 +84,25 @@ public class GameController implements EventListener {
 
     public void setPlayerConfig(GamePlayerConfig playerConfig) {
         this.playerConfig = playerConfig;
+        if (playerConfig != null && playerConfig.getPlayer() != null) {
+            this.localPlayerId = playerConfig.getPlayer().getPlayerID();
+        }
+    }
+
+    public void setGameService(GameService gameService) {
+        this.gameService = gameService;
+        if (this.gameService != null && !listenerRegistered) {
+            this.gameService.addListener(this);
+            listenerRegistered = true;
+        }
     }
 
     @FXML
     public void initialize() {
-        // Iniciiamos el gameService
-        gameService = new GameService();
-        gameService.addListener(this);
+        if (!listenerRegistered && gameService != null) {
+            gameService.addListener(this);
+            listenerRegistered = true;
+        }
 
         // Configurar el botón de inicio
         if (startButton != null) {
@@ -220,6 +234,11 @@ public class GameController implements EventListener {
             Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
         } else if (event instanceof QuestionChangedEvent) {
             QuestionChangedEvent questionEvent = (QuestionChangedEvent) event;
+            // Filtrar por destinatario si el evento viene dirigido a un jugador concreto
+            if (questionEvent.getPlayerId() != null && localPlayerId != null &&
+                !questionEvent.getPlayerId().equals(localPlayerId)) {
+                return; // Evento para otro jugador; ignorar
+            }
             String letter = AlphabetMap.getLetter(questionEvent.getQuestionIndex());
             QuestionStatus status = questionEvent.getStatus();
 

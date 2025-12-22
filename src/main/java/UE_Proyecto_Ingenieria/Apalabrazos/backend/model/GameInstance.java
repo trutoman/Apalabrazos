@@ -40,7 +40,7 @@ public class GameInstance {
         this.currentQuestionIndex = 0;
         this.difficulty = QuestionLevel.EASY;
         this.players = new ArrayList<>();
-        this.players.add(new Player());
+        // No añadir jugadores por defecto; se añaden vía PlayerJoinedEvent
         this.state = GameState.PENDING;
         this.type = GameType.HIGHER_POINTS_WINS;
     }

@@ -5,6 +5,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.MainApp;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.ResultsController;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
 import javafx.fxml.FXMLLoader;
@@ -48,21 +49,18 @@ public class ViewNavigator {
     // Esta función se llama desde el controlador de menu cuando se pulsa singleplayer button
     public void startGame(GamePlayerConfig playerOneConfig) {
         GameService gameService = new GameService();
-
-        // Agregar el jugador al GameInstance del servicio
-        if (playerOneConfig != null && playerOneConfig.getPlayer() != null) {
-            gameService.getGameInstance().addPlayer(playerOneConfig.getPlayer());
-        }
-        
-        showGame(playerOneConfig);
+        // Registrar al creador de la partida mediante evento; GameService validará por playerID
+        gameService.publish(new PlayerJoinedEvent(playerOneConfig.getPlayer()));
+        showGame(playerOneConfig, gameService);
     }
 
-    public void showGame(GamePlayerConfig playerOneConfig) {
+    public void showGame(GamePlayerConfig playerOneConfig, GameService gameService) {
         try {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
             Parent root = loader.load();
             GameController controller = loader.getController();
             controller.setNavigator(this);
+            controller.setGameService(gameService);
             controller.setPlayerConfig(playerOneConfig);
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);

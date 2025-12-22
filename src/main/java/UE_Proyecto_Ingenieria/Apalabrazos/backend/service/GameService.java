@@ -60,7 +60,8 @@ public class GameService implements EventListener {
      * Initialize a new game
      */
     private void handleGameStarted(GameStartedEvent event) {
-        // Cargar preguntas desde el archivo
+        // Se asume que la lista de jugadores ya está poblada en GameInstance (n jugadores)
+        // Cargar preguntas desde el archivo y preparar estado inicial común
         try {
             QuestionFileLoader loader = new QuestionFileLoader();
             QuestionList questions = loader.loadQuestions(event.getGamePlayerConfig().getQuestionNumber());
@@ -69,17 +70,17 @@ public class GameService implements EventListener {
             this.singleGameInstance.setCurrentQuestionIndex(0);
             this.singleGameInstance.setDifficulty(event.getGamePlayerConfig().getDifficultyLevel());
             this.singleGameInstance.setGameType(event.getGamePlayerConfig().getGameType());
-            this.singleGameInstance.addPlayer(event.getGamePlayerConfig().getPlayer());
-
+            // No añadimos jugadores aquí: ya vienen preparados en GameInstance
         } catch (IOException e) {
             System.err.println("Error cargando preguntas: " + e.getMessage());
             e.printStackTrace();
             return;
         }
-        // Notify that first question is ready
+
+        // Notificar la primera pregunta a todos los jugadores registrados
         notifyQuestionChanged();
 
-        // Iniciar servicio de tiempo
+        // Iniciar servicio de tiempo compartido para la partida
         timeService = new TimeService();
         timeService.start();
     }
@@ -91,14 +92,21 @@ public class GameService implements EventListener {
         int questionIndex = singleGameInstance.getCurrentQuestionIndex();
         QuestionList questionList = singleGameInstance.getQuestionList();
 
+        if (questionList == null) {
+            System.err.println("[WARN] notifyQuestionChanged: questionList es null");
+            return;
+        }
+
         if (questionIndex < questionList.getCurrentLength()) {
             Question currentQuestion = questionList.getQuestionList().get(questionIndex);
-            // Tener en cuenta que las preguntas dan vueltas y puede ser que tengamos que
-            // gestionar un estado distinto en las segundas vueltas
             QuestionStatus status = QuestionStatus.INIT;
-            QuestionChangedEvent questionChangedEvent =
-                    new QuestionChangedEvent(questionIndex, status, currentQuestion);
-            gameBusPublish(questionChangedEvent);
+
+            // Enviar un evento por cada jugador con su playerId para que cada controlador filtre
+            for (Player p : singleGameInstance.getPlayers()) {
+                String playerId = (p != null) ? p.getPlayerID() : null;
+                QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, currentQuestion, playerId);
+                gameBusPublish(event);
+            }
         }
     }
 
@@ -165,10 +173,29 @@ public class GameService implements EventListener {
         // Verificar el tipo de evento y llamar al método apropiado
         if (event instanceof GameStartedEvent) {
             handleGameStarted((GameStartedEvent) event);
+        } else if (event instanceof PlayerJoinedEvent) {
+            handlePlayerJoined((PlayerJoinedEvent) event);
         } else if (event instanceof TimerTickEvent) {
             this.singleGameInstance.decrementTimeCounter(1);
             TimerTickEvent controllerTickEvent = new TimerTickEvent(this.singleGameInstance.getTimeCounter());
             gameBusPublish(controllerTickEvent);
+        }
+    }
+
+    /**
+     * Procesar la solicitud de unión de un jugador.
+     */
+    private void handlePlayerJoined(PlayerJoinedEvent event) {
+        Player incoming = event.getPlayer();
+        if (incoming == null) {
+            return;
+        }
+        String incomingId = incoming.getPlayerID();
+
+        boolean alreadyPresent = this.singleGameInstance.getPlayers().stream()
+                .anyMatch(p -> p != null && p.getPlayerID().equals(incomingId));
+        if (!alreadyPresent) {
+            this.singleGameInstance.addPlayer(incoming);
         }
     }
 
