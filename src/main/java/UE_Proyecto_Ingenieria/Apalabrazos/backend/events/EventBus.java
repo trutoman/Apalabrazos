@@ -36,14 +36,6 @@ public class EventBus {
     }
 
     /**
-     * Create a new, independent EventBus instance (not the global singleton).
-     * Use this for per-session isolation of events.
-     */
-    public static EventBus newBus() {
-        return new EventBus();
-    }
-
-    /**
      * Registrar un listener para recibir eventos
      * @param listener El objeto que quiere recibir eventos
      */
