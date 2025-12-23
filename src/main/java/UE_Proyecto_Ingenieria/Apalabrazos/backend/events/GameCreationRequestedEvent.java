@@ -8,12 +8,18 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 public class GameCreationRequestedEvent extends GameEvent {
 
     private final GamePlayerConfig config;
+    private final String tempRoomCode;
 
-    public GameCreationRequestedEvent(GamePlayerConfig config) {
+    public GameCreationRequestedEvent(GamePlayerConfig config, String tempRoomCode) {
         this.config = config;
+        this.tempRoomCode = tempRoomCode;
     }
 
     public GamePlayerConfig getConfig() {
         return config;
+    }
+
+    public String getTempRoomCode() {
+        return tempRoomCode;
     }
 }

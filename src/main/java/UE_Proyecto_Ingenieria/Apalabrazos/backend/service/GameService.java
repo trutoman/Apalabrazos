@@ -44,6 +44,14 @@ public class GameService implements EventListener {
         eventBus.addListener(this);
     }
 
+    public GameService(GamePlayerConfig playerConfig, EventBus bus) {
+        this.GlobalGameInstance = new GameGlobal(playerConfig);
+        this.eventBus = bus;
+        this.listeners = new ArrayList<>();
+        this.gameSessionId = generateGameSessionId();
+        this.eventBus.addListener(this);
+    }
+
     /**
      * Añadir un listener que escuchará eventos desde este servicio
      */

@@ -35,12 +35,18 @@ public class GameSessionManager implements EventListener {
      */
     private void handleGameCreationRequested(GameCreationRequestedEvent event) {
         System.out.println("[GameSessionManager] Game creation requested: " + event.getConfig().getPlayer().getName());
-        GameService gameService = new GameService(event.getConfig());
-        String sessionId = addSession(gameService);
+        // Create per-session bus and GameService bound to it
+        EventBus sessionBus = EventBus.newBus();
+        GameService gameService = new GameService(event.getConfig(), sessionBus);
+        String sessionId = gameService.getGameSessionId();
+        // Register session mapping
+        addSession(gameService);
+        EventBusRegistry.getInstance().registerSessionBus(sessionId, sessionBus);
+        String tempRoomCode = event.getTempRoomCode();
 
-        // Publish event to notify lobby that session was created
+        // Publish event to notify lobby that session was created (on global bus)
         if (sessionId != null) {
-            GameSessionCreatedEvent sessionCreatedEvent = new GameSessionCreatedEvent(sessionId);
+            GameSessionCreatedEvent sessionCreatedEvent = new GameSessionCreatedEvent(tempRoomCode, sessionId);
             eventBus.publish(sessionCreatedEvent);
         }
     }

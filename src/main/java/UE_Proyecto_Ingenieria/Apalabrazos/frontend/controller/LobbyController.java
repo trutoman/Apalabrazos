@@ -7,6 +7,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameCreationRequestedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameSessionCreatedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBusRegistry;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameType;
@@ -16,8 +17,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
+import javafx.application.Platform;
 
 import java.util.Random;
+import java.util.Map;
+import java.util.HashMap;
 
 public class LobbyController implements EventListener {
 
@@ -45,7 +49,8 @@ public class LobbyController implements EventListener {
     private String username = "Jugador1";
     private final int maxPlayers = 4;
     private ObservableList<GameLobbyEntry> games;
-    private GameLobbyEntry currentGameBeingCreated;
+    private final Map<String, GameLobbyEntry> pendingGames = new HashMap<>();
+    private final Map<String, Player> pendingHostPlayers = new HashMap<>();
 
     public void setNavigator(ViewNavigator navigator) { this.navigator = navigator; }
 
@@ -58,7 +63,6 @@ public class LobbyController implements EventListener {
         setupGamesTable();
         setupSelectedPlayersTable();
         setupEventHandlers();
-        generateRoomCode();
     }
 
     private void setupComboBoxes() {
@@ -135,10 +139,11 @@ public class LobbyController implements EventListener {
         if (gameTypeStr == null || gameTypeStr.isEmpty()) { markErrorCombo(gameTypeCombo); error = true; }
         if (error) { showAlert("Error de validación", "Por favor, verifica que todos los campos sean válidos."); return; }
 
-        GameLobbyEntry newGame = new GameLobbyEntry(roomCodeInput.getText(), name, maxPlayers);
+        String tempRoomCode = roomCodeInput.getText();
+        GameLobbyEntry newGame = new GameLobbyEntry(tempRoomCode, name, maxPlayers);
         games.add(newGame);
         gamesTable.getSelectionModel().select(newGame);
-    currentGameBeingCreated = newGame;
+        pendingGames.put(tempRoomCode, newGame);
 
         // Create config and publish event to MatchMakerService
         Player player = new Player(name);
@@ -150,15 +155,18 @@ public class LobbyController implements EventListener {
         config.setDifficultyLevel(QuestionLevel.valueOf(difficultyStr));
 
         // Publish game creation event to central bus
-        eventBus.publish(new GameCreationRequestedEvent(config));
-        eventBus.publish(new PlayerJoinedEvent(player));
+        eventBus.publish(new GameCreationRequestedEvent(config, tempRoomCode));
+        // Defer PlayerJoined until session bus exists; store host for later publish
+        pendingHostPlayers.put(tempRoomCode, player);
 
         statusLabel.setText("Partida creada - esperando jugadores");
         statusLabel.setStyle("-fx-text-fill: #27ae60;");
-        generateRoomCode();
     }
 
-    private void handleBack() { if (navigator != null) navigator.showMenu(); }
+    private void handleBack() {
+        if (navigator != null)
+            navigator.showMenu();
+    }
 
     @Override
     public void onEvent(GameEvent event) {
@@ -172,14 +180,28 @@ public class LobbyController implements EventListener {
      */
     private void handleGameSessionCreated(GameSessionCreatedEvent event) {
         String sessionId = event.getSessionId();
-        System.out.println("[LobbyController] Session created with ID: " + sessionId);
-        // Update room code input with the new session ID
-        roomCodeInput.setText(sessionId);
-            // Update the room code of the game being created with the actual session ID
-            if (currentGameBeingCreated != null) {
-                currentGameBeingCreated.setRoomCode(sessionId);
+        String tempRoomCode = event.getTempRoomCode();
+        System.out.println("[LobbyController] Session created with ID: " + sessionId + " for temp room " + tempRoomCode);
+
+        // UI updates must run on JavaFX Application Thread
+        Platform.runLater(() -> {
+            // Update room code input with the new session ID
+            roomCodeInput.setText(sessionId);
+            GameLobbyEntry entry = pendingGames.remove(tempRoomCode);
+            if (entry != null) {
+                entry.setRoomCode(sessionId);
                 gamesTable.refresh();
+                System.out.println("[LobbyController] Updated table entry from " + tempRoomCode + " to " + sessionId);
+                // Publish host joined event to the per-session bus
+                Player host = pendingHostPlayers.remove(tempRoomCode);
+                EventBus sessionBus = EventBusRegistry.getInstance().getSessionBus(sessionId);
+                if (host != null && sessionBus != null) {
+                    sessionBus.publish(new PlayerJoinedEvent(host));
+                }
+            } else {
+                System.out.println("[LobbyController] WARNING: No pending game found for temp code " + tempRoomCode);
             }
+        });
     }
 
     private void markError(TextField field) { field.setStyle(field.getStyle() + "; -fx-border-color: #e74c3c; -fx-border-width: 2px;"); }
@@ -219,7 +241,7 @@ public class LobbyController implements EventListener {
         }
 
         public String getRoomCode() { return roomCode; }
-            public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
+        public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
         public String getHostName() { return hostName; }
         public ObservableList<PlayerLobbyEntry> getPlayers() { return players; }
         public String getPlayersSummary() { return players.size() + "/" + maxPlayers; }

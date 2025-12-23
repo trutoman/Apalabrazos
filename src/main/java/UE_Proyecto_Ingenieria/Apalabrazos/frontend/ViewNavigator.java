@@ -94,12 +94,4 @@ public class ViewNavigator {
             throw new IllegalStateException("No se pudo cargar la vista de matchmaking", e);
         }
     }
-
-    // Iniciar partida multijugador con la configuración dada
-    public void startMultiplayerGame(GamePlayerConfig playerConfig) {
-
-        GameService gameService = new GameService(playerConfig);
-        gameService.publish(new PlayerJoinedEvent(playerConfig.getPlayer()));
-        showGame(playerConfig, gameService);
-    }
 }

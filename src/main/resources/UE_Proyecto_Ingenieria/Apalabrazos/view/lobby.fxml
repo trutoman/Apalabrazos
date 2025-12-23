@@ -56,29 +56,32 @@
                                style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px; -fx-padding: 8;"/>
                 </VBox>
 
-                <VBox spacing="5">
-                    <Label text="Dificultad:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
-                    <ComboBox fx:id="difficultyCombo" promptText="Selecciona dificultad" prefHeight="35.0" maxWidth="Infinity"
-                              style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px; -fx-padding: 2;"/>
-                </VBox>
+                <HBox spacing="5" alignment="CENTER">
 
-                <VBox spacing="5">
-                    <Label text="Tipo de Juego:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
-                    <ComboBox fx:id="gameTypeCombo" promptText="Selecciona tipo" prefHeight="35.0" maxWidth="Infinity"
-                              style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px; -fx-padding: 2;"/>
-                </VBox>
+                    <VBox spacing="5">
+                        <Label text="Dificultad:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                        <ComboBox fx:id="difficultyCombo" promptText="Selecciona dificultad" prefHeight="35.0" maxWidth="Infinity"
+                                style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px; -fx-padding: 2;"/>
+                    </VBox>
 
-                <VBox spacing="5">
-                    <Label text="Número de Preguntas:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
-                    <TextField fx:id="questionCountInput" promptText="27" text="27" prefHeight="35.0"
-                               style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px; -fx-padding: 8;"/>
-                </VBox>
+                    <VBox spacing="5">
+                        <Label text="Tipo de Juego:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                        <ComboBox fx:id="gameTypeCombo" promptText="Selecciona tipo" prefHeight="35.0" maxWidth="Infinity"
+                                style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px; -fx-padding: 2;"/>
+                    </VBox>
 
-                <VBox spacing="5">
-                    <Label text="Duración (segundos):" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
-                    <TextField fx:id="durationInput" promptText="240" text="240" prefHeight="35.0"
-                               style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px; -fx-padding: 8;"/>
-                </VBox>
+                    <VBox spacing="5">
+                        <Label text="Número de Preguntas:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                        <TextField fx:id="questionCountInput" promptText="27" text="27" prefHeight="35.0"
+                                style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px;"/>
+                    </VBox>
+
+                    <VBox spacing="5">
+                        <Label text="Duración (segundos):" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                        <TextField fx:id="durationInput" promptText="240" text="240" prefHeight="35.0"
+                                style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #3498db; -fx-border-width: 1px;"/>
+                    </VBox>
+                </HBox>
 
                 <VBox spacing="5">
                     <Label text="Código de Sala:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
