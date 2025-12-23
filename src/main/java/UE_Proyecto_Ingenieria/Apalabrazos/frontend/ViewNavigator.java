@@ -87,6 +87,9 @@ public class ViewNavigator {
             controller.setNavigator(this);
             Scene scene = new Scene(root);
             stage.setScene(scene);
+            // Resetear tamaños fijos previos
+            stage.setWidth(Double.NaN);
+            stage.setHeight(Double.NaN);
             stage.sizeToScene();
             stage.centerOnScreen();
             stage.show();

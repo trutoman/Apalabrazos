@@ -2,7 +2,7 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.events;
 
 /**
  * Event published when a new game session has been successfully created in GameSessionManager.
- * Carries the temporary room code used in the lobby and the final session ID, so listeners can correlate.
+ * Contains the session ID and metadata about the newly created session.
  */
 public class GameSessionCreatedEvent extends GameEvent {
 

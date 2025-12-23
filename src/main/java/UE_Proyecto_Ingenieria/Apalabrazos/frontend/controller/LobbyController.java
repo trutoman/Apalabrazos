@@ -7,7 +7,6 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameCreationRequestedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameSessionCreatedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBusRegistry;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameType;
@@ -50,7 +49,6 @@ public class LobbyController implements EventListener {
     private final int maxPlayers = 4;
     private ObservableList<GameLobbyEntry> games;
     private final Map<String, GameLobbyEntry> pendingGames = new HashMap<>();
-    private final Map<String, Player> pendingHostPlayers = new HashMap<>();
 
     public void setNavigator(ViewNavigator navigator) { this.navigator = navigator; }
 
@@ -156,8 +154,7 @@ public class LobbyController implements EventListener {
 
         // Publish game creation event to central bus
         eventBus.publish(new GameCreationRequestedEvent(config, tempRoomCode));
-        // Defer PlayerJoined until session bus exists; store host for later publish
-        pendingHostPlayers.put(tempRoomCode, player);
+        eventBus.publish(new PlayerJoinedEvent(player));
 
         statusLabel.setText("Partida creada - esperando jugadores");
         statusLabel.setStyle("-fx-text-fill: #27ae60;");
@@ -192,12 +189,6 @@ public class LobbyController implements EventListener {
                 entry.setRoomCode(sessionId);
                 gamesTable.refresh();
                 System.out.println("[LobbyController] Updated table entry from " + tempRoomCode + " to " + sessionId);
-                // Publish host joined event to the per-session bus
-                Player host = pendingHostPlayers.remove(tempRoomCode);
-                EventBus sessionBus = EventBusRegistry.getInstance().getSessionBus(sessionId);
-                if (host != null && sessionBus != null) {
-                    sessionBus.publish(new PlayerJoinedEvent(host));
-                }
             } else {
                 System.out.println("[LobbyController] WARNING: No pending game found for temp code " + tempRoomCode);
             }
