@@ -1,95 +1,108 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Collection;
 
 /**
  * Represents the highest level instance of a game session.
- * Contains a list of GamePlayer instances (one per player) and manages the game state.
+ * Contains a map of player instances (playerID -> GameInstance) and manages the game state.
  */
 public class GameGlobal {
 
     /**
      * Enum representing the game state
      */
-    public enum GameState {
-        READY,
-        RUN,
-        PAUSED
+    public enum GameGlobalState {
+        PENDING,
+        PLAYING,
+        PAUSED,
+        POST
     }
 
-    /**
-     * Enum representing the type of game
-     */
-    public enum GameType {
-        HIGHER_POINTS_WINS,  // El primer jugador que termina gana
-        NUMBER_WINS  // Gana quien tenga más aciertos
-    }
-
-    private List<GameInstance> players;
-    private GameState state;
-    private GameType gameType;
-    private int currentPlayerIndex;  // Índice del jugador actual (0 o 1)
+    private Map<String, GameInstance> playerInstances;  // playerID -> GameInstance
+    private GameGlobalState state;
+    private GameType gameType; // Tipo de juego (del modelo)
+    private QuestionLevel difficulty;
 
     /**
      * Default constructor
      */
     public GameGlobal() {
-        this.players = new ArrayList<>();
-        this.state = GameState.READY;
+        this.playerInstances = new HashMap<>();
+        this.state = GameGlobalState.PENDING;
         this.gameType = GameType.HIGHER_POINTS_WINS;
-        this.currentPlayerIndex = 0;
+        this.difficulty = QuestionLevel.EASY;
     }
 
     /**
-     * Constructor with all parameters
-     * @param players List of GameSingleInstance instances
-     * @param state The initial game state
-     * @param gameType The game type
+     * Constructor from GamePlayerConfig
+     * @param config The player configuration containing game settings
      */
-    public GameGlobal(List<GameInstance> players, GameState state, GameType gameType) {
-        this.players = players != null ? players : new ArrayList<>();
-        this.state = state != null ? state : GameState.READY;
-        this.gameType = gameType != null ? gameType : GameType.HIGHER_POINTS_WINS;
+    public GameGlobal(GamePlayerConfig config) {
+        this.playerInstances = new HashMap<>();
+        this.state = GameGlobalState.PENDING;
+        this.gameType = config.getGameType() != null ? config.getGameType() : GameType.HIGHER_POINTS_WINS;
+        this.difficulty = config.getDifficultyLevel() != null ? config.getDifficultyLevel() : QuestionLevel.EASY;
     }
 
     /**
-     * Add a player to the game
-     * @param player The GamePlayer to add
+     * Add a player instance to the game
+     * @param playerId The unique player ID
+     * @param instance The GameInstance for this player
      */
-    public void addPlayer(GameInstance player) {
-        this.players.add(player);
+    public void addPlayerInstance(String playerId, GameInstance instance) {
+        if (playerId != null && instance != null) {
+            this.playerInstances.put(playerId, instance);
+        }
     }
 
     /**
      * Remove a player from the game
-     * @param player The GameSingleInstance to remove
+     * @param playerId The unique player ID to remove
      */
-    public void removePlayer(GameInstance player) {
-        this.players.remove(player);
+    public void removePlayer(String playerId) {
+        this.playerInstances.remove(playerId);
     }
 
     /**
-     * Get all players
-     * @return List of GameSingleInstance instances
+     * Get a specific player's game instance
+     * @param playerId The player ID
+     * @return The GameInstance for this player, or null if not found
      */
-    public List<GameInstance> getPlayers() {
-        return players;
+    public GameInstance getPlayerInstance(String playerId) {
+        return this.playerInstances.get(playerId);
     }
 
     /**
-     * Set the list of players
-     * @param players List of GameSingleInstance instances
+     * Get all player instances
+     * @return Collection of all GameInstance objects
      */
-    public void setPlayers(List<GameInstance> players) {
-        this.players = players;
+    public Collection<GameInstance> getAllPlayerInstances() {
+        return playerInstances.values();
+    }
+
+    /**
+     * Get the map of player instances
+     * @return Map of playerID -> GameInstance
+     */
+    public Map<String, GameInstance> getPlayerInstancesMap() {
+        return playerInstances;
+    }
+
+    /**
+     * Set the player instances map
+     * @param playerInstances Map of playerID -> GameInstance
+     */
+    public void setPlayerInstances(Map<String, GameInstance> playerInstances) {
+        this.playerInstances = playerInstances != null ? playerInstances : new HashMap<>();
     }
 
     /**
      * Get the current game state
      * @return The current GameState
      */
-    public GameState getState() {
+    public GameGlobalState getState() {
         return state;
     }
 
@@ -97,7 +110,7 @@ public class GameGlobal {
      * Set the game state
      * @param state The new GameState
      */
-    public void setState(GameState state) {
+    public void setState(GameGlobalState state) {
         this.state = state;
     }
 
@@ -118,18 +131,34 @@ public class GameGlobal {
     }
 
     /**
+     * Get the difficulty level
+     * @return The current QuestionLevel
+     */
+    public QuestionLevel getDifficulty() {
+        return difficulty;
+    }
+
+    /**
+     * Set the difficulty level
+     * @param difficulty The new QuestionLevel
+     */
+    public void setDifficulty(QuestionLevel difficulty) {
+        this.difficulty = difficulty != null ? difficulty : QuestionLevel.EASY;
+    }
+
+    /**
      * Start the game
      */
     public void start() {
-        this.state = GameState.RUN;
+        this.state = GameGlobalState.PLAYING;
     }
 
     /**
      * Pause the game
      */
     public void pause() {
-        if (this.state == GameState.RUN) {
-            this.state = GameState.PAUSED;
+        if (this.state == GameGlobalState.PLAYING) {
+            this.state = GameGlobalState.PAUSED;
         }
     }
 
@@ -137,8 +166,8 @@ public class GameGlobal {
      * Resume the game
      */
     public void resume() {
-        if (this.state == GameState.PAUSED) {
-            this.state = GameState.RUN;
+        if (this.state == GameGlobalState.PAUSED) {
+            this.state = GameGlobalState.PLAYING;
         }
     }
 
@@ -146,7 +175,7 @@ public class GameGlobal {
      * Reset the game to ready state
      */
     public void reset() {
-        this.state = GameState.READY;
+        this.state = GameGlobalState.PENDING;
     }
 
     /**
@@ -154,52 +183,15 @@ public class GameGlobal {
      * @return The number of players in the game
      */
     public int getPlayerCount() {
-        return players.size();
+        return playerInstances.size();
     }
 
     /**
-     * Get the current player index
-     * @return The index of the current player
+     * Check if a player is in the game
+     * @param playerId The player ID to check
+     * @return true if the player is in the game
      */
-    public int getCurrentPlayerIndex() {
-        return currentPlayerIndex;
-    }
-
-    /**
-     * Set the current player index
-     * @param currentPlayerIndex The index of the current player
-     */
-    public void setCurrentPlayerIndex(int currentPlayerIndex) {
-        this.currentPlayerIndex = currentPlayerIndex;
-    }
-
-    /**
-     * Get player 1 (convenience method)
-     * @return The first player or null if not available
-     */
-    public GameInstance getGamePlayer1() {
-        return players.size() > 0 ? players.get(0) : null;
-    }
-
-    /**
-     * Set player 1 (convenience method)
-     * @param player The player to set as player 1
-     */
-    public void setGamePlayer1(GameInstance player) {
-        if (players.isEmpty()) {
-            players.add(player);
-        } else {
-            players.set(0, player);
-        }
-    }
-    /**
-     * Get the current player
-     * @return The current GameSingleInstance
-     */
-    public GameInstance getCurrentPlayer() {
-        if (currentPlayerIndex >= 0 && currentPlayerIndex < players.size()) {
-            return players.get(currentPlayerIndex);
-        }
-        return null;
+    public boolean hasPlayer(String playerId) {
+        return playerInstances.containsKey(playerId);
     }
 }

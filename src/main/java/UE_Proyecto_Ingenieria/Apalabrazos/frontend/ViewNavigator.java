@@ -5,6 +5,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.MainApp;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.MenuController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.ResultsController;
+import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.LobbyController;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
@@ -46,14 +47,6 @@ public class ViewNavigator {
         }
     }
 
-    // Esta función se llama desde el controlador de menu cuando se pulsa singleplayer button
-    public void startGame(GamePlayerConfig playerOneConfig) {
-        GameService gameService = new GameService();
-        // Registrar al creador de la partida mediante evento; GameService validará por playerID
-        gameService.publish(new PlayerJoinedEvent(playerOneConfig.getPlayer()));
-        showGame(playerOneConfig, gameService);
-    }
-
     public void showGame(GamePlayerConfig playerOneConfig, GameService gameService) {
         try {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
@@ -83,5 +76,30 @@ public class ViewNavigator {
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo cargar la vista de resultados", e);
         }
+    }
+
+    // Mostrar la sala de espera (matchmaking lobby)
+    public void showLobby() {
+        try {
+            FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/lobby.fxml"));
+            Parent root = loader.load();
+            LobbyController controller = loader.getController();
+            controller.setNavigator(this);
+            Scene scene = new Scene(root);
+            stage.setScene(scene);
+            stage.sizeToScene();
+            stage.centerOnScreen();
+            stage.show();
+        } catch (IOException e) {
+            throw new IllegalStateException("No se pudo cargar la vista de matchmaking", e);
+        }
+    }
+
+    // Iniciar partida multijugador con la configuración dada
+    public void startMultiplayerGame(GamePlayerConfig playerConfig) {
+
+        GameService gameService = new GameService(playerConfig);
+        gameService.publish(new PlayerJoinedEvent(playerConfig.getPlayer()));
+        showGame(playerConfig, gameService);
     }
 }

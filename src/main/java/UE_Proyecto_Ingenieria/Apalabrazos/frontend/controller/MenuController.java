@@ -28,7 +28,7 @@ public class MenuController {
     private Label usernameLabel;
 
     @FXML
-    private Button singlePlayerButton;
+    private Button jugarButton;
 
     @FXML
     private TextField playerNameInput;
@@ -46,10 +46,7 @@ public class MenuController {
     private ComboBox<String> gameTypeInput;
 
     @FXML
-    private VBox singlePlayerInputs;
-
-    @FXML
-    private Button multiplayerButton;
+    private VBox jugarInputs;
 
     @FXML
     private Button scoresButton;
@@ -84,14 +81,12 @@ public class MenuController {
         }
 
         // Configurar los eventos de los botones
-        singlePlayerButton.setOnAction(event -> handleSinglePlayer());
-        multiplayerButton.setOnAction(event -> handleMultiplayer());
+        jugarButton.setOnAction(event -> handleMultiplayer());
         scoresButton.setOnAction(event -> handleViewScores());
         exitButton.setOnAction(event -> handleExit());
 
         // Efectos hover para los botones
-        setupButtonHoverEffects(singlePlayerButton, "#2980b9");
-        setupButtonHoverEffects(multiplayerButton, "#27ae60");
+        setupButtonHoverEffects(jugarButton, "#2980b9");
         setupButtonHoverEffects(scoresButton, "#e67e22");
         setupButtonHoverEffects(exitButton, "#c0392b");
     }
@@ -106,64 +101,10 @@ public class MenuController {
         });
     }
 
-    private void handleSinglePlayer() {
-        if (!singlePlayerInputs.isVisible()) {
-            // Animación ligera del botón
-            TranslateTransition transition = new TranslateTransition(Duration.millis(250), singlePlayerButton);
-            transition.setByY(-8);
-            transition.play();
-
-            // Mostrar todos los inputs
-            singlePlayerInputs.setVisible(true);
-            singlePlayerInputs.setManaged(true);
-            playerNameInput.requestFocus();
-            // Sale la primera vez que se pulse pues solo extiende el menu
-            return;
-        }
-
-        // Validar campos
-        String name = playerNameInput.getText().trim();
-        String questionsStr = questionCountInput.getText().trim();
-        String durationStr = durationSecondsInput.getText().trim();
-        String difficultyStr = difficultyInput.getValue() == null ? "" : difficultyInput.getValue().trim().toUpperCase();
-        String gameTypeStr = gameTypeInput.getValue() == null ? "" : gameTypeInput.getValue().trim().toUpperCase();
-
-        boolean error = false;
-        if (name.isEmpty()) {
-            markError(playerNameInput);
-            error = true;
-        }
-        int questionCount = parsePositiveInt(questionsStr, questionCountInput);
-        if (questionCount == -1)
-            error = true;
-        int durationSeconds = parsePositiveInt(durationStr, durationSecondsInput);
-        if (durationSeconds == -1)
-            error = true;
-        if (!(difficultyStr.equals("EASY") || difficultyStr.equals("MEDIUM") || difficultyStr.equals("HARD"))) {
-            markErrorCombo(difficultyInput);
-            error = true;
-        }
-        if (!(gameTypeStr.equals("HIGHER_POINTS_WINS") || gameTypeStr.equals("NUMBER_WINS"))) {
-            markErrorCombo(gameTypeInput);
-            error = true;
-        }
-        if (error) {
-            return; // Hay errores, no continuar
-        }
-
-        System.out.println("Single player -> name=" + name + ", questions=" + questionCount + ", duration=" + durationSeconds + ", difficulty=" + difficultyStr);
-
+    private void handleMultiplayer() {
+        // Por ahora, el lobby se abre desde "Un jugador" (temporal)
         if (navigator != null) {
-            // Nowadays here we create the unique player ID structure
-            Player player = new Player(name);
-            //
-            GamePlayerConfig playerOneConfig = new GamePlayerConfig();
-            playerOneConfig.setPlayer(player);
-            playerOneConfig.setQuestionNumber(questionCount);
-            playerOneConfig.setTimerSeconds(durationSeconds);
-            playerOneConfig.setGameType(GameType.valueOf(gameTypeStr));
-            playerOneConfig.setDifficultyLevel(QuestionLevel.valueOf(difficultyStr));
-            navigator.startGame(playerOneConfig);
+            navigator.showLobby();
         }
     }
 
@@ -184,14 +125,6 @@ public class MenuController {
             markError(field);
             return -1;
         }
-    }
-
-    private void handleMultiplayer() {
-        System.out.println("Iniciando modo Multijugador...");
-        // // Navegar al juego en modo multijugador
-        // if (navigator != null) {
-        // navigator.startGame("Jugador 1", "Jugador 2");
-        // }
     }
 
     private void handleViewScores() {

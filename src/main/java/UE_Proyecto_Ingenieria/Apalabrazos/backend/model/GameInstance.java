@@ -20,29 +20,20 @@ public class GameInstance {
         FINISHED
     }
 
-    private int timeCounter;  // Tiempo en milisegundos
     private QuestionList questionList;
     private GameRecord gameResult;
-    private int timer = 240 /*seconds */;
     private int currentQuestionIndex;  // Índice de la pregunta actual
-    private QuestionLevel difficulty;  // Dificultad del juego
-    private List<Player> players;  // Lista de jugadores que forman parte de la partida
-    private GameState state; // Estado de la partida
-    private GameType type;
+    private GameState gameInstanceState;
 
     /**
      * Default constructor
      */
     public GameInstance() {
-        this.timeCounter = this.timer;
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
         this.currentQuestionIndex = 0;
-        this.difficulty = QuestionLevel.EASY;
-        this.players = new ArrayList<>();
         // No añadir jugadores por defecto; se añaden vía PlayerJoinedEvent
-        this.state = GameState.PENDING;
-        this.type = GameType.HIGHER_POINTS_WINS;
+        this.gameInstanceState = GameState.PENDING;
     }
 
     /**
@@ -52,19 +43,13 @@ public class GameInstance {
      * @param player The player participating in the game
      * @param difficulty The difficulty level of the game
      */
-    public GameInstance(int timer,
-                        QuestionList questionList,
+    public GameInstance(QuestionList questionList,
                         GameRecord gameResult,
-                        Player player,
-                        QuestionLevel difficulty) {
-        this.timeCounter = timer;
+                        Player player) {
         this.questionList = questionList;
         this.gameResult = gameResult;
         this.currentQuestionIndex = 0;
-        this.difficulty = difficulty != null ? difficulty : QuestionLevel.EASY;
-        this.players = new ArrayList<>();
-        this.players.add(player);
-        this.state = GameState.PENDING;
+        this.gameInstanceState = GameState.PENDING;
     }
 
     /**
@@ -81,41 +66,10 @@ public class GameInstance {
                         QuestionLevel difficultyLevel,
                         int questionNumber,
                         GameType gameType) {
-        this.timeCounter = timerSeconds;
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
         this.currentQuestionIndex = 0;
-        this.difficulty = difficultyLevel != null ? difficultyLevel : QuestionLevel.EASY;
-        this.players = new ArrayList<>();
-        this.players.add(player);
-        this.state = GameState.PENDING;
-        this.type = gameType != null ? gameType : GameType.HIGHER_POINTS_WINS;
-        // questionNumber parameter is intentionally not stored; GameService loads questions using it
-    }
-
-
-    /**
-     * Get the time counter in milliseconds
-     * @return The time counter
-     */
-    public int getTimeCounter() {
-        return timeCounter;
-    }
-
-    /**
-     * Set the time counter
-     * @param timeCounter The time counter in milliseconds
-     */
-    public void setTimeCounter(int timeCounter) {
-        this.timeCounter = timeCounter;
-    }
-
-    public void incrementTimeCounter(int increment) {
-        this.timeCounter += increment;
-    }
-
-    public void decrementTimeCounter(int decrement) {
-        this.timeCounter -= decrement;
+        this.gameInstanceState = GameState.PENDING;
     }
 
     /**
@@ -167,99 +121,34 @@ public class GameInstance {
     }
 
     /**
-     * Get the difficulty level
-     * @return The difficulty level
-     */
-    public QuestionLevel getDifficulty() {
-        return difficulty;
-    }
-
-    /**
-     * Set the difficulty level
-     * @param difficulty The difficulty level
-     */
-    public void setDifficulty(QuestionLevel difficulty) {
-        this.difficulty = difficulty;
-    }
-
-    /**
-     * Set the game type
-     * @param gameType The difficulty level
-     */
-    public void setGameType(GameType gameType) {
-        this.type = gameType;
-    }
-
-    /**
-     * Obtener la lista de jugadores que forman parte de la partida
-     * @return Lista inmutable de jugadores
-     */
-    public List<Player> getPlayers() {
-        return Collections.unmodifiableList(players);
-    }
-
-    /**
-     * Agregar un jugador a la partida
-     * @param player El jugador a agregar
-     */
-    public void addPlayer(Player player) {
-        if (player != null && !players.contains(player)) {
-            players.add(player);
-        }
-    }
-
-    /**
-     * Remover un jugador de la partida
-     * @param player El jugador a remover
-     */
-    public void removePlayer(Player player) {
-        players.remove(player);
-    }
-
-    /**
-     * Obtener el número de jugadores en la partida
-     * @return Cantidad de jugadores
-     */
-    public int getPlayerCount() {
-        return players.size();
-    }
-
-    /**
-     * Limpiar la lista de jugadores
-     */
-    public void clearPlayers() {
-        players.clear();
-    }
-
-    /**
      * Obtener el estado de la partida
      * @return estado actual
      */
-    public GameState getState() {
-        return state;
+    public GameState getGameInstanceState() {
+        return gameInstanceState;
     }
 
     /**
      * Establecer el estado de la partida
      * @param state nuevo estado
      */
-    public void setState(GameState state) {
-        this.state = state;
+    public void setGameInstanceState(GameState state) {
+        this.gameInstanceState = state;
     }
 
     /**
      * Start the game
      */
     public void start() {
-        this.state = GameState.PLAYING;
+        this.gameInstanceState = GameState.PLAYING;
     }
 
     /**
      * Pause the game
      */
     public void pause() {
-        if (this.state == GameState.PLAYING) {
-            this.state = GameState.PAUSED;
+        if (this.gameInstanceState == GameState.PLAYING) {
+            this.gameInstanceState = GameState.PAUSED;
         }
     }
 
@@ -267,8 +156,8 @@ public class GameInstance {
      * Resume the game
      */
     public void resume() {
-        if (this.state == GameState.PAUSED) {
-            this.state = GameState.PLAYING;
+        if (this.gameInstanceState == GameState.PAUSED) {
+            this.gameInstanceState = GameState.PLAYING;
         }
     }
 
@@ -276,7 +165,7 @@ public class GameInstance {
      * Reset the game to ready state
      */
     public void reset() {
-        this.state = GameState.PENDING;
+        this.gameInstanceState = GameState.PENDING;
     }
 
 }
