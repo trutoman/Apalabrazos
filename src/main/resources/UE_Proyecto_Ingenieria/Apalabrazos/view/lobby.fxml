@@ -85,11 +85,21 @@
                     </VBox>
                 </HBox>
 
-                <VBox spacing="5">
-                    <Label text="Código de Sala:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
-                    <TextField fx:id="roomCodeInput" text="ROOM-1234" editable="false" prefHeight="35.0"
-                               style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #bdc3c7; -fx-border-width: 1px; -fx-padding: 8; -fx-text-fill: #7f8c8d;"/>
-                </VBox>
+                <HBox spacing="5" alignment="CENTER">
+
+                    <VBox spacing="5">
+                        <Label text="Room id:" style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                        <TextField fx:id="roomCodeInput" text="ROOM-1234" editable="false" prefHeight="35.0"
+                                style="-fx-font-size: 13px; -fx-background-radius: 6; -fx-border-radius: 6; -fx-border-color: #bdc3c7; -fx-border-width: 1px; -fx-padding: 8; -fx-text-fill: #7f8c8d;"/>
+                    </VBox>
+
+                    <VBox spacing="5">
+                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold;"/>
+                        <Button fx:id="joinButton" text="Unirse"
+                                prefHeight="35.0"
+                                style="-fx-font-size: 16px; -fx-background-color: #3498db; -fx-text-fill: white; -fx-background-radius: 6; -fx-cursor: hand;"/>
+                    </VBox>
+                </HBox>
 
                 <Separator />
 

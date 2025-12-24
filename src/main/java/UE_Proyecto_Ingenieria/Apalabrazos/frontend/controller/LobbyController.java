@@ -6,6 +6,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventListener;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameCreationRequestedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameSessionCreatedEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GetGameSessionInfoEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
@@ -41,6 +42,7 @@ public class LobbyController implements EventListener {
     @FXML private TableColumn<PlayerLobbyEntry, String> selectedPlayerNameColumn;
     @FXML private TableColumn<PlayerLobbyEntry, String> selectedPlayerStatusColumn;
     @FXML private Button startButton;
+    @FXML private Button joinButton;
     @FXML private Button backButton;
 
     private ViewNavigator navigator;
@@ -78,7 +80,20 @@ public class LobbyController implements EventListener {
         gameHostColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getHostName));
         gamePlayersColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getPlayersSummary));
 
-        gamesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> showSelectedGamePlayers(newSel));
+        // Deshabilitar el botón Unirse por defecto
+        joinButton.setDisable(true);
+
+        gamesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> {
+            showSelectedGamePlayers(newSel);
+            // Habilitar el botón solo cuando hay una selección
+            joinButton.setDisable(newSel == null);
+
+            // Publicar evento para obtener información de la sesión seleccionada
+            if (newSel != null) {
+                eventBus.publish(new GetGameSessionInfoEvent(newSel.getRoomCode()));
+                System.out.println("[LobbyController] Published GetGameSessionInfoEvent for room: " + newSel.getRoomCode());
+            }
+        });
         gamesTable.setPlaceholder(new Label("No hay partidas creadas"));
     }
 
@@ -91,8 +106,10 @@ public class LobbyController implements EventListener {
 
     private void setupEventHandlers() {
         startButton.setOnAction(e -> handleCreateGame());
+        joinButton.setOnAction(e -> handleJoinGame());
         backButton.setOnAction(e -> handleBack());
         setupButtonHoverEffects(startButton, "#27ae60");
+        setupButtonHoverEffects(joinButton, "#2980b9");
         setupButtonHoverEffects(backButton, "#7f8c8d");
     }
 
@@ -154,10 +171,32 @@ public class LobbyController implements EventListener {
 
         // Publish game creation event to central bus
         eventBus.publish(new GameCreationRequestedEvent(config, tempRoomCode));
-        eventBus.publish(new PlayerJoinedEvent(player));
+        //eventBus.publish(new PlayerJoinedEvent(player));
 
         statusLabel.setText("Partida creada - esperando jugadores");
         statusLabel.setStyle("-fx-text-fill: #27ae60;");
+    }
+
+    private void handleJoinGame() {
+        GameLobbyEntry selectedGame = gamesTable.getSelectionModel().getSelectedItem();
+        if (selectedGame == null) {
+            showAlert("Sin selección", "Por favor, selecciona una partida de la tabla.");
+            return;
+        }
+
+        String name = playerNameInput.getText() == null ? "" : playerNameInput.getText().trim();
+        if (name.isEmpty()) {
+            markError(playerNameInput);
+            showAlert("Error de validación", "Por favor, ingresa tu nombre.");
+            return;
+        }
+
+        // Create player and join event
+        Player player = new Player(name);
+        eventBus.publish(new PlayerJoinedEvent(player));
+
+        statusLabel.setText("Uniéndose a partida " + selectedGame.getRoomCode());
+        statusLabel.setStyle("-fx-text-fill: #3498db;");
     }
 
     private void handleBack() {
