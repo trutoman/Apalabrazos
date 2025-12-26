@@ -6,6 +6,7 @@ public class GamePlayerConfig {
     private int timerSeconds;
     private QuestionLevel difficultyLevel;
     private int questionNumber;
+    private int playersCount;
     private GameType gameType;
 
 
@@ -14,13 +15,15 @@ public class GamePlayerConfig {
         this.timerSeconds = 240;
         this.difficultyLevel = QuestionLevel.EASY;
         this.questionNumber = 27;
+        this.playersCount = 1;
         this.gameType = GameType.HIGHER_POINTS_WINS;
     }
 
-    public GamePlayerConfig(Player player, int timerSeconds, QuestionLevel difficultyLevel, int questionNumber) {
+    public GamePlayerConfig(Player player, int timerSeconds, QuestionLevel difficultyLevel,int playersCount, int questionNumber) {
         this.player = player;
         this.timerSeconds = timerSeconds;
         this.difficultyLevel = difficultyLevel;
+        this.playersCount = playersCount;
         this.questionNumber = questionNumber;
         this.gameType = GameType.HIGHER_POINTS_WINS;
     }
@@ -63,4 +66,13 @@ public class GamePlayerConfig {
     public void setGameType(GameType gameType) {
         this.gameType = gameType;
     }
+
+    public int getPlayersCount() {
+        return playersCount;
+    }
+
+    public void setPlayersCount(int playersCount) {
+        this.playersCount = playersCount;
+    }
+
 }

@@ -22,6 +22,7 @@ import javafx.application.Platform;
 import java.util.Random;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 public class LobbyController implements EventListener {
 
@@ -32,15 +33,18 @@ public class LobbyController implements EventListener {
     @FXML private ComboBox<String> gameTypeCombo;
     @FXML private TextField questionCountInput;
     @FXML private TextField durationInput;
+    @FXML private TextField playersInput;
     @FXML private TextField roomCodeInput;
     @FXML private Label statusLabel;
     @FXML private TableView<GameLobbyEntry> gamesTable;
     @FXML private TableColumn<GameLobbyEntry, String> gameRoomColumn;
     @FXML private TableColumn<GameLobbyEntry, String> gameHostColumn;
+    @FXML private TableColumn<GameLobbyEntry, String> gameTypeColumn;
+    @FXML private TableColumn<GameLobbyEntry, String> gameDifficultyColumn;
+    @FXML private TableColumn<GameLobbyEntry, String> gameQuestionCountColumn;
+    @FXML private TableColumn<GameLobbyEntry, String> gameDurationColumn;
     @FXML private TableColumn<GameLobbyEntry, String> gamePlayersColumn;
-    @FXML private TableView<PlayerLobbyEntry> selectedPlayersTable;
-    @FXML private TableColumn<PlayerLobbyEntry, String> selectedPlayerNameColumn;
-    @FXML private TableColumn<PlayerLobbyEntry, String> selectedPlayerStatusColumn;
+    @FXML private TableColumn<GameLobbyEntry, String> gamePlayersListColumn;
     @FXML private Button startButton;
     @FXML private Button joinButton;
     @FXML private Button backButton;
@@ -48,7 +52,6 @@ public class LobbyController implements EventListener {
     private ViewNavigator navigator;
     private EventBus eventBus;
     private String username = "Jugador1";
-    private final int maxPlayers = 4;
     private ObservableList<GameLobbyEntry> games;
     private final Map<String, GameLobbyEntry> pendingGames = new HashMap<>();
 
@@ -61,7 +64,6 @@ public class LobbyController implements EventListener {
         usernameLabel.setText(username);
         setupComboBoxes();
         setupGamesTable();
-        setupSelectedPlayersTable();
         setupEventHandlers();
     }
 
@@ -78,15 +80,27 @@ public class LobbyController implements EventListener {
 
         gameRoomColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getRoomCode));
         gameHostColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getHostName));
+        gameTypeColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getGameType));
+        gameDifficultyColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getDifficulty));
+        gameQuestionCountColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getQuestionCount));
+        gameDurationColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getDurationSeconds));
         gamePlayersColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getPlayersSummary));
+        gamePlayersListColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getPlayersList));
 
         // Deshabilitar el botón Unirse por defecto
         joinButton.setDisable(true);
 
         gamesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> {
-            showSelectedGamePlayers(newSel);
             // Habilitar el botón solo cuando hay una selección
             joinButton.setDisable(newSel == null);
+
+            if (newSel == null) {
+                statusLabel.setText("Selecciona una partida");
+                statusLabel.setStyle("-fx-text-fill: #f39c12;");
+            } else {
+                statusLabel.setText("Partida " + newSel.getRoomCode() + " seleccionada");
+                statusLabel.setStyle("-fx-text-fill: #3498db;");
+            }
 
             // Publicar evento para obtener información de la sesión seleccionada
             if (newSel != null) {
@@ -95,13 +109,6 @@ public class LobbyController implements EventListener {
             }
         });
         gamesTable.setPlaceholder(new Label("No hay partidas creadas"));
-    }
-
-    private void setupSelectedPlayersTable() {
-        selectedPlayersTable.setItems(FXCollections.observableArrayList());
-        selectedPlayerNameColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getName));
-        selectedPlayerStatusColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getStatus));
-        selectedPlayersTable.setPlaceholder(new Label("Selecciona una partida"));
     }
 
     private void setupEventHandlers() {
@@ -124,25 +131,11 @@ public class LobbyController implements EventListener {
         roomCodeInput.setText(code);
     }
 
-    private void showSelectedGamePlayers(GameLobbyEntry entry) {
-        if (entry == null) {
-            selectedPlayersTable.setItems(FXCollections.observableArrayList());
-            selectedPlayersTable.setPlaceholder(new Label("Selecciona una partida"));
-            statusLabel.setText("Selecciona una partida");
-            statusLabel.setStyle("-fx-text-fill: #f39c12;");
-            return;
-        }
-
-        selectedPlayersTable.setItems(entry.getPlayers());
-        selectedPlayersTable.setPlaceholder(new Label("Sin jugadores todavía"));
-        statusLabel.setText("Partida " + entry.getRoomCode() + " seleccionada");
-        statusLabel.setStyle("-fx-text-fill: #3498db;");
-    }
-
     private void handleCreateGame() {
         String name = playerNameInput.getText() == null ? "" : playerNameInput.getText().trim();
         String questionsStr = questionCountInput.getText() == null ? "" : questionCountInput.getText().trim();
         String durationStr = durationInput.getText() == null ? "" : durationInput.getText().trim();
+        String playersStr = playersInput.getText() == null ? "" : playersInput.getText().trim();
         String difficultyStr = difficultyCombo.getValue();
         String gameTypeStr = gameTypeCombo.getValue();
 
@@ -150,12 +143,13 @@ public class LobbyController implements EventListener {
         if (name.isEmpty()) { markError(playerNameInput); error = true; }
         int questionCount = parsePositiveInt(questionsStr, questionCountInput); if (questionCount == -1) error = true;
         int durationSeconds = parsePositiveInt(durationStr, durationInput); if (durationSeconds == -1) error = true;
+        int maxPlayers = parsePositiveInt(playersStr, playersInput); if (maxPlayers == -1) error = true;
         if (difficultyStr == null || difficultyStr.isEmpty()) { markErrorCombo(difficultyCombo); error = true; }
         if (gameTypeStr == null || gameTypeStr.isEmpty()) { markErrorCombo(gameTypeCombo); error = true; }
         if (error) { showAlert("Error de validación", "Por favor, verifica que todos los campos sean válidos."); return; }
 
         String tempRoomCode = roomCodeInput.getText();
-        GameLobbyEntry newGame = new GameLobbyEntry(tempRoomCode, name, maxPlayers);
+        GameLobbyEntry newGame = new GameLobbyEntry(tempRoomCode, name, maxPlayers, difficultyStr, gameTypeStr, questionCount, durationSeconds);
         games.add(newGame);
         gamesTable.getSelectionModel().select(newGame);
         pendingGames.put(tempRoomCode, newGame);
@@ -168,6 +162,7 @@ public class LobbyController implements EventListener {
         config.setTimerSeconds(durationSeconds);
         config.setGameType(GameType.valueOf(gameTypeStr));
         config.setDifficultyLevel(QuestionLevel.valueOf(difficultyStr));
+        config.setPlayersCount(maxPlayers);
 
         // Publish game creation event to central bus
         eventBus.publish(new GameCreationRequestedEvent(config, tempRoomCode));
@@ -260,12 +255,20 @@ public class LobbyController implements EventListener {
         private String roomCode;
         private final String hostName;
         private final int maxPlayers;
+        private final String difficulty;
+        private final String gameType;
+        private final int questionCount;
+        private final int durationSeconds;
         private final ObservableList<PlayerLobbyEntry> players;
 
-        public GameLobbyEntry(String roomCode, String hostName, int maxPlayers) {
+        public GameLobbyEntry(String roomCode, String hostName, int maxPlayers, String difficulty, String gameType, int questionCount, int durationSeconds) {
             this.roomCode = roomCode;
             this.hostName = hostName;
             this.maxPlayers = maxPlayers;
+            this.difficulty = difficulty;
+            this.gameType = gameType;
+            this.questionCount = questionCount;
+            this.durationSeconds = durationSeconds;
             this.players = FXCollections.observableArrayList();
             this.players.add(new PlayerLobbyEntry(hostName, "Anfitrión", 0, "00:00"));
         }
@@ -274,7 +277,18 @@ public class LobbyController implements EventListener {
         public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
         public String getHostName() { return hostName; }
         public ObservableList<PlayerLobbyEntry> getPlayers() { return players; }
+        public String getDifficulty() { return difficulty; }
+        public String getGameType() { return gameType; }
+        public String getQuestionCount() { return String.valueOf(questionCount); }
+        public String getDurationSeconds() { return String.valueOf(durationSeconds); }
         public String getPlayersSummary() { return players.size() + "/" + maxPlayers; }
+        public String getPlayersList() {
+            return players.isEmpty()
+                    ? "Sin jugadores"
+                    : players.stream()
+                        .map(p -> p.getName() + " (" + p.getStatus() + ")")
+                        .collect(Collectors.joining(", "));
+        }
     }
 
     public static class PlayerLobbyEntry {
