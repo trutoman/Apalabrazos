@@ -23,7 +23,7 @@
             stylesheets="@styles.css">
 
     <top>
-        <HBox alignment="TOP_RIGHT" spacing="10" styleClass="profile-container">
+        <HBox  spacing="10" styleClass="profile-container">
             <VBox alignment="CENTER" spacing="5">
                 <ImageView fx:id="profileImage" fitHeight="50.0" preserveRatio="true" styleClass="profile-image">
                     <image>
@@ -36,13 +36,10 @@
     </top>
 
     <center>
-        <GridPane hgap="15" vgap="0" styleClass="menu-container">
-            <columnConstraints>
-                <ColumnConstraints percentWidth="35" />
-                <ColumnConstraints percentWidth="65" />
-            </columnConstraints>
+        <HBox alignment="CENTER_LEFT">
+            <HBox spacing="15" styleClass="menu-container">
 
-            <VBox GridPane.columnIndex="0" spacing="10">
+                <VBox spacing="10">
 
                 <!-- Configuración del Jugador -->
                 <VBox spacing="10" styleClass="player-card">
@@ -120,23 +117,24 @@
 
             </VBox>
 
-            <VBox GridPane.columnIndex="1" spacing="12" styleClass="player-card">
+            <VBox spacing="12" styleClass="player-card">
                 <Label text="Partidas creadas" styleClass="question-label"/>
 
-                <TableView fx:id="gamesTable" prefHeight="520.0">
+                <TableView fx:id="gamesTable">
                     <columns>
-                        <TableColumn text="Sala" prefWidth="120.0" fx:id="gameRoomColumn" />
-                        <TableColumn text="Anfitrión" prefWidth="140.0" fx:id="gameHostColumn" />
-                        <TableColumn text="Tipo" prefWidth="130.0" fx:id="gameTypeColumn" />
-                        <TableColumn text="Dificultad" prefWidth="120.0" fx:id="gameDifficultyColumn" />
-                        <TableColumn text="Preguntas" prefWidth="90.0" fx:id="gameQuestionCountColumn" />
-                        <TableColumn text="Duración (s)" prefWidth="100.0" fx:id="gameDurationColumn" />
-                        <TableColumn text="Jugadores" prefWidth="90.0" fx:id="gamePlayersColumn" />
-                        <TableColumn text="Lista de jugadores" prefWidth="240.0" fx:id="gamePlayersListColumn" />
+                        <TableColumn text="Sala" fx:id="gameRoomColumn" />
+                        <TableColumn text="Anfitrión" fx:id="gameHostColumn" />
+                        <TableColumn text="Tipo" fx:id="gameTypeColumn" />
+                        <TableColumn text="Dificultad" fx:id="gameDifficultyColumn" />
+                        <TableColumn text="Preguntas" fx:id="gameQuestionCountColumn" />
+                        <TableColumn text="Duración (s)" fx:id="gameDurationColumn" />
+                        <TableColumn text="Jugadores" fx:id="gamePlayersColumn" />
+                        <TableColumn text="Lista de jugadores" fx:id="gamePlayersListColumn" />
                     </columns>
                 </TableView>
             </VBox>
-        </GridPane>
+        </HBox>
+        </HBox>
     </center>
 
 </BorderPane>

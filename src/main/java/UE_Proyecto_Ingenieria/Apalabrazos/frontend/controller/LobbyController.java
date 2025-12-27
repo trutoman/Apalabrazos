@@ -149,6 +149,8 @@ public class LobbyController implements EventListener {
         if (error) { showAlert("Error de validación", "Por favor, verifica que todos los campos sean válidos."); return; }
 
         String tempRoomCode = roomCodeInput.getText();
+
+        // HAcer esto cuando reciba la partida creada
         GameLobbyEntry newGame = new GameLobbyEntry(tempRoomCode, name, maxPlayers, difficultyStr, gameTypeStr, questionCount, durationSeconds);
         games.add(newGame);
         gamesTable.getSelectionModel().select(newGame);
@@ -162,7 +164,7 @@ public class LobbyController implements EventListener {
         config.setTimerSeconds(durationSeconds);
         config.setGameType(GameType.valueOf(gameTypeStr));
         config.setDifficultyLevel(QuestionLevel.valueOf(difficultyStr));
-        config.setPlayersCount(maxPlayers);
+        config.setMaxPlayers(maxPlayers);
 
         // Publish game creation event to central bus
         eventBus.publish(new GameCreationRequestedEvent(config, tempRoomCode));

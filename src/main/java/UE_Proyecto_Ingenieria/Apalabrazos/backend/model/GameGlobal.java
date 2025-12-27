@@ -24,6 +24,7 @@ public class GameGlobal {
     private GameGlobalState state;
     private GameType gameType; // Tipo de juego (del modelo)
     private QuestionLevel difficulty;
+    private int maxPlayers;
 
     /**
      * Default constructor
@@ -33,6 +34,7 @@ public class GameGlobal {
         this.state = GameGlobalState.PENDING;
         this.gameType = GameType.HIGHER_POINTS_WINS;
         this.difficulty = QuestionLevel.EASY;
+        this.maxPlayers = 1;
     }
 
     /**
@@ -44,6 +46,7 @@ public class GameGlobal {
         this.state = GameGlobalState.PENDING;
         this.gameType = config.getGameType() != null ? config.getGameType() : GameType.HIGHER_POINTS_WINS;
         this.difficulty = config.getDifficultyLevel() != null ? config.getDifficultyLevel() : QuestionLevel.EASY;
+        this.maxPlayers = config.getMaxPlayers() > 0 ? config.getMaxPlayers() : 1;
     }
 
     /**
