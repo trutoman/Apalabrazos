@@ -54,46 +54,28 @@ public class GameService implements EventListener {
     }
 
     /**
-     * Recibir y procesar eventos
-     */
-    @Override
-    public void onEvent(GameEvent event) {
-        // Verificar el tipo de evento y llamar al método apropiado
-        if (event instanceof GameStartedEvent) {
-            handleGameStarted((GameStartedEvent) event);
-        } else if (event instanceof TimerTickEvent) {
-            this.singleGameInstance.decrementTimeCounter(1);
-            TimerTickEvent controllerTickEvent = new TimerTickEvent( this.singleGameInstance.getTimeCounter());
-            for (EventListener l : listeners) {
-                l.onEvent(controllerTickEvent);
-            }
-        }
-    }
-
-    /**
      * Initialize a new game
      */
     private void handleGameStarted(GameStartedEvent event) {
-         // Create players from event TODO: players are generated before event
-        Player playerOne = new Player();
-        playerOne.setName(event.getGamePlayerConfig().getPlayerName());
-        singleGameInstance.setPlayer(playerOne);
+
+        // Create players from event
+        singleGameInstance.setPlayer(event.getGamePlayerConfig().getPlayer());
         singleGameInstance.setTimeCounter(event.getGamePlayerConfig().getTimerSeconds());
-
-        // Iniciar servicio de tiempo
-        timeService = new TimeService();
-        timeService.start();
-
+        singleGameInstance.setCurrentQuestionIndex(0);
+        singleGameInstance.setDifficulty(event.getGamePlayerConfig().getDifficultyLevel());
         // Cargar preguntas desde el archivo
         try {
             QuestionFileLoader loader = new QuestionFileLoader();
-            QuestionList questions = loader.loadQuestions(); // Usa archivo por defecto
+            QuestionList questions = loader.loadQuestions(event.getGamePlayerConfig().getQuestionNumber());
             singleGameInstance.setQuestionList(questions);
         } catch (IOException e) {
             System.err.println("Error cargando preguntas: " + e.getMessage());
             e.printStackTrace();
             return;
         }
+        // Iniciar servicio de tiempo
+        timeService = new TimeService();
+        timeService.start();
 
         // Notify that first question is ready
         notifyQuestionChanged();
@@ -107,15 +89,13 @@ public class GameService implements EventListener {
         QuestionList questionList = singleGameInstance.getQuestionList();
 
         if (questionIndex < questionList.getCurrentLength()) {
-            // Get the letter from AlphabetMap using the question index
-            String letterStr = AlphabetMap.getLetter(questionIndex);
-            char letter = letterStr.charAt(0);
-
-            eventBus.publish(new QuestionChangedEvent(
-                0,  // Single player is always index 0
-                questionIndex,
-                letter
-            ));
+            Question currentQuestion = questionList.getQuestionList().get(questionIndex);
+            // Tener en cuenta que las preguntas dan vueltas y puede ser que tengamos que
+            // gestionar un estado distinto en las segundas vueltas
+            QuestionStatus status = QuestionStatus.INIT;
+            QuestionChangedEvent questionChangedEvent =
+                    new QuestionChangedEvent(questionIndex, status, currentQuestion);
+            gameBusPublish(questionChangedEvent);
         }
     }
 
@@ -132,4 +112,39 @@ public class GameService implements EventListener {
     public int getElapsedSeconds() {
         return timeService != null ? timeService.getElapsedSeconds() : 0;
     }
+
+    /**
+     * Publicar un evento hacia los listeners del GameService (como GameController)
+     * Este método centraliza la comunicación del servicio hacia las vistas
+     *
+     * @param event El evento a publicar a los listeners
+     */
+    private void gameBusPublish(GameEvent event) {
+        // Notificar a todos los listeners registrados
+        for (EventListener listener : this.listeners) {
+            try {
+                listener.onEvent(event);
+            } catch (Exception e) {
+                System.err.println("[ERROR] gameBusPublish: Error al notificar listener con evento "
+                    + event.getClass().getSimpleName() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Recibir y procesar eventos
+     */
+    @Override
+    public void onEvent(GameEvent event) {
+        // Verificar el tipo de evento y llamar al método apropiado
+        if (event instanceof GameStartedEvent) {
+            handleGameStarted((GameStartedEvent) event);
+        } else if (event instanceof TimerTickEvent) {
+            this.singleGameInstance.decrementTimeCounter(1);
+            TimerTickEvent controllerTickEvent = new TimerTickEvent(this.singleGameInstance.getTimeCounter());
+            gameBusPublish(controllerTickEvent);
+        }
+    }
+
 }

@@ -2,27 +2,52 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
 
 public class GamePlayerConfig {
 
-    private String playerName;
-    private String imageResource; // Can be a local path or a URL
+    private Player player;
     private int timerSeconds;
+    private QuestionLevel difficultyLevel;
+    private int questionNumber;
 
     public GamePlayerConfig() {
-        this.playerName = "Jugador1";
-        this.imageResource = "resources/images/default-profile.png";
-        this.timerSeconds = 180;
+        this.player = new Player("Jugador1", "default_avatar.png");
+        this.timerSeconds = 240;
+        this.difficultyLevel = QuestionLevel.EASY;
+        this.questionNumber = 27;
     }
 
-    public GamePlayerConfig(String playerName, String imageResource, int timerSeconds) {
-        this.playerName = playerName;
-        this.imageResource = imageResource;
+    public GamePlayerConfig(Player player, int timerSeconds, QuestionLevel difficultyLevel, int questionNumber) {
+        this.player = player;
+        this.timerSeconds = timerSeconds;
+        this.difficultyLevel = difficultyLevel;
+        this.questionNumber = questionNumber;
+    }
+    public Player getPlayer() {
+        return player;
+    }
+
+    public void setPlayer(Player player) {
+        this.player = player;
+    }
+
+    public void setTimerSeconds(int timerSeconds) {
         this.timerSeconds = timerSeconds;
     }
-    public String getPlayerName() {
-        return playerName;
+
+    public QuestionLevel getDifficultyLevel() {
+        return difficultyLevel;
     }
-    public String getImageResource() {
-        return imageResource;
+
+    public void setDifficultyLevel(QuestionLevel difficultyLevel) {
+        this.difficultyLevel = difficultyLevel;
     }
+
+    public int getQuestionNumber() {
+        return questionNumber;
+    }
+
+    public void setQuestionNumber(int questionNumber) {
+        this.questionNumber = questionNumber;
+    }
+
     public int getTimerSeconds() {
         return timerSeconds;
     }

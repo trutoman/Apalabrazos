@@ -17,18 +17,20 @@ import javafx.stage.Stage;
 public class ViewNavigator {
 
     private final Stage stage;
-    private static final int SCENE_WIDTH = 1024;
-    private static final int SCENE_HEIGHT = 600;
+    private static final int SCENE_WIDTH = 1280;
+    private static final int SCENE_HEIGHT = 720;
 
     public ViewNavigator(Stage stage) {
         this.stage = stage;
         this.stage.setTitle("Apalabrazos 2D");
-        // Configuración de ventana adaptable
+        // Fijar tamaño inicial y evitar cambios al sustituir escenas.
         this.stage.setWidth(SCENE_WIDTH);
         this.stage.setHeight(SCENE_HEIGHT);
-        this.stage.setResizable(true);
-        // Permitir ventana completa
-        this.stage.setMaximized(false);
+        this.stage.setMinWidth(SCENE_WIDTH);
+        this.stage.setMinHeight(SCENE_HEIGHT);
+        this.stage.setMaxWidth(SCENE_WIDTH);
+        this.stage.setMaxHeight(SCENE_HEIGHT);
+        this.stage.setResizable(false);
     }
 
 
@@ -57,13 +59,10 @@ public class ViewNavigator {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
             Parent root = loader.load();
             GameController controller = loader.getController();
-            // Pasar configuración del jugador al controlador
-            GamePlayerConfig config = new GamePlayerConfig(playerOneConfig.getPlayerName(), "resources/images/default-profile.png", 180);
-            controller.setPlayerConfig(config);
             controller.setNavigator(this);
+            controller.setPlayerConfig(playerOneConfig);
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
-            stage.setMaximized(true);
             stage.show();
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo cargar la vista del juego", e);
@@ -79,7 +78,6 @@ public class ViewNavigator {
 
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
-            stage.setMaximized(true);
             stage.show();
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo cargar la vista de resultados", e);

@@ -12,6 +12,7 @@ public class GameSingleInstance {
     private Player player;
     private int timer = 240 /*seconds */;
     private int currentQuestionIndex;  // Índice de la pregunta actual
+    private QuestionLevel difficulty;  // Dificultad del juego
 
     /**
      * Default constructor
@@ -22,6 +23,7 @@ public class GameSingleInstance {
         this.gameResult = new GameRecord();
         this.player = new Player();
         this.currentQuestionIndex = 0;
+        this.difficulty = QuestionLevel.EASY;
     }
 
     /**
@@ -30,16 +32,19 @@ public class GameSingleInstance {
      * @param questionList The list of questions for the game
      * @param gameResult The result of the game
      * @param player The player participating in the game
+     * @param difficulty The difficulty level of the game
      */
     public GameSingleInstance(int timer,
             QuestionList questionList,
             GameRecord gameResult,
-            Player player) {
+            Player player,
+            QuestionLevel difficulty) {
         this.timeCounter = timer;
         this.questionList = questionList;
         this.gameResult = gameResult;
         this.player = player;
         this.currentQuestionIndex = 0;
+        this.difficulty = difficulty != null ? difficulty : QuestionLevel.EASY;
     }
 
     /**
@@ -128,5 +133,21 @@ public class GameSingleInstance {
      */
     public void setCurrentQuestionIndex(int currentQuestionIndex) {
         this.currentQuestionIndex = currentQuestionIndex;
+    }
+
+    /**
+     * Get the difficulty level
+     * @return The difficulty level
+     */
+    public QuestionLevel getDifficulty() {
+        return difficulty;
+    }
+
+    /**
+     * Set the difficulty level
+     * @param difficulty The difficulty level
+     */
+    public void setDifficulty(QuestionLevel difficulty) {
+        this.difficulty = difficulty;
     }
 }

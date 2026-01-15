@@ -1,29 +1,32 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.events;
 
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionStatus;
+
 /**
  * Event fired when the current question changes.
  */
 public class QuestionChangedEvent extends GameEvent {
-    private final int playerIndex;
     private final int questionIndex;
-    private final char letter;
+    private final QuestionStatus status;
+    private final Question question;
 
-    public QuestionChangedEvent(int playerIndex, int questionIndex, char letter) {
+    public QuestionChangedEvent(int questionIndex, QuestionStatus status, Question question) {
         super();
-        this.playerIndex = playerIndex;
         this.questionIndex = questionIndex;
-        this.letter = letter;
-    }
-
-    public int getPlayerIndex() {
-        return playerIndex;
+        this.status = status;
+        this.question = question;
     }
 
     public int getQuestionIndex() {
         return questionIndex;
     }
 
-    public char getLetter() {
-        return letter;
+    public QuestionStatus getStatus() {
+        return status;
+    }
+
+    public Question getQuestion() {
+        return question;
     }
 }
