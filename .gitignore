@@ -65,3 +65,6 @@ build/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Mac script para lanzar la aplicacion con Rosetta
+run_rosetta.sh

@@ -8,6 +8,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Pane;
 
@@ -30,6 +31,18 @@ public class GameController implements EventListener {
     private Label questionLabel;
 
     @FXML
+    private Label optionALabel;
+    
+    @FXML
+    private Label optionBLabel;
+    
+    @FXML
+    private Label optionCLabel;
+    
+    @FXML
+    private Label optionDLabel;
+
+    @FXML
     private Label timerLabel;
 
     @FXML
@@ -40,12 +53,6 @@ public class GameController implements EventListener {
 
     @FXML
     private VBox questionArea;
-    
-    @FXML
-    private VBox leftButtonsArea;
-    
-    @FXML
-    private VBox rightButtonsArea;
     
     @FXML
     private Button option1Button;
@@ -61,6 +68,27 @@ public class GameController implements EventListener {
     
     @FXML
     private Button skipButton;
+    
+    @FXML
+    private Canvas playerOneCanvas;
+    
+    @FXML
+    private Canvas rivalCanvas;
+    
+    @FXML
+    private VBox leftOptionsArea;
+    
+    @FXML
+    private VBox rightOptionsArea;
+    
+    @FXML
+    private Label correctCountLabel;
+    
+    @FXML
+    private Label incorrectCountLabel;
+    
+    @FXML
+    private Label skippedCountLabel;
 
     private GamePlayerConfig playerConfig;
 
@@ -106,9 +134,26 @@ public class GameController implements EventListener {
         if (startButton != null) {
             startButton.setOnAction(event -> handleStartGame());
         }
+        
+        // Configurar el botón de pasar
+        if (skipButton != null) {
+            skipButton.setOnAction(event -> handlePasapalabra());
+        }
 
         // Crear el rosco con botones circulares
-        createRosco();
+        if (roscoPane != null) {
+            // Listener para recalcular cuando cambie el tamaño
+            roscoPane.widthProperty().addListener((obs, oldVal, newVal) -> {
+                if (roscoPane.getHeight() > 0) {
+                    recreateRosco();
+                }
+            });
+            roscoPane.heightProperty().addListener((obs, oldVal, newVal) -> {
+                if (roscoPane.getWidth() > 0) {
+                    recreateRosco();
+                }
+            });
+        }
         
         // Cargar preguntas desde JSON
         loadQuestions();
@@ -118,17 +163,77 @@ public class GameController implements EventListener {
         
         // Configurar eventos de los botones de opciones
         setupOptionButtons();
+        
+        // Dibujar círculos centrados en los canvas (y redibujar en cambios de tamaño)
+        if (playerOneCanvas != null) {
+            setupCanvasCircle(playerOneCanvas);
+        }
+        if (rivalCanvas != null) {
+            setupCanvasCircle(rivalCanvas);
+        }
+    }
+    
+    /**
+     * Recrear el rosco cuando cambia el tamaño
+     */
+    private void recreateRosco() {
+        if (roscoPane == null || roscoPane.getWidth() <= 0 || roscoPane.getHeight() <= 0) {
+            return;
+        }
+        roscoPane.getChildren().clear();
+        letterButtons.clear();
+        createRosco();
+        
+        // Restaurar estados visuales
+        for (int i = 0; i < LETTERS.length; i++) {
+            updateLetterState(LETTERS[i], letterStates[i]);
+        }
+    }
+    
+    /**
+     * Manejador para cuando se presiona el botón PASAR
+     */
+    @FXML
+    private void handleSkipPressed() {
+        if (skipButton != null) {
+            skipButton.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: #5dade2; -fx-text-fill: #ecf0f1; -fx-border-radius: 65; -fx-background-radius: 65; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0, 0, 3);");
+        }
+    }
+    
+    /**
+     * Manejador para cuando se suelta el botón PASAR
+     */
+    @FXML
+    private void handleSkipReleased() {
+        if (skipButton != null) {
+            skipButton.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: #3498db; -fx-text-fill: white; -fx-border-radius: 65; -fx-background-radius: 65; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0, 0, 3);");
+        }
     }
 
     /**
      * Crear el rosco de letras en forma circular
      */
     private void createRosco() {
+        if (roscoPane == null) {
+            System.err.println("[ERROR] roscoPane es null - verifica que esté definido en el FXML con fx:id=\"roscoPane\"");
+            return;
+        }
+        
+        // Obtener el tamaño actual del pane (o usar el tamaño preferido si aún no se ha renderizado)
+        double paneWidth = roscoPane.getWidth() > 0 ? roscoPane.getWidth() : roscoPane.getPrefWidth();
+        double paneHeight = roscoPane.getHeight() > 0 ? roscoPane.getHeight() : roscoPane.getPrefHeight();
+        
+        // Si aún no tenemos tamaño, usar un valor por defecto
+        if (paneWidth <= 0) paneWidth = 550;
+        if (paneHeight <= 0) paneHeight = 550;
+        
         int numLetters = LETTERS.length;
-        double centerX = 200; // Centro del rosco
-        double centerY = 200;
-        double radius = 180; // Radio del círculo
-        double buttonSize = 42; // Tamaño de cada botón
+        double centerX = paneWidth / 2;
+        double centerY = paneHeight / 2;
+        // Radio proporcional al tamaño del contenedor (37% del tamaño mínimo)
+        double radius = Math.min(paneWidth, paneHeight) * 0.37;
+        double buttonSize = Math.min(44, radius / 5); // Tamaño proporcional pero no menor a 30
+        if (buttonSize < 30) buttonSize = 30;
         
         for (int i = 0; i < numLetters; i++) {
             String letter = LETTERS[i];
@@ -156,9 +261,9 @@ public class GameController implements EventListener {
             roscoPane.getChildren().add(btn);
         }
         
-        // Ocultar el rosco inicialmente
-        roscoPane.setVisible(false);
-        roscoPane.setManaged(false);
+        // NO ocultar el rosco inicialmente - dejarlo visible pero sin contenido hasta START
+        // roscoPane.setVisible(false);
+        // roscoPane.setManaged(false);
     }
 
     /**
@@ -181,21 +286,21 @@ public class GameController implements EventListener {
             System.out.println("[DEBUG] Rosco mostrado");
         }
         
+        // Mostrar las áreas de opciones
+        if (leftOptionsArea != null) {
+            leftOptionsArea.setVisible(true);
+            leftOptionsArea.setManaged(true);
+        }
+        if (rightOptionsArea != null) {
+            rightOptionsArea.setVisible(true);
+            rightOptionsArea.setManaged(true);
+        }
+        
         // Mostrar la zona de preguntas
         if (questionArea != null) {
             questionArea.setVisible(true);
             questionArea.setManaged(true);
             System.out.println("[DEBUG] Área de preguntas mostrada");
-        }
-        
-        // Mostrar las áreas de botones
-        if (leftButtonsArea != null) {
-            leftButtonsArea.setVisible(true);
-            leftButtonsArea.setManaged(true);
-        }
-        if (rightButtonsArea != null) {
-            rightButtonsArea.setVisible(true);
-            rightButtonsArea.setManaged(true);
         }
         
         // Mostrar el botón de pasapalabra
@@ -213,6 +318,17 @@ public class GameController implements EventListener {
         System.out.println("[DEBUG] handleStartGame() completado");
     }
 
+    /**
+     * Configurar dibujo de círculos en canvas
+     */
+    private void setupCanvasCircle(Canvas canvas) {
+        if (canvas == null) return;
+        // Canvas está preparado para futuros dibujos si es necesario
+        // Por ahora solo se define el tamaño
+        canvas.setWidth(400);
+        canvas.setHeight(400);
+    }
+    
     /**
      * Cargar preguntas desde el archivo JSON
      */
@@ -328,39 +444,26 @@ public class GameController implements EventListener {
             System.out.println("[DEBUG] Texto establecido correctamente: '" + questionLabel.getText() + "'");
         }
         
-        // Mostrar las opciones
+        // Mostrar las opciones en los labels
         List<String> options = currentQuestion.getQuestionResponsesList();
         System.out.println("[DEBUG] Número de opciones: " + options.size());
         System.out.println("[DEBUG] Opciones: " + options);
         
-        System.out.println("[DEBUG] option1Button == null? " + (option1Button == null));
-        System.out.println("[DEBUG] option2Button == null? " + (option2Button == null));
-        System.out.println("[DEBUG] option3Button == null? " + (option3Button == null));
-        System.out.println("[DEBUG] option4Button == null? " + (option4Button == null));
-        
-        if (option1Button != null && options.size() > 0) {
-            String text1 = options.get(0);
-            option1Button.setText(text1);
-            option1Button.setWrapText(true);
-            System.out.println("[DEBUG] Opción 1 establecida: " + text1);
+        if (optionALabel != null && options.size() > 0) {
+            optionALabel.setText("A) " + options.get(0));
+            System.out.println("[DEBUG] Opción A establecida: " + options.get(0));
         }
-        if (option2Button != null && options.size() > 1) {
-            String text2 = options.get(1);
-            option2Button.setText(text2);
-            option2Button.setWrapText(true);
-            System.out.println("[DEBUG] Opción 2 establecida: " + text2);
+        if (optionBLabel != null && options.size() > 1) {
+            optionBLabel.setText("B) " + options.get(1));
+            System.out.println("[DEBUG] Opción B establecida: " + options.get(1));
         }
-        if (option3Button != null && options.size() > 2) {
-            String text3 = options.get(2);
-            option3Button.setText(text3);
-            option3Button.setWrapText(true);
-            System.out.println("[DEBUG] Opción 3 establecida: " + text3);
+        if (optionCLabel != null && options.size() > 2) {
+            optionCLabel.setText("C) " + options.get(2));
+            System.out.println("[DEBUG] Opción C establecida: " + options.get(2));
         }
-        if (option4Button != null && options.size() > 3) {
-            String text4 = options.get(3);
-            option4Button.setText(text4);
-            option4Button.setWrapText(true);
-            System.out.println("[DEBUG] Opción 4 establecida: " + text4);
+        if (optionDLabel != null && options.size() > 3) {
+            optionDLabel.setText("D) " + options.get(3));
+            System.out.println("[DEBUG] Opción D establecida: " + options.get(3));
         }
         
         // Habilitar botones
@@ -438,9 +541,8 @@ public class GameController implements EventListener {
         String currentLetter = LETTERS[currentQuestionIndex];
         System.out.println("Pasapalabra en letra: " + currentLetter);
         
-        // Restaurar el color según el estado actual de la letra
-        String currentState = letterStates[currentQuestionIndex];
-        updateLetterState(currentLetter, currentState);
+        // Marcar la letra como saltada (azul claro)
+        updateLetterState(currentLetter, "skipped");
         
         // Mover la pregunta actual al final de la cola
         Integer skippedIndex = pendingLetters.poll();
@@ -461,7 +563,7 @@ public class GameController implements EventListener {
             Platform.runLater(() -> {
                 // Remover todas las clases de estado previas
                 btn.getStyleClass().removeAll("rosco-letter-pending", "rosco-letter-correct", 
-                                              "rosco-letter-incorrect", "rosco-letter-current");
+                                              "rosco-letter-incorrect", "rosco-letter-current", "rosco-letter-skipped");
                 
                 // Agregar la clase correspondiente al nuevo estado
                 switch (state.toLowerCase()) {
@@ -473,6 +575,9 @@ public class GameController implements EventListener {
                         break;
                     case "current":
                         btn.getStyleClass().add("rosco-letter-current");
+                        break;
+                    case "skipped":
+                        btn.getStyleClass().add("rosco-letter-skipped");
                         break;
                     case "pending":
                         btn.getStyleClass().add("rosco-letter-pending");

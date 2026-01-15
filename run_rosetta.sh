@@ -8,11 +8,11 @@ export PATH="$JAVA_HOME/bin:/usr/local/bin:$PATH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-echo "🔨 Building dependencies with Maven..."
-arch -x86_64 /usr/local/bin/mvn -q -DskipTests -Dmdep.outputFile=target/classpath.txt dependency:build-classpath
-
-echo "🔨 Compiling sources..."
+echo "🔨 Cleaning and compiling sources..."
 arch -x86_64 /usr/local/bin/mvn -q -DskipTests clean compile
+
+echo "🔨 Building classpath with all dependencies..."
+arch -x86_64 /usr/local/bin/mvn -q -Dmdep.outputFile=target/classpath.txt dependency:build-classpath
 
 echo "🚀 Running app with JavaFX 17 (x86_64)..."
 FXLIB="$HOME/.javafx/17.0.10/sdk/lib"
