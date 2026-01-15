@@ -12,7 +12,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * Utility class that orchestrates switching between main application views.
+ * Class para gestionar la navegación entre vistas
  */
 public class ViewNavigator {
 
@@ -23,14 +23,12 @@ public class ViewNavigator {
     public ViewNavigator(Stage stage) {
         this.stage = stage;
         this.stage.setTitle("Apalabrazos 2D");
-        // Fijar tamaño inicial y evitar cambios al sustituir escenas.
+        // Tamaño inicial
         this.stage.setWidth(SCENE_WIDTH);
         this.stage.setHeight(SCENE_HEIGHT);
-        this.stage.setMinWidth(SCENE_WIDTH);
-        this.stage.setMinHeight(SCENE_HEIGHT);
-        this.stage.setMaxWidth(SCENE_WIDTH);
-        this.stage.setMaxHeight(SCENE_HEIGHT);
-        this.stage.setResizable(false);
+        this.stage.setMinWidth(800);
+        this.stage.setMinHeight(600);
+        this.stage.setResizable(true);
     }
 
 
@@ -61,8 +59,10 @@ public class ViewNavigator {
             GameController controller = loader.getController();
             controller.setNavigator(this);
             controller.setPlayerConfig(playerOneConfig);
-            Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
+            Scene scene = new Scene(root);
             stage.setScene(scene);
+            stage.setMaximized(true);
+            stage.setFullScreen(true);
             stage.show();
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo cargar la vista del juego", e);

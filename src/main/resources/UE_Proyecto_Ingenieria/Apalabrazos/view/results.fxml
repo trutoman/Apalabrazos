@@ -5,18 +5,73 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
+<!-- ===== VISTA DE RESULTADOS ===== -->
 <VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.ResultsController"
-      alignment="CENTER" spacing="16" stylesheets="@styles.css">
+      alignment="CENTER" spacing="30" stylesheets="@styles.css"
+      styleClass="results-container">
+    
     <padding>
         <Insets top="40" right="40" bottom="40" left="40" />
     </padding>
-    <Label text="Resultados" style="-fx-font-size: 26px; -fx-font-weight: bold;" />
-    <Label fx:id="playerOneResultLabel" text="Jugador 1" />
-    <Label fx:id="playerTwoResultLabel" text="Jugador 2" />
-    <Label fx:id="winnerLabel" text="Ganador" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
-    <HBox spacing="10">
-        <Button fx:id="playAgainButton" text="Jugar de nuevo" />
-        <Button fx:id="goToMenuButton" text="Volver al menú" />
+    
+    <!-- ===== TÍTULO ===== -->
+    <Label text="Top 5 Mejores Puntuaciones" styleClass="results-title" />
+    
+    <!-- ===== ENCABEZADO DE LA TABLA ===== -->
+    <HBox spacing="20" alignment="CENTER" prefWidth="700" styleClass="leaderboard-header">
+        <Label text="Posición" prefWidth="100" styleClass="leaderboard-header-label" />
+        <Label text="Jugador" prefWidth="300" styleClass="leaderboard-header-label" />
+        <Label text="Puntuación" prefWidth="150" styleClass="leaderboard-header-label" />
+        <Label text="Tiempo" prefWidth="150" styleClass="leaderboard-header-label" />
     </HBox>
+    
+    <!-- ===== TABLA DE CLASIFICACIÓN ===== -->
+    <VBox spacing="10" alignment="CENTER">
+        <!-- Item 1 -->
+        <HBox spacing="20" alignment="CENTER" prefWidth="700" styleClass="leaderboard-item">
+            <Label text="1" prefWidth="100" styleClass="leaderboard-rank" />
+            <Label text="Alejandro" prefWidth="300" styleClass="leaderboard-name" />
+            <Label text="95%" prefWidth="150" styleClass="leaderboard-score" />
+            <Label text="2:15" prefWidth="150" styleClass="leaderboard-time" />
+        </HBox>
+        
+        <!-- Item 2 -->
+        <HBox spacing="20" alignment="CENTER" prefWidth="700" styleClass="leaderboard-item">
+            <Label text="2" prefWidth="100" styleClass="leaderboard-rank" />
+            <Label text="Alvaro" prefWidth="300" styleClass="leaderboard-name" />
+            <Label text="88%" prefWidth="150" styleClass="leaderboard-score" />
+            <Label text="2:45" prefWidth="150" styleClass="leaderboard-time" />
+        </HBox>
+        
+        <!-- Item 3 -->
+        <HBox spacing="20" alignment="CENTER" prefWidth="700" styleClass="leaderboard-item">
+            <Label text="3" prefWidth="100" styleClass="leaderboard-rank" />
+            <Label text="Leandro" prefWidth="300" styleClass="leaderboard-name" />
+            <Label text="82%" prefWidth="150" styleClass="leaderboard-score" />
+            <Label text="3:10" prefWidth="150" styleClass="leaderboard-time" />
+        </HBox>
+        
+        <!-- Item 4 -->
+        <HBox spacing="20" alignment="CENTER" prefWidth="700" styleClass="leaderboard-item">
+            <Label text="4" prefWidth="100" styleClass="leaderboard-rank" />
+            <Label text="Carlos" prefWidth="300" styleClass="leaderboard-name" />
+            <Label text="78%" prefWidth="150" styleClass="leaderboard-score" />
+            <Label text="3:30" prefWidth="150" styleClass="leaderboard-time" />
+        </HBox>
+        
+        <!-- Item 5 -->
+        <HBox spacing="20" alignment="CENTER" prefWidth="700" styleClass="leaderboard-item">
+            <Label text="5" prefWidth="100" styleClass="leaderboard-rank" />
+            <Label text="Juan" prefWidth="300" styleClass="leaderboard-name" />
+            <Label text="75%" prefWidth="150" styleClass="leaderboard-score" />
+            <Label text="3:55" prefWidth="150" styleClass="leaderboard-time" />
+        </HBox>
+    </VBox>
+    
+    <!-- ===== BOTÓN VOLVER ===== -->
+    <Button fx:id="goToMenuButton" text="Volver al Menú" 
+            prefWidth="200" prefHeight="50"
+            styleClass="results-button, menu-return-button" />
+    
 </VBox>

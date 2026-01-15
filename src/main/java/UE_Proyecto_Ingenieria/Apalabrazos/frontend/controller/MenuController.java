@@ -94,14 +94,9 @@ public class MenuController {
         });
     }
 
-    private void handleSinglePlayer() {
+        private void handleSinglePlayer() {
         if (!singlePlayerInputs.isVisible()) {
-            // Animación ligera del botón
-            TranslateTransition transition = new TranslateTransition(Duration.millis(250), singlePlayerButton);
-            transition.setByY(-8);
-            transition.play();
-
-            // Mostrar todos los inputs
+            // Mostrar inputs por primera vez
             singlePlayerInputs.setVisible(true);
             singlePlayerInputs.setManaged(true);
             playerNameInput.requestFocus();
@@ -145,6 +140,7 @@ public class MenuController {
             navigator.startGame(playerOneConfig);
         }
     }
+    
 
     private void markError(TextField field) {
         field.setStyle(field.getStyle() + "; -fx-border-color: red; -fx-border-width: 2px;");
