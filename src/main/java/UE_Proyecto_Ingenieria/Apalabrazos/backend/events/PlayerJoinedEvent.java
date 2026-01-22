@@ -7,14 +7,20 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
  * Contiene el objeto Player completo para validar por playerID.
  */
 public class PlayerJoinedEvent extends GameEvent {
-    private final Player player;
+    private final String playerID;
+    private final String roomCode;
 
-    public PlayerJoinedEvent(Player player) {
+    public PlayerJoinedEvent(String playerID, String roomCode) {
         super();
-        this.player = player;
+        this.playerID = playerID;
+        this.roomCode = roomCode;
     }
 
-    public Player getPlayer() {
-        return player;
+    public String getPlayerID() {
+        return playerID;
+    }
+
+    public String getRoomCode() {
+        return roomCode;
     }
 }

@@ -54,6 +54,8 @@ public class LobbyController implements EventListener {
     private String username = "Jugador1";
     private ObservableList<GameLobbyEntry> games;
     private final Map<String, GameLobbyEntry> pendingGames = new HashMap<>();
+    private final Map<String, String> pendingHostsByTempCode = new HashMap<>();
+    private boolean suppressInfoRequest = false;
 
     public void setNavigator(ViewNavigator navigator) { this.navigator = navigator; }
 
@@ -97,13 +99,15 @@ public class LobbyController implements EventListener {
             if (newSel == null) {
                 statusLabel.setText("Selecciona una partida");
                 statusLabel.setStyle("-fx-text-fill: #f39c12;");
+                roomCodeInput.clear();
             } else {
                 statusLabel.setText("Partida " + newSel.getRoomCode() + " seleccionada");
                 statusLabel.setStyle("-fx-text-fill: #3498db;");
+                roomCodeInput.setText(newSel.getRoomCode());
             }
 
             // Publicar evento para obtener información de la sesión seleccionada
-            if (newSel != null) {
+            if (newSel != null && !suppressInfoRequest) {
                 eventBus.publish(new GetGameSessionInfoEvent(newSel.getRoomCode()));
                 System.out.println("[LobbyController] Published GetGameSessionInfoEvent for room: " + newSel.getRoomCode());
             }
@@ -150,11 +154,8 @@ public class LobbyController implements EventListener {
 
         String tempRoomCode = roomCodeInput.getText();
 
-        // HAcer esto cuando reciba la partida creada
-        GameLobbyEntry newGame = new GameLobbyEntry(tempRoomCode, name, maxPlayers, difficultyStr, gameTypeStr, questionCount, durationSeconds);
-        games.add(newGame);
-        gamesTable.getSelectionModel().select(newGame);
-        pendingGames.put(tempRoomCode, newGame);
+        // No añadimos la partida a la tabla aún: esperar al evento GameSessionCreatedEvent
+        pendingHostsByTempCode.put(tempRoomCode, name);
 
         // Create config and publish event to MatchMakerService
         Player player = new Player(name);
@@ -190,7 +191,7 @@ public class LobbyController implements EventListener {
 
         // Create player and join event
         Player player = new Player(name);
-        eventBus.publish(new PlayerJoinedEvent(player));
+        eventBus.publish(new PlayerJoinedEvent(player.getPlayerID(), selectedGame.getRoomCode()));
 
         statusLabel.setText("Uniéndose a partida " + selectedGame.getRoomCode());
         statusLabel.setStyle("-fx-text-fill: #3498db;");
@@ -218,17 +219,55 @@ public class LobbyController implements EventListener {
 
         // UI updates must run on JavaFX Application Thread
         Platform.runLater(() -> {
-            // Update room code input with the new session ID
-            roomCodeInput.setText(sessionId);
-            GameLobbyEntry entry = pendingGames.remove(tempRoomCode);
-            if (entry != null) {
-                entry.setRoomCode(sessionId);
-                gamesTable.refresh();
-                System.out.println("[LobbyController] Updated table entry from " + tempRoomCode + " to " + sessionId);
-            } else {
-                System.out.println("[LobbyController] WARNING: No pending game found for temp code " + tempRoomCode);
+            // If the session already exists (info refresh), just select it to avoid duplicates
+            GameLobbyEntry existingEntry = findGameEntry(sessionId);
+            if (existingEntry != null) {
+                suppressInfoRequest = true;
+                gamesTable.getSelectionModel().select(existingEntry);
+                suppressInfoRequest = false;
+                System.out.println("[LobbyController] Session " + sessionId + " already listed. Skipping duplicate add.");
+                return;
             }
+
+            // Actualizar room id
+            roomCodeInput.setText(sessionId);
+
+            // Construir la entrada usando datos del servicio
+            String hostName = pendingHostsByTempCode.getOrDefault(tempRoomCode, "Anfitrión");
+            String difficulty = "";
+            String gameType = "";
+            int maxPlayersFromService = 0;
+            int numberOfQuestions = 0;
+            int gameDuration = 0;
+            try {
+                var service = event.getGameService();
+                var global = service != null ? service.getGameInstance() : null;
+                if (global != null) {
+                    difficulty = global.getDifficulty() != null ? global.getDifficulty().name() : "";
+                    gameType = global.getGameType() != null ? global.getGameType().name() : "";
+                    maxPlayersFromService = global.getMaxPlayers();
+                    numberOfQuestions = global.getNumberOfQuestions();
+                    gameDuration = global.getGameDuration();
+                }
+            } catch (Exception ignored) {}
+
+            GameLobbyEntry newEntry = new GameLobbyEntry(sessionId, hostName, maxPlayersFromService, difficulty, gameType, numberOfQuestions, gameDuration);
+            games.add(newEntry);
+            // Evitar ciclo: la selección dispara GetGameSessionInfoEvent -> GameSessionCreatedEvent
+            suppressInfoRequest = true;
+            gamesTable.getSelectionModel().select(newEntry);
+            suppressInfoRequest = false;
+            pendingHostsByTempCode.remove(tempRoomCode);
+            System.out.println("[LobbyController] Added new game entry for session " + sessionId + " (from temp " + tempRoomCode + ")");
         });
+    }
+
+    private GameLobbyEntry findGameEntry(String roomCode) {
+        if (roomCode == null) return null;
+        return games.stream()
+                .filter(entry -> roomCode.equals(entry.getRoomCode()))
+                .findFirst()
+                .orElse(null);
     }
 
     private void markError(TextField field) { field.setStyle(field.getStyle() + "; -fx-border-color: #e74c3c; -fx-border-width: 2px;"); }
@@ -281,9 +320,9 @@ public class LobbyController implements EventListener {
         public ObservableList<PlayerLobbyEntry> getPlayers() { return players; }
         public String getDifficulty() { return difficulty; }
         public String getGameType() { return gameType; }
-        public String getQuestionCount() { return String.valueOf(questionCount); }
-        public String getDurationSeconds() { return String.valueOf(durationSeconds); }
-        public String getPlayersSummary() { return players.size() + "/" + maxPlayers; }
+        public String getQuestionCount() { return questionCount > 0 ? String.valueOf(questionCount) : "-"; }
+        public String getDurationSeconds() { return durationSeconds > 0 ? String.valueOf(durationSeconds) : "-"; }
+        public String getPlayersSummary() { return maxPlayers > 0 ? players.size() + "/" + maxPlayers : players.size() + "/?"; }
         public String getPlayersList() {
             return players.isEmpty()
                     ? "Sin jugadores"

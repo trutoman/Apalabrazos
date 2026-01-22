@@ -29,3 +29,4 @@ public class GameSessionCreatedEvent extends GameEvent {
     public GameService getGameService() {
         return gameService;
     }
+}

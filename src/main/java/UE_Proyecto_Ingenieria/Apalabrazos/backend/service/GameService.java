@@ -123,6 +123,43 @@ public class GameService implements EventListener {
     }
 
     /**
+     * Agregar un jugador a la partida asociada a este servicio.
+     * Valida duplicados y capacidad máxima, y prepara su GameInstance con
+     * la cantidad de preguntas configurada en el GameGlobal.
+     *
+     * @param playerId ID único del jugador
+     * @return true si el jugador fue agregado; false si ya existía o no hay capacidad
+     */
+    public boolean addPlayerToGame(String playerId) {
+        if (playerId == null || playerId.isEmpty()) {
+            System.err.println("[GameService] addPlayerToGame: playerId inválido");
+            return false;
+        }
+
+        GameGlobal global = this.GlobalGameInstance;
+        if (global == null) {
+            System.err.println("[GameService] addPlayerToGame: GlobalGameInstance es null");
+            return false;
+        }
+
+        if (global.hasPlayer(playerId)) {
+            System.out.println("[GameService] addPlayerToGame: jugador ya en la partida: " + playerId);
+            return false;
+        }
+
+        if (global.getPlayerCount() >= global.getMaxPlayers()) {
+            System.out.println("[GameService] addPlayerToGame: partida llena (" + global.getPlayerCount() + "/" + global.getMaxPlayers() + ")");
+            return false;
+        }
+
+        GameInstance instance = new GameInstance();
+            //instance.initializeQuestions(global.getNumberOfQuestions(), global.getDifficulty());
+        global.addPlayerInstance(playerId, instance);
+        System.out.println("[GameService] Jugador agregado: " + playerId + " (total: " + global.getPlayerCount() + ")");
+        return true;
+    }
+
+    /**
      * Publicar un evento hacia los listeners del GameService (como GameController)
      * Este método centraliza la comunicación del servicio hacia las vistas
      *
@@ -150,20 +187,9 @@ public class GameService implements EventListener {
         if (event instanceof GameStartedEvent) {
             handleGameStarted((GameStartedEvent) event);
         } else if (event instanceof PlayerJoinedEvent) {
-            handlePlayerJoined((PlayerJoinedEvent) event);
+            PlayerJoinedEvent join = (PlayerJoinedEvent) event;
+            addPlayerToGame(join.getPlayerID());
         }
-    }
-
-    /**
-     * Procesar la solicitud de unión de un jugador.
-     */
-    private void handlePlayerJoined(PlayerJoinedEvent event) {
-        Player incoming = event.getPlayer();
-        if (incoming == null) {
-            return;
-        }
-        System.out.println("[GameService] Jugador unido: " + incoming.getName());
-        // En multijugador, cada GameInstance manejará sus propios jugadores
     }
 
 }

@@ -25,6 +25,8 @@ public class GameGlobal {
     private GameType gameType; // Tipo de juego (del modelo)
     private QuestionLevel difficulty;
     private int maxPlayers;
+    private int numberOfQuestions;
+    private int gameDuration; // Duration in seconds
 
     /**
      * Default constructor
@@ -35,6 +37,8 @@ public class GameGlobal {
         this.gameType = GameType.HIGHER_POINTS_WINS;
         this.difficulty = QuestionLevel.EASY;
         this.maxPlayers = 1;
+        this.numberOfQuestions = 10;
+        this.gameDuration = 300; // 5 minutes default
     }
 
     /**
@@ -47,6 +51,8 @@ public class GameGlobal {
         this.gameType = config.getGameType() != null ? config.getGameType() : GameType.HIGHER_POINTS_WINS;
         this.difficulty = config.getDifficultyLevel() != null ? config.getDifficultyLevel() : QuestionLevel.EASY;
         this.maxPlayers = config.getMaxPlayers() > 0 ? config.getMaxPlayers() : 1;
+        this.numberOfQuestions = config.getQuestionNumber() > 0 ? config.getQuestionNumber() : 10;
+        this.gameDuration = config.getTimerSeconds() > 0 ? config.getTimerSeconds() : 300; // 5 minutes default
     }
 
     /**
@@ -187,6 +193,46 @@ public class GameGlobal {
      */
     public int getPlayerCount() {
         return playerInstances.size();
+    }
+
+    public int getMaxPlayers() {
+        return this.maxPlayers;
+    }
+
+    public void setMaxPlayers(int maxPlayers) {
+        this.maxPlayers = maxPlayers;
+    }
+
+    /**
+     * Get the number of questions
+     * @return The number of questions in the game
+     */
+    public int getNumberOfQuestions() {
+        return this.numberOfQuestions;
+    }
+
+    /**
+     * Set the number of questions
+     * @param numberOfQuestions The number of questions
+     */
+    public void setNumberOfQuestions(int numberOfQuestions) {
+        this.numberOfQuestions = numberOfQuestions;
+    }
+
+    /**
+     * Get the game duration
+     * @return The game duration in seconds
+     */
+    public int getGameDuration() {
+        return this.gameDuration;
+    }
+
+    /**
+     * Set the game duration
+     * @param gameDuration The game duration in seconds
+     */
+    public void setGameDuration(int gameDuration) {
+        this.gameDuration = gameDuration;
     }
 
     /**

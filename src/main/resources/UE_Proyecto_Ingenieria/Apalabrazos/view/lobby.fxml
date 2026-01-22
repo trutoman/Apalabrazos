@@ -129,7 +129,7 @@
                         <TableColumn text="Preguntas" fx:id="gameQuestionCountColumn" />
                         <TableColumn text="Duración (s)" fx:id="gameDurationColumn" />
                         <TableColumn text="Jugadores" fx:id="gamePlayersColumn" />
-                        <TableColumn text="Lista de jugadores" fx:id="gamePlayersListColumn" />
+                        <TableColumn text="Lista de jugadores" fx:id="gamePlayersListColumn" prefWidth="250.0"/>
                     </columns>
                 </TableView>
             </VBox>

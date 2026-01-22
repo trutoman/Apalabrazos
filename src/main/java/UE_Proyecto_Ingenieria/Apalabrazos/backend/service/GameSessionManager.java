@@ -1,6 +1,9 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.service;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameGlobal;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameGlobal;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -27,6 +30,10 @@ public class GameSessionManager implements EventListener {
     public void onEvent(GameEvent event) {
         if (event instanceof GameCreationRequestedEvent) {
             handleGameCreationRequested((GameCreationRequestedEvent) event);
+        } else if (event instanceof GetGameSessionInfoEvent) {
+            handleGetGameSessionInfo((GetGameSessionInfoEvent) event);
+        } else if (event instanceof PlayerJoinedEvent) {
+            handlePlayerJoined((PlayerJoinedEvent) event);
         }
     }
 
@@ -41,8 +48,55 @@ public class GameSessionManager implements EventListener {
 
         // Publish event to notify lobby that session was created
         if (sessionId != null) {
-            GameSessionCreatedEvent sessionCreatedEvent = new GameSessionCreatedEvent(tempRoomCode, sessionId);
+            GameSessionCreatedEvent sessionCreatedEvent = new GameSessionCreatedEvent(tempRoomCode, sessionId, gameService);
             eventBus.publish(sessionCreatedEvent);
+        }
+    }
+
+    /**
+     * Send session information back to listeners when requested from the lobby
+     */
+    private void handleGetGameSessionInfo(GetGameSessionInfoEvent event) {
+        String roomCode = event.getRoomCode();
+        GameService service = getSessionById(roomCode);
+        if (service != null) {
+            // Reuse GameSessionCreatedEvent to deliver the GameService reference
+            eventBus.publish(new GameSessionCreatedEvent(roomCode, roomCode, service));
+        }
+    }
+
+    /**
+     * Forward player join requests to the correct game session
+     */
+    private void handlePlayerJoined(PlayerJoinedEvent event) {
+        String playerId = event.getPlayerID();
+        String roomId = event.getRoomCode();
+
+        if (playerId == null || roomId == null) {
+            System.err.println("[GameService] Error: playerId o roomId es null");
+            return;
+        }
+        // En multijugador, cada GameInstance manejará sus propios jugadores
+        GameService service = getSessionById(roomId);
+        if (service != null) {
+            GameGlobal gameInstance = service.getGameInstance();
+            boolean alreadyInRoom = gameInstance != null && gameInstance.hasPlayer(playerId);
+
+            if (alreadyInRoom) {
+                System.out.println("[GameSessionManager] Player " + playerId + " already in room " + roomId);
+                return;
+            }
+
+            System.out.println("[GameSessionManager] Player " + playerId + " joined room " + roomId);
+            // Agregar jugador a la partida
+            boolean added = service.addPlayerToGame(playerId);
+            if (!added) {
+                System.err.println("[GameSessionManager] No se pudo agregar el jugador " + playerId + " a la sala " + roomId);
+            }
+            // Aquí podríamos añadir la instancia del jugador si existe lógica para ello
+            // service.onEvent(event); // reenviar al GameService si debe manejar la creación de la instancia
+        } else {
+            System.err.println("[GameSessionManager] Error: Room with ID " + roomId + " not found");
         }
     }
 
