@@ -113,6 +113,10 @@
                         <Button fx:id="startButton" text="Crear partida" prefWidth="200.0" prefHeight="45.0" styleClass="start-button"/>
                         <Button fx:id="backButton" text="Volver" prefWidth="150.0" prefHeight="45.0" styleClass="menu-return-button"/>
                     </HBox>
+
+                    <HBox spacing="10" alignment="CENTER">
+                        <Button fx:id="startGameButton" text="Empezar Partida" prefWidth="360.0" prefHeight="45.0" styleClass="start-button"/>
+                    </HBox>
                 </VBox>
 
             </VBox>

@@ -69,13 +69,31 @@ public class GameService implements EventListener {
     }
 
     /**
-     * Initialize a new game
+     * Called when GameSessionManager validates that the game start request is valid
+     * This method will be invoked only after validating that the requester is the creator
      */
-    private void handleGameStarted(GameStartedEvent event) {
-        // En multijugador, cada jugador tiene su propia GameInstance
-        // Aquí simplemente registramos que el juego comenzó
-        // Las preguntas y configuración ya están en GameGlobal
-        System.out.println("[GameService] Juego iniciado: " + event.getGamePlayerConfig().getPlayer().getName());
+    public void GameStartedValid() {
+        // Notificar a los listeners (GameController) que el inicio fue validado
+        gameBusPublish(new UE_Proyecto_Ingenieria.Apalabrazos.backend.events.CreatorInitGame());
+        System.out.println("[GameService] GameStartedValid invoked - notifying CreatorInitGame to listeners");
+    }
+
+    /**
+     * Initialize a new game - starts the timer and changes state to PLAYING
+     */
+    public void initGame() {
+        // Inicializar y arrancar el TimeService
+        if (this.timeService == null) {
+            this.timeService = new TimeService();
+        }
+        this.timeService.start();
+
+        // Cambiar el estado del GameGlobal a PLAYING
+        if (this.GlobalGameInstance != null) {
+            this.GlobalGameInstance.setState(GameGlobal.GameGlobalState.PLAYING);
+        }
+
+        System.out.println("[GameService] Juego iniciado. TimeService iniciado");
     }
 
     /**
@@ -184,11 +202,15 @@ public class GameService implements EventListener {
     @Override
     public void onEvent(GameEvent event) {
         // Verificar el tipo de evento y llamar al método apropiado
-        if (event instanceof GameStartedEvent) {
-            handleGameStarted((GameStartedEvent) event);
-        } else if (event instanceof PlayerJoinedEvent) {
+        if (event instanceof PlayerJoinedEvent) {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
             addPlayerToGame(join.getPlayerID());
+        } else if (event instanceof TimerTickEvent) {
+            // Reenviar TimerTickEvent a los listeners (como GameController)
+            gameBusPublish(event);
+        } else if (event instanceof GameControllerReady) {
+            // GameController notifies that it is ready to receive events
+            System.out.println("[GameService] GameController is ready");
         }
     }
 

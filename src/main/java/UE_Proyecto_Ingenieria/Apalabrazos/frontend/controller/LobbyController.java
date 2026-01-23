@@ -6,12 +6,14 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventListener;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameCreationRequestedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameSessionCreatedEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameStartedRequestEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GetGameSessionInfoEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameType;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionLevel;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
 import javafx.fxml.FXML;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -46,6 +48,7 @@ public class LobbyController implements EventListener {
     @FXML private TableColumn<GameLobbyEntry, String> gamePlayersColumn;
     @FXML private TableColumn<GameLobbyEntry, String> gamePlayersListColumn;
     @FXML private Button startButton;
+    @FXML private Button startGameButton;
     @FXML private Button joinButton;
     @FXML private Button backButton;
 
@@ -55,6 +58,8 @@ public class LobbyController implements EventListener {
     private ObservableList<GameLobbyEntry> games;
     private final Map<String, GameLobbyEntry> pendingGames = new HashMap<>();
     private final Map<String, String> pendingHostsByTempCode = new HashMap<>();
+    private final Map<String, String> pendingHostPlayerIdByTempCode = new HashMap<>();
+    private final Map<String, GameService> sessionServices = new HashMap<>();
     private boolean suppressInfoRequest = false;
 
     public void setNavigator(ViewNavigator navigator) { this.navigator = navigator; }
@@ -89,12 +94,14 @@ public class LobbyController implements EventListener {
         gamePlayersColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getPlayersSummary));
         gamePlayersListColumn.setCellValueFactory(cd -> javafx.beans.binding.Bindings.createStringBinding(cd.getValue()::getPlayersList));
 
-        // Deshabilitar el botón Unirse por defecto
+        // Deshabilitar los botones Unirse y Empezar Partida por defecto
         joinButton.setDisable(true);
+        startGameButton.setDisable(true);
 
         gamesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSel, newSel) -> {
-            // Habilitar el botón solo cuando hay una selección
+            // Habilitar los botones solo cuando hay una selección
             joinButton.setDisable(newSel == null);
+            startGameButton.setDisable(newSel == null);
 
             if (newSel == null) {
                 statusLabel.setText("Selecciona una partida");
@@ -117,9 +124,11 @@ public class LobbyController implements EventListener {
 
     private void setupEventHandlers() {
         startButton.setOnAction(e -> handleCreateGame());
+        startGameButton.setOnAction(e -> handleStartGame());
         joinButton.setOnAction(e -> handleJoinGame());
         backButton.setOnAction(e -> handleBack());
         setupButtonHoverEffects(startButton, "#27ae60");
+        setupButtonHoverEffects(startGameButton, "#27ae60");
         setupButtonHoverEffects(joinButton, "#2980b9");
         setupButtonHoverEffects(backButton, "#7f8c8d");
     }
@@ -159,6 +168,9 @@ public class LobbyController implements EventListener {
 
         // Create config and publish event to MatchMakerService
         Player player = new Player(name);
+        // Guardar el playerId del host para unirlo automáticamente cuando se cree la sesión
+        pendingHostPlayerIdByTempCode.put(tempRoomCode, player.getPlayerID());
+
         GamePlayerConfig config = new GamePlayerConfig();
         config.setPlayer(player);
         config.setQuestionNumber(questionCount);
@@ -173,6 +185,56 @@ public class LobbyController implements EventListener {
 
         statusLabel.setText("Partida creada - esperando jugadores");
         statusLabel.setStyle("-fx-text-fill: #27ae60;");
+    }
+
+    private void handleStartGame() {
+        String roomCode = roomCodeInput.getText();
+        if (roomCode == null || roomCode.trim().isEmpty()) {
+            showAlert("Sin selección", "Por favor, selecciona una partida de la tabla.");
+            return;
+        }
+
+        // Obtener el GameService de la sesión
+        GameService gameService = sessionServices.get(roomCode);
+        if (gameService == null) {
+            showAlert("Error", "No se encontró la sesión de juego para el código: " + roomCode);
+            return;
+        }
+
+        // Obtener el nombre del jugador (necesario para identificar quién está jugando)
+        String playerName = playerNameInput.getText() == null ? "" : playerNameInput.getText().trim();
+        if (playerName.isEmpty()) {
+            markError(playerNameInput);
+            showAlert("Error de validación", "Por favor, ingresa tu nombre.");
+            return;
+        }
+
+        // Obtener la configuración del juego desde el GameGlobal
+        var gameGlobal = gameService.getGameInstance();
+
+        // Crear configuración del jugador usando los datos del GameGlobal
+        Player player = new Player(playerName);
+        GamePlayerConfig playerConfig = new GamePlayerConfig();
+        playerConfig.setPlayer(player);
+        playerConfig.setQuestionNumber(gameGlobal.getNumberOfQuestions());
+        playerConfig.setTimerSeconds(gameGlobal.getGameDuration());
+        playerConfig.setGameType(gameGlobal.getGameType());
+        playerConfig.setDifficultyLevel(gameGlobal.getDifficulty());
+        playerConfig.setMaxPlayers(gameGlobal.getMaxPlayers());
+
+        statusLabel.setText("Iniciando partida " + roomCode);
+        statusLabel.setStyle("-fx-text-fill: #27ae60;");
+
+        // Publicar evento para solicitar iniciar el juego (roomId y username del que inicia)
+        // GameSessionManager validará que sea el creador
+        eventBus.publish(new GameStartedRequestEvent(roomCode, playerName));
+
+        // Navegar al juego usando el ViewNavigator
+        if (navigator != null) {
+            navigator.showGame(playerConfig, gameService);
+        }
+
+        System.out.println("[LobbyController] Iniciando partida con Room ID: " + roomCode);
     }
 
     private void handleJoinGame() {
@@ -241,6 +303,10 @@ public class LobbyController implements EventListener {
             int gameDuration = 0;
             try {
                 var service = event.getGameService();
+                // Guardar la referencia al GameService para uso posterior
+                if (service != null) {
+                    sessionServices.put(sessionId, service);
+                }
                 var global = service != null ? service.getGameInstance() : null;
                 if (global != null) {
                     difficulty = global.getDifficulty() != null ? global.getDifficulty().name() : "";
@@ -257,6 +323,15 @@ public class LobbyController implements EventListener {
             suppressInfoRequest = true;
             gamesTable.getSelectionModel().select(newEntry);
             suppressInfoRequest = false;
+
+            // Unir automáticamente al host a la partida que acaba de crear
+            String hostPlayerId = pendingHostPlayerIdByTempCode.get(tempRoomCode);
+            if (hostPlayerId != null) {
+                eventBus.publish(new PlayerJoinedEvent(hostPlayerId, sessionId));
+                System.out.println("[LobbyController] Host " + hostName + " (" + hostPlayerId + ") joined session " + sessionId);
+                pendingHostPlayerIdByTempCode.remove(tempRoomCode);
+            }
+
             pendingHostsByTempCode.remove(tempRoomCode);
             System.out.println("[LobbyController] Added new game entry for session " + sessionId + " (from temp " + tempRoomCode + ")");
         });

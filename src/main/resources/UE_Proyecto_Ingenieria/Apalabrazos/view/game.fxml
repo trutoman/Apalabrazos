@@ -52,7 +52,7 @@
 
                             <!-- Botón de inicio del juego -->
                             <Button fx:id="startButton" text="Empezar"
-                                prefWidth="150" prefHeight="60"
+                                prefWidth="180" prefHeight="60"
                                 styleClass="start-button" />
 
                             <!-- Botón PASAPALABRA (circular, dentro del rosco) -->

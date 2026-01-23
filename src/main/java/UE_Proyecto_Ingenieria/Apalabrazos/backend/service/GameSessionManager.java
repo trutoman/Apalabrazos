@@ -18,10 +18,12 @@ public class GameSessionManager implements EventListener {
 
     private final EventBus eventBus;
     private final Map<String, GameService> activeSessions;
+    private final Map<String, String> sessionCreators; // roomId -> creatorUsername
 
     public GameSessionManager() {
         this.eventBus = EventBus.getInstance();
         this.activeSessions = new ConcurrentHashMap<>();
+        this.sessionCreators = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
     }
@@ -34,6 +36,8 @@ public class GameSessionManager implements EventListener {
             handleGetGameSessionInfo((GetGameSessionInfoEvent) event);
         } else if (event instanceof PlayerJoinedEvent) {
             handlePlayerJoined((PlayerJoinedEvent) event);
+        } else if (event instanceof GameStartedRequestEvent) {
+            handleGameStartedRequest((GameStartedRequestEvent) event);
         }
     }
 
@@ -45,6 +49,11 @@ public class GameSessionManager implements EventListener {
         GameService gameService = new GameService(event.getConfig());
         String sessionId = addSession(gameService);
         String tempRoomCode = event.getTempRoomCode();
+
+        // Guardar quién es el creador de esta sesión
+        if (sessionId != null && event.getConfig().getPlayer() != null) {
+            sessionCreators.put(sessionId, event.getConfig().getPlayer().getName());
+        }
 
         // Publish event to notify lobby that session was created
         if (sessionId != null) {
@@ -62,6 +71,37 @@ public class GameSessionManager implements EventListener {
         if (service != null) {
             // Reuse GameSessionCreatedEvent to deliver the GameService reference
             eventBus.publish(new GameSessionCreatedEvent(roomCode, roomCode, service));
+        }
+    }
+
+    /**
+     * Handle game start request - validates that the requester is the creator
+     */
+    private void handleGameStartedRequest(GameStartedRequestEvent event) {
+        String roomId = event.getRoomId();
+        String username = event.getUsername();
+
+        System.out.println("[GameSessionManager] Game start requested by " + username + " for room " + roomId);
+
+        // Validar que el usuario sea el creador de la partida
+        String creator = sessionCreators.get(roomId);
+        if (creator == null) {
+            System.err.println("[GameSessionManager] Error: No se encontró el creador para la sala " + roomId);
+            return;
+        }
+
+        if (!creator.equals(username)) {
+            System.err.println("[GameSessionManager] Error: Solo el creador puede iniciar la partida. Creador: " + creator + ", Usuario: " + username);
+            return;
+        }
+
+        // Obtener el GameService y validar inicio
+        GameService service = getSessionById(roomId);
+        if (service != null) {
+            service.GameStartedValid();
+            System.out.println("[GameSessionManager] Validación exitosa. Juego iniciado por " + username + " en sala " + roomId);
+        } else {
+            System.err.println("[GameSessionManager] Error: Room with ID " + roomId + " not found");
         }
     }
 

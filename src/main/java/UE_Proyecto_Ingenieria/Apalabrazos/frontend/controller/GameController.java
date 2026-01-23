@@ -106,6 +106,9 @@ public class GameController implements EventListener {
 
         // Configurar el botón de inicio
         if (startButton != null) {
+            // Mientras se valida el inicio desde el lobby, mostrar "Esperando..."
+            startButton.setText("Esperando...");
+            startButton.setDisable(true);
             startButton.setOnAction(event -> handleStartGame());
         }
     }
@@ -220,7 +223,7 @@ public class GameController implements EventListener {
         // que ya existe la config. Necesito la config para pintar  el rosco
         createRosco();
         // Publicar evento de inicio de juego
-        gameService.publish(new GameStartedEvent(this.playerConfig));
+        gameService.initGame();
     }
 
     /**
@@ -232,6 +235,16 @@ public class GameController implements EventListener {
         if (event instanceof TimerTickEvent) {
             int remaining = ((TimerTickEvent) event).getElapsedSeconds();
             Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
+        } else if (event instanceof CreatorInitGame) {
+            // Validación correcta del inicio del juego por el creador
+            Platform.runLater(() -> {
+                if (startButton != null) {
+                    startButton.setText("Empezar");
+                    startButton.setDisable(false);
+                }
+                // Iniciar como si se hubiera pulsado el botón
+                handleStartGame();
+            });
         } else if (event instanceof QuestionChangedEvent) {
             QuestionChangedEvent questionEvent = (QuestionChangedEvent) event;
             // Filtrar por destinatario si el evento viene dirigido a un jugador concreto
