@@ -2,6 +2,7 @@ package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GlobalEventBus;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventListener;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameCreationRequestedEvent;
@@ -66,7 +67,7 @@ public class LobbyController implements EventListener {
 
     @FXML
     public void initialize() {
-        eventBus = EventBus.getInstance();
+        eventBus = GlobalEventBus.getInstance();
         eventBus.addListener(this);
         usernameLabel.setText(username);
         setupComboBoxes();

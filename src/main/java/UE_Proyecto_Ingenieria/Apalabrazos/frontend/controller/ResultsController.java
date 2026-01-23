@@ -1,6 +1,7 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GlobalEventBus;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventListener;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameFinishedEvent;
@@ -31,7 +32,7 @@ public class ResultsController implements EventListener {
 
     @FXML
     public void initialize() {
-        this.eventBus = EventBus.getInstance();
+        this.eventBus = GlobalEventBus.getInstance();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
     }

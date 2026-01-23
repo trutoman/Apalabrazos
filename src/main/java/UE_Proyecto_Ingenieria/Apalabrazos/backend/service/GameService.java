@@ -17,45 +17,43 @@ import java.util.Random;
 public class GameService implements EventListener {
 
     private final EventBus eventBus;
+    private final EventBus externalBus;
     private GameGlobal GlobalGameInstance;
 
     private TimeService timeService;
-    private List<EventListener> listeners;
     private String gameSessionId; // UUID único para la partida
 
     public GameService() {
         this.GlobalGameInstance = new GameGlobal();
-        this.eventBus = EventBus.getInstance();
-        // Yo tambien tengo mis listeners, el gamecontroller
-        this.listeners = new ArrayList<>();
+        this.eventBus = GlobalEventBus.getInstance();
+        this.externalBus = new EventBus();
         this.gameSessionId = generateGameSessionId();
-        // Registrarse como listener de eventos
+        // Registrarse como listener de eventos globales
         eventBus.addListener(this);
     }
 
     public GameService(GamePlayerConfig playerConfig) {
         // Configurar la instancia global del juego para multijugador
         this.GlobalGameInstance = new GameGlobal(playerConfig);
-        this.eventBus = EventBus.getInstance();
-        // Yo tambien tengo mis listeners, el gamecontroller
-        this.listeners = new ArrayList<>();
+        this.eventBus = GlobalEventBus.getInstance();
+        this.externalBus = new EventBus();
         this.gameSessionId = generateGameSessionId();
-        // Registrarse como listener de eventos
+        // Registrarse como listener de eventos globales
         eventBus.addListener(this);
     }
 
     /**
-     * Añadir un listener que escuchará eventos desde este servicio
+     * Add a listener to the external bus (e.g., GameController)
      */
     public void addListener(EventListener listener) {
-        listeners.add(listener);
+        externalBus.addListener(listener);
     }
 
     /**
-     * Eliminar un listener (útil al cerrar vistas)
+     * Remove a listener from the external bus
      */
     public void removeListener(EventListener listener) {
-        listeners.remove(listener);
+        externalBus.removeListener(listener);
     }
 
     /**
@@ -73,9 +71,9 @@ public class GameService implements EventListener {
      * This method will be invoked only after validating that the requester is the creator
      */
     public void GameStartedValid() {
-        // Notificar a los listeners (GameController) que el inicio fue validado
-        gameBusPublish(new UE_Proyecto_Ingenieria.Apalabrazos.backend.events.CreatorInitGame());
-        System.out.println("[GameService] GameStartedValid invoked - notifying CreatorInitGame to listeners");
+        // Publicar CreatorInitGame en el bus externo para notificar a GameController
+        externalBus.publish(new CreatorInitGame());
+        System.out.println("[GameService] GameStartedValid invoked - notifying CreatorInitGame to external bus");
     }
 
     /**
@@ -179,25 +177,16 @@ public class GameService implements EventListener {
 
     /**
      * Publicar un evento hacia los listeners del GameService (como GameController)
-     * Este método centraliza la comunicación del servicio hacia las vistas
+     * mediante el bus externo
      *
-     * @param event El evento a publicar a los listeners
+     * @param event El evento a publicar
      */
-    private void gameBusPublish(GameEvent event) {
-        // Notificar a todos los listeners registrados
-        for (EventListener listener : this.listeners) {
-            try {
-                listener.onEvent(event);
-            } catch (Exception e) {
-                System.err.println("[ERROR] gameBusPublish: Error al notificar listener con evento "
-                    + event.getClass().getSimpleName() + ": " + e.getMessage());
-                e.printStackTrace();
-            }
-        }
+    public void publishExternal(GameEvent event) {
+        externalBus.publish(event);
     }
 
     /**
-     * Recibir y procesar eventos
+     * Recibir y procesar eventos del bus global
      */
     @Override
     public void onEvent(GameEvent event) {
@@ -206,11 +195,8 @@ public class GameService implements EventListener {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
             addPlayerToGame(join.getPlayerID());
         } else if (event instanceof TimerTickEvent) {
-            // Reenviar TimerTickEvent a los listeners (como GameController)
-            gameBusPublish(event);
-        } else if (event instanceof GameControllerReady) {
-            // GameController notifies that it is ready to receive events
-            System.out.println("[GameService] GameController is ready");
+            // Reenviar TimerTickEvent al bus externo (hacia GameController)
+            publishExternal(event);
         }
     }
 

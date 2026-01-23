@@ -1,7 +1,8 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.service;
 
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GlobalEventBus;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.TimerTickEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
 
 /**
  * Usa un único Thread con un bucle y sleep de 1 segundo.
@@ -14,7 +15,7 @@ public class TimeService {
     private int elapsedSeconds = 0;
 
     public TimeService() {
-        this.eventBus = EventBus.getInstance();
+        this.eventBus = GlobalEventBus.getInstance();
     }
 
     // Inicia el hilo si aún no está iniciado

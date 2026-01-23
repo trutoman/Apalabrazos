@@ -21,7 +21,7 @@ public class GameSessionManager implements EventListener {
     private final Map<String, String> sessionCreators; // roomId -> creatorUsername
 
     public GameSessionManager() {
-        this.eventBus = EventBus.getInstance();
+        this.eventBus = GlobalEventBus.getInstance();
         this.activeSessions = new ConcurrentHashMap<>();
         this.sessionCreators = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos

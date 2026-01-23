@@ -7,32 +7,19 @@ import java.util.List;
  * EventBus simplificado para comunicación entre componentes del juego.
  * Permite publicar eventos y recibir notificaciones cuando ocurren.
  *
- * Patrón Singleton: solo existe una instancia compartida en toda la aplicación.
+ * Cada instancia es independiente. Se puede crear una instancia global compartida
+ * o instancias locales según sea necesario.
  */
 public class EventBus {
-
-    // La única instancia del EventBus (patrón Singleton)
-    private static EventBus instance;
 
     // Listeners que escuchan diferentes tipos de eventos
     private List<EventListener> listeners;
 
     /**
-     * Constructor privado para evitar crear múltiples instancias
+     * Constructor público para crear instancias independientes del bus
      */
-    private EventBus() {
+    public EventBus() {
         this.listeners = new ArrayList<>();
-    }
-
-    /**
-     * Obtener la única instancia del EventBus
-     * @return La instancia compartida del EventBus
-     */
-    public static EventBus getInstance() {
-        if (instance == null) {
-            instance = new EventBus();
-        }
-        return instance;
     }
 
     /**
