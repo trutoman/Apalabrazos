@@ -3,6 +3,8 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Collection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents the highest level instance of a game session.
@@ -10,11 +12,16 @@ import java.util.Collection;
  */
 public class GameGlobal {
 
+    private static final Logger log = LoggerFactory.getLogger(GameGlobal.class);
+
     /**
      * Enum representing the game state
      */
     public enum GameGlobalState {
-        PENDING,
+        IDLE,
+        CONTROLLER_READY,
+        START_VALIDATED,
+        INITIALIZED,           // Ambas condiciones (Controller Ready + Start Validated) se cumplieron
         PLAYING,
         PAUSED,
         POST
@@ -33,7 +40,7 @@ public class GameGlobal {
      */
     public GameGlobal() {
         this.playerInstances = new HashMap<>();
-        this.state = GameGlobalState.PENDING;
+        this.state = GameGlobalState.IDLE;
         this.gameType = GameType.HIGHER_POINTS_WINS;
         this.difficulty = QuestionLevel.EASY;
         this.maxPlayers = 1;
@@ -47,7 +54,7 @@ public class GameGlobal {
      */
     public GameGlobal(GamePlayerConfig config) {
         this.playerInstances = new HashMap<>();
-        this.state = GameGlobalState.PENDING;
+        this.state = GameGlobalState.IDLE;
         this.gameType = config.getGameType() != null ? config.getGameType() : GameType.HIGHER_POINTS_WINS;
         this.difficulty = config.getDifficultyLevel() != null ? config.getDifficultyLevel() : QuestionLevel.EASY;
         this.maxPlayers = config.getMaxPlayers() > 0 ? config.getMaxPlayers() : 1;
@@ -184,7 +191,7 @@ public class GameGlobal {
      * Reset the game to ready state
      */
     public void reset() {
-        this.state = GameGlobalState.PENDING;
+        this.state = GameGlobalState.IDLE;
     }
 
     /**
@@ -242,5 +249,49 @@ public class GameGlobal {
      */
     public boolean hasPlayer(String playerId) {
         return playerInstances.containsKey(playerId);
+    }
+
+    /**
+     * Transiciona a CONTROLLER_READY si es posible
+     * Retorna true si transición exitosa y se alcanzó INITIALIZED
+     * @return true si se alcanzó INITIALIZED, false en otro caso
+     */
+    public synchronized boolean transitionControllerReady() {
+        if (this.state == GameGlobalState.IDLE) {
+            this.state = GameGlobalState.CONTROLLER_READY;
+            log.info("State transitioned: IDLE -> CONTROLLER_READY");
+            return false;
+        } else if (this.state == GameGlobalState.START_VALIDATED) {
+            this.state = GameGlobalState.INITIALIZED;
+            log.info("State transitioned: START_VALIDATED -> INITIALIZED (ok)");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Transiciona a START_VALIDATED si es posible
+     * Retorna true si transición exitosa y se alcanzó INITIALIZED
+     * @return true si se alcanzó INITIALIZED, false en otro caso
+     */
+    public synchronized boolean transitionStartValidated() {
+        if (this.state == GameGlobalState.IDLE) {
+            this.state = GameGlobalState.START_VALIDATED;
+            log.info("State transitioned: IDLE -> START_VALIDATED");
+            return false;
+        } else if (this.state == GameGlobalState.CONTROLLER_READY) {
+            this.state = GameGlobalState.INITIALIZED;
+            log.info("State transitioned: CONTROLLER_READY -> INITIALIZED (ok)");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Verifica si el juego ha sido inicializado (ambas condiciones se cumplen)
+     * @return true si el estado es INITIALIZED
+     */
+    public boolean isGameInitialized() {
+        return this.state == GameGlobalState.INITIALIZED;
     }
 }

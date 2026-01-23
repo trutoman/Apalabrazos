@@ -7,8 +7,8 @@ import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.ResultsController;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.LobbyController;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -47,14 +47,14 @@ public class ViewNavigator {
         }
     }
 
-    public void showGame(GamePlayerConfig playerOneConfig, GameService gameService) {
+    public void showGame(GamePlayerConfig playerOneConfig, EventBus externalBus) {
         try {
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
             Parent root = loader.load();
             GameController controller = loader.getController();
             controller.setNavigator(this);
-            controller.setGameService(gameService);
             controller.setPlayerConfig(playerOneConfig);
+            controller.setExternalBus(externalBus);
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
             stage.show();

@@ -15,11 +15,15 @@ import javafx.scene.layout.VBox;
 import javafx.scene.image.ImageView;
 import javafx.animation.TranslateTransition;
 import javafx.util.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Controller for the main menu with game mode selection.
  */
 public class MenuController {
+
+    private static final Logger log = LoggerFactory.getLogger(MenuController.class);
 
     @FXML
     private ImageView profileImage;

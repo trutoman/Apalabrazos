@@ -1,33 +1,29 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GlobalEventBus;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventListener;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameEvent;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameCreationRequestedEvent;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameSessionCreatedEvent;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GameStartedRequestEvent;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GetGameSessionInfoEvent;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.PlayerJoinedEvent;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameType;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionLevel;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
-import javafx.fxml.FXML;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.ImageView;
-import javafx.application.Platform;
+import javafx.util.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Random;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 public class LobbyController implements EventListener {
+
+    private static final Logger log = LoggerFactory.getLogger(LobbyController.class);
 
     @FXML private ImageView profileImage;
     @FXML private Label usernameLabel;
@@ -117,7 +113,7 @@ public class LobbyController implements EventListener {
             // Publicar evento para obtener información de la sesión seleccionada
             if (newSel != null && !suppressInfoRequest) {
                 eventBus.publish(new GetGameSessionInfoEvent(newSel.getRoomCode()));
-                System.out.println("[LobbyController] Published GetGameSessionInfoEvent for room: " + newSel.getRoomCode());
+                log.info("Published GetGameSessionInfoEvent for room: {}", newSel.getRoomCode());
             }
         });
         gamesTable.setPlaceholder(new Label("No hay partidas creadas"));
@@ -217,6 +213,7 @@ public class LobbyController implements EventListener {
         Player player = new Player(playerName);
         GamePlayerConfig playerConfig = new GamePlayerConfig();
         playerConfig.setPlayer(player);
+        playerConfig.setRoomId(roomCode);
         playerConfig.setQuestionNumber(gameGlobal.getNumberOfQuestions());
         playerConfig.setTimerSeconds(gameGlobal.getGameDuration());
         playerConfig.setGameType(gameGlobal.getGameType());
@@ -232,10 +229,10 @@ public class LobbyController implements EventListener {
 
         // Navegar al juego usando el ViewNavigator
         if (navigator != null) {
-            navigator.showGame(playerConfig, gameService);
+            navigator.showGame(playerConfig, gameService.getExternalBus());
         }
 
-        System.out.println("[LobbyController] Iniciando partida con Room ID: " + roomCode);
+        log.info("Starting game with Room ID: {}", roomCode);
     }
 
     private void handleJoinGame() {
@@ -278,7 +275,7 @@ public class LobbyController implements EventListener {
     private void handleGameSessionCreated(GameSessionCreatedEvent event) {
         String sessionId = event.getSessionId();
         String tempRoomCode = event.getTempRoomCode();
-        System.out.println("[LobbyController] Session created with ID: " + sessionId + " for temp room " + tempRoomCode);
+        log.info("Session created with ID: {} for temp room: {}", sessionId, tempRoomCode);
 
         // UI updates must run on JavaFX Application Thread
         Platform.runLater(() -> {
@@ -288,7 +285,7 @@ public class LobbyController implements EventListener {
                 suppressInfoRequest = true;
                 gamesTable.getSelectionModel().select(existingEntry);
                 suppressInfoRequest = false;
-                System.out.println("[LobbyController] Session " + sessionId + " already listed. Skipping duplicate add.");
+                log.info("Session {} already listed. Skipping duplicate add.", sessionId);
                 return;
             }
 
@@ -329,12 +326,12 @@ public class LobbyController implements EventListener {
             String hostPlayerId = pendingHostPlayerIdByTempCode.get(tempRoomCode);
             if (hostPlayerId != null) {
                 eventBus.publish(new PlayerJoinedEvent(hostPlayerId, sessionId));
-                System.out.println("[LobbyController] Host " + hostName + " (" + hostPlayerId + ") joined session " + sessionId);
+                log.info("Host {} ({}) joined session {}", hostName, hostPlayerId, sessionId);
                 pendingHostPlayerIdByTempCode.remove(tempRoomCode);
             }
 
             pendingHostsByTempCode.remove(tempRoomCode);
-            System.out.println("[LobbyController] Added new game entry for session " + sessionId + " (from temp " + tempRoomCode + ")");
+            log.info("Added new game entry for session {} (from temp {})", sessionId, tempRoomCode);
         });
     }
 

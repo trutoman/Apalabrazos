@@ -8,6 +8,7 @@ public class GamePlayerConfig {
     private int questionNumber;
     private int maxPlayers;
     private GameType gameType;
+    private String roomId;
 
 
     public GamePlayerConfig() {
@@ -73,6 +74,14 @@ public class GamePlayerConfig {
 
     public void setMaxPlayers(int playersCount) {
         this.maxPlayers = playersCount;
+    }
+
+    public String getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
     }
 
 }

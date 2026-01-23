@@ -2,11 +2,9 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.service;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.*;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionFileLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -15,6 +13,8 @@ import java.util.Random;
  * and publishes state change events.
  */
 public class GameService implements EventListener {
+
+    private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
     private final EventBus eventBus;
     private final EventBus externalBus;
@@ -71,9 +71,13 @@ public class GameService implements EventListener {
      * This method will be invoked only after validating that the requester is the creator
      */
     public void GameStartedValid() {
+        // Transicionar a START_VALIDATED en la máquina de estados
+        GlobalGameInstance.transitionStartValidated();
+        checkAndInitialize();
+
         // Publicar CreatorInitGame en el bus externo para notificar a GameController
-        externalBus.publish(new CreatorInitGame());
-        System.out.println("[GameService] GameStartedValid invoked - notifying CreatorInitGame to external bus");
+        externalBus.publish(new CreatorInitGameEvent());
+        log.info("GameStartedValid invoked - state machine updated");
     }
 
     /**
@@ -91,7 +95,7 @@ public class GameService implements EventListener {
             this.GlobalGameInstance.setState(GameGlobal.GameGlobalState.PLAYING);
         }
 
-        System.out.println("[GameService] Juego iniciado. TimeService iniciado");
+        log.info("Juego iniciado. TimeService iniciado");
     }
 
     /**
@@ -99,7 +103,7 @@ public class GameService implements EventListener {
      */
     private void notifyQuestionChanged() {
         // En multijugador, cada instancia del juego notifica sus propios cambios
-        System.out.println("[GameService] Cambio de pregunta notificado");
+        log.debug("Cambio de pregunta notificado");
     }
 
     /**
@@ -148,30 +152,39 @@ public class GameService implements EventListener {
      */
     public boolean addPlayerToGame(String playerId) {
         if (playerId == null || playerId.isEmpty()) {
-            System.err.println("[GameService] addPlayerToGame: playerId inválido");
+            log.warn("addPlayerToGame: playerId inválido");
             return false;
         }
 
         GameGlobal global = this.GlobalGameInstance;
         if (global == null) {
-            System.err.println("[GameService] addPlayerToGame: GlobalGameInstance es null");
+            log.error("addPlayerToGame: GlobalGameInstance es null");
             return false;
         }
 
         if (global.hasPlayer(playerId)) {
-            System.out.println("[GameService] addPlayerToGame: jugador ya en la partida: " + playerId);
+            log.info("addPlayerToGame: jugador ya en la partida: {}", playerId);
             return false;
         }
 
         if (global.getPlayerCount() >= global.getMaxPlayers()) {
-            System.out.println("[GameService] addPlayerToGame: partida llena (" + global.getPlayerCount() + "/" + global.getMaxPlayers() + ")");
+            log.warn("addPlayerToGame: partida llena ({}/{})", global.getPlayerCount(), global.getMaxPlayers());
             return false;
         }
 
-        GameInstance instance = new GameInstance();
-            //instance.initializeQuestions(global.getNumberOfQuestions(), global.getDifficulty());
+        // Crear GameInstance con parámetros del GameGlobal
+        Player player = new Player(playerId, playerId);  // Crear Player mínimo con ID como nombre
+        GameInstance instance = new GameInstance(
+            global.getGameDuration(),
+            player,
+            global.getDifficulty(),
+            global.getNumberOfQuestions(),
+            global.getGameType()
+        );
+
+        // Insertar la GameInstance en el mapa playerInstances del GameGlobal
         global.addPlayerInstance(playerId, instance);
-        System.out.println("[GameService] Jugador agregado: " + playerId + " (total: " + global.getPlayerCount() + ")");
+        log.info("Jugador agregado: {} (total: {})", playerId, global.getPlayerCount());
         return true;
     }
 
@@ -186,6 +199,27 @@ public class GameService implements EventListener {
     }
 
     /**
+     * Get the external EventBus instance for this GameService.
+     * Controllers can use this bus to publish events and receive game updates.
+     *
+     * @return EventBus instance for external communication
+     */
+    public EventBus getExternalBus() {
+        return externalBus;
+    }
+
+    /**
+     * Verifica si ambas condiciones se cumplen (ControllerReady + StartValidated)
+     * Si sí, invoca initGame()
+     */
+    private void checkAndInitialize() {
+        if (GlobalGameInstance.isGameInitialized()) {
+            log.info("Ambas condiciones cumplidas (Controller + Start Validation) - iniciando juego");
+            initGame();
+        }
+    }
+
+    /**
      * Recibir y procesar eventos del bus global
      */
     @Override
@@ -197,6 +231,20 @@ public class GameService implements EventListener {
         } else if (event instanceof TimerTickEvent) {
             // Reenviar TimerTickEvent al bus externo (hacia GameController)
             publishExternal(event);
+        } else if (event instanceof GameControllerReady) {
+            GameControllerReady ready = (GameControllerReady) event;
+            log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
+            GlobalGameInstance.transitionControllerReady();
+            checkAndInitialize();
+        } else if (event instanceof InitGameRequestEvent) {
+            InitGameRequestEvent request = (InitGameRequestEvent) event;
+            log.info("InitGameRequestEvent received from playerId: {} in room: {}", request.getPlayerId(), request.getRoomId());
+            // Verificar que el request viene del mismo room
+            if (gameSessionId.equals(request.getRoomId())) {
+                initGame();
+            } else {
+                log.warn("InitGameRequestEvent ignored - roomId mismatch: expected={}, received={}", gameSessionId, request.getRoomId());
+            }
         }
     }
 

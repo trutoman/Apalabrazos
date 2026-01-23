@@ -4,7 +4,8 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionStatus;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.AlphabetMap;
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -22,6 +23,8 @@ import java.util.Map;
  * Listens to game events and updates the UI accordingly.
  */
 public class GameController implements EventListener {
+
+    private static final Logger log = LoggerFactory.getLogger(GameController.class);
 
     @FXML
     private Label questionLabel;
@@ -70,9 +73,10 @@ public class GameController implements EventListener {
 
     private GamePlayerConfig playerConfig;
     private String localPlayerId;
+    private String roomId;
 
     //
-    private GameService gameService;
+    private EventBus externalBus;
     private boolean listenerRegistered = false;
     private ViewNavigator navigator;
     // Mapa de botones por letra del rosco
@@ -84,23 +88,26 @@ public class GameController implements EventListener {
 
     public void setPlayerConfig(GamePlayerConfig playerConfig) {
         this.playerConfig = playerConfig;
-        if (playerConfig != null && playerConfig.getPlayer() != null) {
-            this.localPlayerId = playerConfig.getPlayer().getPlayerID();
+        if (playerConfig != null) {
+            if (playerConfig.getPlayer() != null) {
+                this.localPlayerId = playerConfig.getPlayer().getPlayerID();
+            }
+            this.roomId = playerConfig.getRoomId();
         }
     }
 
-    public void setGameService(GameService gameService) {
-        this.gameService = gameService;
-        if (this.gameService != null && !listenerRegistered) {
-            this.gameService.addListener(this);
+    public void setExternalBus(EventBus externalBus) {
+        this.externalBus = externalBus;
+        if (this.externalBus != null && !listenerRegistered) {
+            this.externalBus.addListener(this);
             listenerRegistered = true;
         }
     }
 
     @FXML
     public void initialize() {
-        if (!listenerRegistered && gameService != null) {
-            gameService.addListener(this);
+        if (!listenerRegistered && externalBus != null) {
+            externalBus.addListener(this);
             listenerRegistered = true;
         }
 
@@ -110,6 +117,12 @@ public class GameController implements EventListener {
             startButton.setText("Esperando...");
             startButton.setDisable(true);
             startButton.setOnAction(event -> handleStartGame());
+        }
+
+        // Notificar al GameService que el controller está listo (máquina de estados)
+        if (externalBus != null && localPlayerId != null && roomId != null) {
+            externalBus.publish(new GameControllerReady(localPlayerId, roomId));
+            log.info("initialize() completed - publishing GameControllerReady (playerId={}, roomId={})", localPlayerId, roomId);
         }
     }
 
@@ -223,7 +236,10 @@ public class GameController implements EventListener {
         // que ya existe la config. Necesito la config para pintar  el rosco
         createRosco();
         // Publicar evento de inicio de juego
-        gameService.initGame();
+        if (externalBus != null && localPlayerId != null && roomId != null) {
+            externalBus.publish(new InitGameRequestEvent(localPlayerId, roomId));
+            log.info("Start button clicked - publishing InitGameRequestEvent (playerId={}, roomId={})", localPlayerId, roomId);
+        }
     }
 
     /**
@@ -235,7 +251,7 @@ public class GameController implements EventListener {
         if (event instanceof TimerTickEvent) {
             int remaining = ((TimerTickEvent) event).getElapsedSeconds();
             Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
-        } else if (event instanceof CreatorInitGame) {
+        } else if (event instanceof CreatorInitGameEvent) {
             // Validación correcta del inicio del juego por el creador
             Platform.runLater(() -> {
                 if (startButton != null) {
