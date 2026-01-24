@@ -106,11 +106,6 @@ public class GameController implements EventListener {
 
     @FXML
     public void initialize() {
-        if (!listenerRegistered && externalBus != null) {
-            externalBus.addListener(this);
-            listenerRegistered = true;
-        }
-
         // Configurar el botón de inicio
         if (startButton != null) {
             // Mientras se valida el inicio desde el lobby, mostrar "Esperando..."
@@ -118,11 +113,22 @@ public class GameController implements EventListener {
             startButton.setDisable(true);
             startButton.setOnAction(event -> handleStartGame());
         }
+    }
+
+    /**
+     * Llamar a este método después de configurar todas las dependencias
+     * (setNavigator, setPlayerConfig, setExternalBus)
+     */
+    public void postInitialize() {
+        if (!listenerRegistered && externalBus != null) {
+            externalBus.addListener(this);
+            listenerRegistered = true;
+        }
 
         // Notificar al GameService que el controller está listo (máquina de estados)
         if (externalBus != null && localPlayerId != null && roomId != null) {
             externalBus.publish(new GameControllerReady(localPlayerId, roomId));
-            log.info("initialize() completed - publishing GameControllerReady (playerId={}, roomId={})", localPlayerId, roomId);
+            log.info("postInitialize() completed - publishing GameControllerReady (playerId={}, roomId={})", localPlayerId, roomId);
         }
     }
 
@@ -235,11 +241,6 @@ public class GameController implements EventListener {
         // Crear el rosco con botones circulares, lo pongo aqui porque me aseguro
         // que ya existe la config. Necesito la config para pintar  el rosco
         createRosco();
-        // Publicar evento de inicio de juego
-        if (externalBus != null && localPlayerId != null && roomId != null) {
-            externalBus.publish(new InitGameRequestEvent(localPlayerId, roomId));
-            log.info("Start button clicked - publishing InitGameRequestEvent (playerId={}, roomId={})", localPlayerId, roomId);
-        }
     }
 
     /**

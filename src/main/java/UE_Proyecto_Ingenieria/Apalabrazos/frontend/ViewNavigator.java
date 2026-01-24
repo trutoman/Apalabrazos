@@ -55,6 +55,7 @@ public class ViewNavigator {
             controller.setNavigator(this);
             controller.setPlayerConfig(playerOneConfig);
             controller.setExternalBus(externalBus);
+            controller.postInitialize();  // Llamar después de todas las dependencias
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
             stage.show();

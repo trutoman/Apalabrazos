@@ -20,6 +20,14 @@ public class GameService implements EventListener {
     private final EventBus externalBus;
     private GameGlobal GlobalGameInstance;
 
+    // Controla que el evento de inicio para el controlador se publique una sola vez
+    private boolean creatorInitEventSent = false;
+
+    // Listeners separados para evitar rebotes entre buses
+    private final EventListener globalListener = this::onGlobalEvent;
+    private final EventListener externalListener = this::onExternalEvent;
+
+
     private TimeService timeService;
     private String gameSessionId; // UUID único para la partida
 
@@ -28,8 +36,9 @@ public class GameService implements EventListener {
         this.eventBus = GlobalEventBus.getInstance();
         this.externalBus = new EventBus();
         this.gameSessionId = generateGameSessionId();
-        // Registrarse como listener de eventos globales
-        eventBus.addListener(this);
+        // Registrarse con listeners separados (evita rebotes entre buses)
+        eventBus.addListener(globalListener);
+        externalBus.addListener(externalListener);
     }
 
     public GameService(GamePlayerConfig playerConfig) {
@@ -38,8 +47,9 @@ public class GameService implements EventListener {
         this.eventBus = GlobalEventBus.getInstance();
         this.externalBus = new EventBus();
         this.gameSessionId = generateGameSessionId();
-        // Registrarse como listener de eventos globales
-        eventBus.addListener(this);
+        // Registrarse con listeners separados (evita rebotes entre buses)
+        eventBus.addListener(globalListener);
+        externalBus.addListener(externalListener);
     }
 
     /**
@@ -57,16 +67,6 @@ public class GameService implements EventListener {
     }
 
     /**
-     * Publicar un evento al servicio (no al bus directamente)
-     * El GameController invoca este método para enviar eventos al servicio
-     * que los procesará localmente
-     */
-    public void publish(GameEvent event) {
-        // Procesar el evento localmente en lugar de publicarlo al bus
-        onEvent(event);
-    }
-
-    /**
      * Called when GameSessionManager validates that the game start request is valid
      * This method will be invoked only after validating that the requester is the creator
      */
@@ -74,10 +74,6 @@ public class GameService implements EventListener {
         // Transicionar a START_VALIDATED en la máquina de estados
         GlobalGameInstance.transitionStartValidated();
         checkAndInitialize();
-
-        // Publicar CreatorInitGame en el bus externo para notificar a GameController
-        externalBus.publish(new CreatorInitGameEvent());
-        log.info("GameStartedValid invoked - state machine updated");
     }
 
     /**
@@ -214,37 +210,49 @@ public class GameService implements EventListener {
      */
     private void checkAndInitialize() {
         if (GlobalGameInstance.isGameInitialized()) {
-            log.info("Ambas condiciones cumplidas (Controller + Start Validation) - iniciando juego");
+            log.info("Ambas condiciones cumplidas (Controller + Start Validation) - notificando al GameController");
+            if (!creatorInitEventSent) {
+                externalBus.publish(new CreatorInitGameEvent());
+                creatorInitEventSent = true;
+            }
             initGame();
         }
     }
 
     /**
-     * Recibir y procesar eventos del bus global
+     * Compatibilidad: si alguien llama a publish() se enruta como evento global.
      */
     @Override
     public void onEvent(GameEvent event) {
-        // Verificar el tipo de evento y llamar al método apropiado
+        onGlobalEvent(event);
+    }
+
+    // Maneja eventos del bus global (GameSessionManager, TimeService, etc.)
+    private void onGlobalEvent(GameEvent event) {
         if (event instanceof PlayerJoinedEvent) {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
             addPlayerToGame(join.getPlayerID());
         } else if (event instanceof TimerTickEvent) {
-            // Reenviar TimerTickEvent al bus externo (hacia GameController)
+            // Reenviar al bus externo para que el GameController actualice UI
             publishExternal(event);
         } else if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
             GlobalGameInstance.transitionControllerReady();
             checkAndInitialize();
-        } else if (event instanceof InitGameRequestEvent) {
-            InitGameRequestEvent request = (InitGameRequestEvent) event;
-            log.info("InitGameRequestEvent received from playerId: {} in room: {}", request.getPlayerId(), request.getRoomId());
-            // Verificar que el request viene del mismo room
-            if (gameSessionId.equals(request.getRoomId())) {
-                initGame();
-            } else {
-                log.warn("InitGameRequestEvent ignored - roomId mismatch: expected={}, received={}", gameSessionId, request.getRoomId());
-            }
+        }
+    }
+
+    // Maneja eventos que vienen del bus externo (publicados por GameController)
+    private void onExternalEvent(GameEvent event) {
+        if (event instanceof GameControllerReady) {
+            GameControllerReady ready = (GameControllerReady) event;
+            log.info("GameControllerReady received from playerId: {} (external bus)", ready.getPlayerId());
+            GlobalGameInstance.transitionControllerReady();
+            checkAndInitialize();
+        } else if (event instanceof TimerTickEvent) {
+            // No reenviar TimerTickEvent al mismo bus para evitar bucles
+            return;
         }
     }
 

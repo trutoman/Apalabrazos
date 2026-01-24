@@ -7,7 +7,7 @@
             "request": "launch",
             "mainClass": "UE_Proyecto_Ingenieria.Apalabrazos.MainApp",
             "projectName": "Apalabrazos",
-            "vmArgs": "--module-path /home/alvaro/.m2/repository/org/openjfx/javafx-controls/13:/home/alvaro/.m2/repository/org/openjfx/javafx-fxml/13:/home/alvaro/.m2/repository/org/openjfx/javafx-graphics/13:/home/alvaro/.m2/repository/org/openjfx/javafx-base/13 --add-modules javafx.controls,javafx.fxml",
+            "vmArgs": "--module-path /home/alosadad/.m2/repository/org/openjfx/javafx-controls/13:/home/alosadad/.m2/repository/org/openjfx/javafx-fxml/13:/home/alosadad/.m2/repository/org/openjfx/javafx-graphics/13:/home/alosadad/.m2/repository/org/openjfx/javafx-base/13 --add-modules javafx.controls,javafx.fxml",
             "console": "internalConsole"
         },
         {
