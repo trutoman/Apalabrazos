@@ -77,3 +77,6 @@ Desktop.ini
 # Built Visual Studio Code Extensions
 *.vsix
 .vscode/launch.json
+run_rosetta.sh
+.idea/workspace.xml
+.vscode/tasks.json

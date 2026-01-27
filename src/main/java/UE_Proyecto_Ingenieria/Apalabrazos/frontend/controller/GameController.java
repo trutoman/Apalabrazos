@@ -113,6 +113,25 @@ public class GameController implements EventListener {
             startButton.setDisable(true);
             startButton.setOnAction(event -> handleStartGame());
         }
+        
+        // Configurar botones de opciones
+        if (option1Button != null) {
+            option1Button.setOnAction(event -> handleOptionSelected(0));
+        }
+        if (option2Button != null) {
+            option2Button.setOnAction(event -> handleOptionSelected(1));
+        }
+        if (option3Button != null) {
+            option3Button.setOnAction(event -> handleOptionSelected(2));
+        }
+        if (option4Button != null) {
+            option4Button.setOnAction(event -> handleOptionSelected(3));
+        }
+        
+        // Configurar botón de skip (pasapalabra)
+        if (skipButton != null) {
+            skipButton.setOnAction(event -> handleSkip());
+        }
     }
 
     /**
@@ -177,7 +196,7 @@ public class GameController implements EventListener {
         double centerY = roscoPane.getHeight() / 2;
         // Radio proporcional al tamaño más pequeño del contenedor
         double radius = Math.min(centerX, centerY) * 0.8;
-        double buttonSize = 42;
+        double buttonSize = 38;;
 
         int index = 0;
         for (Button btn : letterButtons.values()) {
@@ -252,6 +271,8 @@ public class GameController implements EventListener {
         if (event instanceof TimerTickEvent) {
             int remaining = ((TimerTickEvent) event).getElapsedSeconds();
             Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
+        } else if (event instanceof AnswerValidatedEvent) {
+            handleAnswerValidated((AnswerValidatedEvent) event);
         } else if (event instanceof CreatorInitGameEvent) {
             // Validación correcta del inicio del juego por el creador
             Platform.runLater(() -> {
@@ -309,5 +330,106 @@ public class GameController implements EventListener {
                 option4Button.setText(responses.get(3));
             });
         }
+    }
+
+    /**
+     * Manejar cuando se recibe la validación de una respuesta
+     * Actualiza el color del botón del rosco según si fue correcta o incorrecta
+     */
+    private void handleAnswerValidated(AnswerValidatedEvent event) {
+        char letter = event.getLetter();
+        QuestionStatus status = event.getStatus();
+        boolean isCorrect = event.isCorrect();
+
+        log.info("Respuesta validada para letra {}: {} (status={})", letter, isCorrect ? "CORRECTA" : "INCORRECTA", status);
+
+        // Obtener el botón correspondiente a la letra
+        String letterStr = String.valueOf(letter).toUpperCase();
+        Button letterButton = letterButtons.get(letterStr);
+
+        if (letterButton != null) {
+            Platform.runLater(() -> {
+                // Remover todas las clases de estado anteriores
+                letterButton.getStyleClass().removeAll("rosco-letter-pending", "rosco-letter-correct", "rosco-letter-wrong", "rosco-letter-current");
+
+                // Aplicar el estilo según el status
+                if (status == QuestionStatus.RESPONDED_OK) {
+                    letterButton.getStyleClass().add("rosco-letter-correct");
+                    log.debug("Botón {} pintado en verde (correcto)", letter);
+                } else if (status == QuestionStatus.RESPONDED_FAIL) {
+                    letterButton.getStyleClass().add("rosco-letter-wrong");
+                    log.debug("Botón {} pintado en rojo (incorrecto)", letter);
+                }
+            });
+        }
+    }
+
+    /**
+     * Manejar cuando el jugador selecciona una opción de respuesta
+     * Publica AnswerSubmittedEvent al bus externo para que GameService lo procese
+     */
+    private void handleOptionSelected(int selectedOption) {
+        if (externalBus == null) {
+            log.warn("handleOptionSelected: externalBus es null");
+            return;
+        }
+
+        // Obtener el texto de la respuesta seleccionada
+        String answer = "";
+        switch (selectedOption) {
+            case 0:
+                answer = option1Button.getText();
+                break;
+            case 1:
+                answer = option2Button.getText();
+                break;
+            case 2:
+                answer = option3Button.getText();
+                break;
+            case 3:
+                answer = option4Button.getText();
+                break;
+        }
+
+        // Validar que hay texto en la respuesta
+        if (answer.isEmpty()) {
+            log.warn("handleOptionSelected: la respuesta está vacía");
+            return;
+        }
+
+        // Obtener la letra actual del rosco (buscar el botón con estilo "current")
+        char currentLetter = 0; // Sin letra por defecto
+        boolean foundCurrentLetter = false;
+        
+        for (Map.Entry<String, Button> entry : letterButtons.entrySet()) {
+            if (entry.getValue().getStyleClass().contains("rosco-letter-current")) {
+                currentLetter = entry.getKey().charAt(0);
+                foundCurrentLetter = true;
+                break;
+            }
+        }
+
+        // Validar que se encontró una letra actual válida
+        if (!foundCurrentLetter) {
+            log.warn("handleOptionSelected: no se encontró letra actual en el rosco");
+            return;
+        }
+
+        log.info("Opción seleccionada: {} (respuesta: '{}') para letra {}", selectedOption, answer, currentLetter);
+
+        // Publicar evento con: playerIndex=0 (single player siempre es jugador 0), 
+        // letra actual, y texto de respuesta
+        AnswerSubmittedEvent event = new AnswerSubmittedEvent(0, currentLetter, answer);
+        externalBus.publish(event);
+    }
+
+    /**
+     * Manejar cuando el jugador presiona el botón de "Pasapalabra"
+     * Por ahora solo registra el evento (falta implementar el evento en backend)
+     */
+    private void handleSkip() {
+        log.info("Botón Pasapalabra presionado");
+        // TODO: El backend necesita implementar QuestionSkippedEvent
+        
     }
 }
