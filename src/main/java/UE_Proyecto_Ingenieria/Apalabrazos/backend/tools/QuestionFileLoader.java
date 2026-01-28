@@ -2,9 +2,14 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionList;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Clase encargada de cargar las preguntas desde un archivo JSON.
@@ -14,6 +19,16 @@ public class QuestionFileLoader {
 
     // Ruta por defecto del archivo de preguntas
     private String defaultQuestionsFile = "src/main/resources/UE_Proyecto_Ingenieria/Apalabrazos/data/questions.json";
+
+    /**
+     * En el JSON de la rama de Alejandro hay 3 preguntas por letra (A..Z incluyendo Ñ):
+     * 27 letras * 3 = 81 preguntas.
+     *
+     * Para construir un rosco, necesitamos 1 pregunta por letra, manteniendo el orden
+     * de las letras (índice 0..N-1) para que el GameController pinte correctamente el rosco.
+     */
+    private static final int DEFAULT_QUESTIONS_PER_LETTER = 3;
+    private final Random rng = new Random();
 
     /**
      * Carga las preguntas desde el archivo por defecto.
@@ -62,11 +77,17 @@ public class QuestionFileLoader {
             throw new IllegalArgumentException(
                     "El archivo solo contiene " + available + " preguntas, se solicitaron " + count);
         }
-        // Take the first "count" questions
-        java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> subset =
-                all.getQuestionList().subList(0, count);
-        // Create a QuestionList with limit equal to "count"
-        return new UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionList(subset, count);
+
+        // Caso ROSCO (1 pregunta por letra) -> si tenemos al menos count * 3 preguntas,
+        // asumimos el formato "bloques" (3 por letra) y elegimos 1 aleatoria por bloque.
+        if (available >= count * DEFAULT_QUESTIONS_PER_LETTER) {
+            List<Question> picked = pickOnePerLetter(all.getQuestionList(), count, DEFAULT_QUESTIONS_PER_LETTER);
+            return new QuestionList(picked, count);
+        }
+
+        // Fallback: comportamiento anterior (coger las primeras "count")
+        List<Question> subset = all.getQuestionList().subList(0, count);
+        return new QuestionList(subset, count);
     }
 
     /**
@@ -74,5 +95,31 @@ public class QuestionFileLoader {
      */
     public QuestionList loadQuestions(int count) throws IOException {
         return this.loadQuestions(defaultQuestionsFile, count);
+    }
+
+    /**
+     * Selecciona 1 pregunta aleatoria por letra.
+     *
+     * @param allQuestions          lista completa (esperada en bloques por letra)
+     * @param lettersCount          número de letras/preguntas del rosco
+     * @param questionsPerLetter    tamaño de cada bloque (por defecto 3)
+     */
+    private List<Question> pickOnePerLetter(List<Question> allQuestions, int lettersCount, int questionsPerLetter) {
+        if (allQuestions == null) {
+            return Collections.emptyList();
+        }
+        List<Question> out = new ArrayList<>(lettersCount);
+        for (int letterIndex = 0; letterIndex < lettersCount; letterIndex++) {
+            int start = letterIndex * questionsPerLetter;
+            int end = start + questionsPerLetter;
+            if (end > allQuestions.size()) {
+                // Si el fichero no tiene suficientes, paramos para evitar IndexOutOfBounds
+                break;
+            }
+            List<Question> block = allQuestions.subList(start, end);
+            Question chosen = block.get(rng.nextInt(block.size()));
+            out.add(chosen);
+        }
+        return out;
     }
 }
