@@ -54,7 +54,7 @@ public class GameSessionManager implements EventListener {
 
         // Guardar quién es el creador de esta sesión
         if (sessionId != null && event.getConfig().getPlayer() != null) {
-            sessionCreators.put(sessionId, event.getConfig().getPlayer().getName());
+            sessionCreators.put(sessionId, event.getConfig().getPlayer().getPlayerID());
         }
 
         // Publish event to notify lobby that session was created

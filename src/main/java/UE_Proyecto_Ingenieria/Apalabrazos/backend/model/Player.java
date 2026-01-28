@@ -111,6 +111,14 @@ public class Player {
     }
 
     /**
+     * Establecer el ID único del jugador (usado cuando se necesita mantener consistencia)
+     * @param playerID ID del jugador
+     */
+    public void setPlayerID(String playerID) {
+        this.playerID = playerID;
+    }
+
+    /**
      * Generar un ID único para el jugador: nombre-xxxx (4 caracteres alfanuméricos al azar)
      * @param playerName nombre del jugador
      * @return ID único en formato nombre-xxxx

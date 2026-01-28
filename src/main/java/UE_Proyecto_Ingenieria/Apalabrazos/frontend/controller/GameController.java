@@ -288,8 +288,12 @@ public class GameController implements EventListener {
             // Filtrar por destinatario si el evento viene dirigido a un jugador concreto
             if (questionEvent.getPlayerId() != null && localPlayerId != null &&
                 !questionEvent.getPlayerId().equals(localPlayerId)) {
+                log.debug("Evento ignorado: destinado a {} pero este controlador es de {}",
+                         questionEvent.getPlayerId(), localPlayerId);
                 return; // Evento para otro jugador; ignorar
             }
+            log.debug("Procesando QuestionChangedEvent para jugador: {} (índice: {})",
+                     localPlayerId, questionEvent.getQuestionIndex());
             String letter = AlphabetMap.getLetter(questionEvent.getQuestionIndex());
             QuestionStatus status = questionEvent.getStatus();
 
