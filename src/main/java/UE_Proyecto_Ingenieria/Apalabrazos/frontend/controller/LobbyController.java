@@ -51,8 +51,8 @@ public class LobbyController implements EventListener {
 
     private ViewNavigator navigator;
     private EventBus eventBus;
-    private String username = "Jugador1";
     private ObservableList<GameLobbyEntry> games;
+    private Player loggedInsideLobbyPlayer;
     private final Map<String, GameLobbyEntry> pendingGames = new HashMap<>();
     private final Map<String, String> pendingHostsByTempCode = new HashMap<>();
     private final Map<String, String> pendingHostPlayerIdByTempCode = new HashMap<>();
@@ -65,7 +65,7 @@ public class LobbyController implements EventListener {
     public void initialize() {
         eventBus = GlobalEventBus.getInstance();
         eventBus.addListener(this);
-        usernameLabel.setText(username);
+        usernameLabel.setText("JugadorVacio");
         setupComboBoxes();
         setupGamesTable();
         setupEventHandlers();
@@ -136,13 +136,14 @@ public class LobbyController implements EventListener {
         b.setOnMouseExited(e -> b.setStyle(original));
     }
 
-    private void generateRoomCode() {
-        String code = "ROOM-" + String.format("%04d", new Random().nextInt(10000));
-        roomCodeInput.setText(code);
-    }
-
     private void handleCreateGame() {
+        // Creamos el usuario lo que en un futuro se hará con base de datos
         String name = playerNameInput.getText() == null ? "" : playerNameInput.getText().trim();
+        Player player = new Player(name);
+        // Forzamos ahora a que este lobby pertenezca al jugador que acaba de ser creado
+        this.loggedInsideLobbyPlayer = player;
+        this.usernameLabel.setText(player.getPlayerID());
+
         String questionsStr = questionCountInput.getText() == null ? "" : questionCountInput.getText().trim();
         String durationStr = durationInput.getText() == null ? "" : durationInput.getText().trim();
         String playersStr = playersInput.getText() == null ? "" : playersInput.getText().trim();
@@ -150,7 +151,7 @@ public class LobbyController implements EventListener {
         String gameTypeStr = gameTypeCombo.getValue();
 
         boolean error = false;
-        if (name.isEmpty()) { markError(playerNameInput); error = true; }
+        if (this.loggedInsideLobbyPlayer.getPlayerID().isEmpty()) { markError(playerNameInput); error = true; }
         int questionCount = parsePositiveInt(questionsStr, questionCountInput); if (questionCount == -1) error = true;
         int durationSeconds = parsePositiveInt(durationStr, durationInput); if (durationSeconds == -1) error = true;
         int maxPlayers = parsePositiveInt(playersStr, playersInput); if (maxPlayers == -1) error = true;
@@ -161,15 +162,13 @@ public class LobbyController implements EventListener {
         String tempRoomCode = roomCodeInput.getText();
 
         // No añadimos la partida a la tabla aún: esperar al evento GameSessionCreatedEvent
-        pendingHostsByTempCode.put(tempRoomCode, name);
+        pendingHostsByTempCode.put(tempRoomCode, this.loggedInsideLobbyPlayer.getPlayerID());
 
-        // Create config and publish event to MatchMakerService
-        Player player = new Player(name);
         // Guardar el playerId del host para unirlo automáticamente cuando se cree la sesión
-        pendingHostPlayerIdByTempCode.put(tempRoomCode, player.getPlayerID());
+        pendingHostPlayerIdByTempCode.put(tempRoomCode, this.loggedInsideLobbyPlayer.getPlayerID());
 
         GamePlayerConfig config = new GamePlayerConfig();
-        config.setPlayer(player);
+        config.setPlayer(this.loggedInsideLobbyPlayer);
         config.setQuestionNumber(questionCount);
         config.setTimerSeconds(durationSeconds);
         config.setGameType(GameType.valueOf(gameTypeStr));
@@ -197,22 +196,12 @@ public class LobbyController implements EventListener {
             showAlert("Error", "No se encontró la sesión de juego para el código: " + roomCode);
             return;
         }
-
-        // Obtener el nombre del jugador (necesario para identificar quién está jugando)
-        String playerName = playerNameInput.getText() == null ? "" : playerNameInput.getText().trim();
-        if (playerName.isEmpty()) {
-            markError(playerNameInput);
-            showAlert("Error de validación", "Por favor, ingresa tu nombre.");
-            return;
-        }
-
         // Obtener la configuración del juego desde el GameGlobal
         var gameGlobal = gameService.getGameInstance();
 
         // Crear configuración del jugador usando los datos del GameGlobal
-        Player player = new Player(playerName);
         GamePlayerConfig playerConfig = new GamePlayerConfig();
-        playerConfig.setPlayer(player);
+        playerConfig.setPlayer(this.loggedInsideLobbyPlayer);
         playerConfig.setRoomId(roomCode);
         playerConfig.setQuestionNumber(gameGlobal.getNumberOfQuestions());
         playerConfig.setTimerSeconds(gameGlobal.getGameDuration());
@@ -225,7 +214,7 @@ public class LobbyController implements EventListener {
 
         // Publicar evento para solicitar iniciar el juego (roomId y username del que inicia)
         // GameSessionManager validará que sea el creador
-        eventBus.publish(new GameStartedRequestEvent(roomCode, playerName));
+        eventBus.publish(new GameStartedRequestEvent(roomCode, this.loggedInsideLobbyPlayer.getPlayerID()));
 
         // Navegar al juego usando el ViewNavigator
         if (navigator != null) {

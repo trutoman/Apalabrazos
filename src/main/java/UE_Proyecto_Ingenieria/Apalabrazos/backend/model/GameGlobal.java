@@ -99,6 +99,14 @@ public class GameGlobal {
     }
 
     /**
+     * Get all player IDs
+     * @return Set of player IDs
+     */
+    public java.util.Set<String> getAllPlayerIds() {
+        return playerInstances.keySet();
+    }
+
+    /**
      * Get the map of player instances
      * @return Map of playerID -> GameInstance
      */

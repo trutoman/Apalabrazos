@@ -2,9 +2,11 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.service;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.*;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.QuestionFileLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Random;
 
 /**
@@ -91,15 +93,63 @@ public class GameService implements EventListener {
             this.GlobalGameInstance.setState(GameGlobal.GameGlobalState.PLAYING);
         }
 
+        // Cargar preguntas para todos y publicar la primera
+        loadQuestionsForAllPlayers();
+        publishQuestionForAllPlayers(0, QuestionStatus.INIT);
+
         log.info("Juego iniciado. TimeService iniciado");
     }
 
     /**
-     * Notify that the current question has changed for a player
+     * Carga las preguntas y las asigna a cada instancia de jugador
      */
-    private void notifyQuestionChanged() {
-        // En multijugador, cada instancia del juego notifica sus propios cambios
-        log.debug("Cambio de pregunta notificado");
+    private void loadQuestionsForAllPlayers() {
+        try {
+            QuestionFileLoader loader = new QuestionFileLoader();
+            int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
+
+            // Cargar y limitar la lista de preguntas
+            QuestionList questionList = loader.loadQuestions(numberOfQuestions);
+
+            // Asignar a cada instancia de jugador
+            for (GameInstance instance : GlobalGameInstance.getAllPlayerInstances()) {
+                instance.setQuestionList(questionList);
+                instance.start();
+            }
+        } catch (IOException e) {
+            log.error("Error al cargar preguntas: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Publica la pregunta indicada por índice para todos los jugadores
+     */
+    private void publishQuestionForAllPlayers(int questionIndex, QuestionStatus status) {
+        for (String playerId : GlobalGameInstance.getAllPlayerIds()) {
+            publishQuestionForPlayer(playerId, questionIndex, status);
+        }
+    }
+
+    /**
+     * Publica un QuestionChangedEvent para un jugador y pregunta concretos
+     */
+    public void publishQuestionForPlayer(String playerId, int questionIndex, QuestionStatus status) {
+        GameInstance instance = GlobalGameInstance.getPlayerInstance(playerId);
+        if (instance == null) {
+            log.warn("No GameInstance for player {}", playerId);
+            return;
+        }
+
+        QuestionList list = instance.getQuestionList();
+        if (list == null || questionIndex < 0 || questionIndex >= list.getCurrentLength()) {
+            log.warn("Invalid question index {} for player {}", questionIndex, playerId);
+            return;
+        }
+
+        Question question = list.getQuestionAt(questionIndex);
+        QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, question, playerId);
+        externalBus.publish(event);
+        log.info("Pregunta {} publicada para jugador {}", questionIndex, playerId);
     }
 
     /**
@@ -168,8 +218,13 @@ public class GameService implements EventListener {
             return false;
         }
 
-        // Crear GameInstance con parámetros del GameGlobal
-        Player player = new Player(playerId, playerId);  // Crear Player mínimo con ID como nombre
+        // Extraer el nombre del jugador del playerId (formato: nombre-xxxx)
+        String playerName = playerId.contains("-") ? playerId.substring(0, playerId.lastIndexOf("-")) : playerId;
+
+        // Crear Player y asignarle manualmente el playerId recibido para mantener consistencia
+        Player player = new Player(playerName, playerName);
+        player.setPlayerID(playerId);  // Establecer el ID exacto recibido
+
         GameInstance instance = new GameInstance(
             global.getGameDuration(),
             player,
@@ -178,9 +233,9 @@ public class GameService implements EventListener {
             global.getGameType()
         );
 
-        // Insertar la GameInstance en el mapa playerInstances del GameGlobal
+        // Insertar la GameInstance en el mapa playerInstances del GameGlobal usando el playerId original
         global.addPlayerInstance(playerId, instance);
-        log.info("Jugador agregado: {} (total: {})", playerId, global.getPlayerCount());
+        log.info("Jugador agregado: {} (nombre: {}, total: {})", playerId, playerName, global.getPlayerCount());
         return true;
     }
 
