@@ -21,14 +21,24 @@ public class ViewNavigator {
 
     private final Stage stage;
     private static final int SCENE_WIDTH = 1280;
-    private static final int SCENE_HEIGHT = 550;
+    private static final int SCENE_HEIGHT = 720;
+
+    // public ViewNavigator(Stage stage) {
+    //     this.stage = stage;
+    //     this.stage.setTitle("Apalabrazos 2D");
+    //     // Permitir que la ventana se ajuste al contenido
+    //     this.stage.setResizable(true);
+    //     this.stage.sizeToScene();
+    // }
 
     public ViewNavigator(Stage stage) {
         this.stage = stage;
         this.stage.setTitle("Apalabrazos 2D");
-        // Permitir que la ventana se ajuste al contenido
-        this.stage.setResizable(true);
+        // Tamaño inicial
         this.stage.sizeToScene();
+        this.stage.setMinWidth(800);
+        this.stage.setMinHeight(600);
+        this.stage.setResizable(true);
     }
 
 
@@ -49,18 +59,36 @@ public class ViewNavigator {
 
     public void showGame(GamePlayerConfig playerOneConfig, EventBus externalBus) {
         try {
+            System.out.println("[ViewNavigator] showGame llamado con externalBus: " + externalBus);
+            System.out.println("[ViewNavigator] Cargando FXML...");
             FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/UE_Proyecto_Ingenieria/Apalabrazos/view/game.fxml"));
+            System.out.println("[ViewNavigator] Haciendo loader.load()...");
             Parent root = loader.load();
+            System.out.println("[ViewNavigator] FXML cargado, obteniendo controller...");
             GameController controller = loader.getController();
+            System.out.println("[ViewNavigator] Controller obtenido: " + controller);
+            System.out.println("[ViewNavigator] Llamando setNavigator...");
             controller.setNavigator(this);
+            System.out.println("[ViewNavigator] Llamando setPlayerConfig...");
             controller.setPlayerConfig(playerOneConfig);
+            System.out.println("[ViewNavigator] Llamando setExternalBus con: " + externalBus);
             controller.setExternalBus(externalBus);
+            System.out.println("[ViewNavigator] setExternalBus completado");
+            System.out.println("[ViewNavigator] Llamando postInitialize...");
             controller.postInitialize();  // Llamar después de todas las dependencias
+            System.out.println("[ViewNavigator] Creando Scene...");
             Scene scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
             stage.show();
+            System.out.println("[ViewNavigator] showGame completado exitosamente");
         } catch (IOException e) {
+            System.err.println("[ViewNavigator ERROR] IOException: " + e.getMessage());
+            e.printStackTrace();
             throw new IllegalStateException("No se pudo cargar la vista del juego", e);
+        } catch (Exception e) {
+            System.err.println("[ViewNavigator ERROR] Exception: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 

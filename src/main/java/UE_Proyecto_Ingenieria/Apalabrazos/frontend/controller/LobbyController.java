@@ -218,7 +218,9 @@ public class LobbyController implements EventListener {
 
         // Navegar al juego usando el ViewNavigator
         if (navigator != null) {
-            navigator.showGame(playerConfig, gameService.getExternalBus());
+            EventBus externalBus = gameService.getExternalBus();
+            log.info("Navegando al juego con externalBus: {}", externalBus);
+            navigator.showGame(playerConfig, externalBus);
         }
 
         log.info("Starting game with Room ID: {}", roomCode);

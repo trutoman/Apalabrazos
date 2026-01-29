@@ -4,26 +4,27 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.events;
  * Event fired when a player submits an answer.
  */
 public class AnswerSubmittedEvent extends GameEvent {
-    private final int playerIndex; // 0 or 1
-    private final char letter;
-    private final String answer;
+    private final String playerId;
+    private final int questionIndex;
+    private final int selectedOption;
 
-    public AnswerSubmittedEvent(int playerIndex, char letter, String answer) {
+    public AnswerSubmittedEvent(String playerId, int questionIndex, int selectedOption) {
         super();
-        this.playerIndex = playerIndex;
-        this.letter = letter;
-        this.answer = answer;
+        this.playerId = playerId;
+        this.questionIndex = questionIndex;
+        this.selectedOption = selectedOption;
     }
 
-    public int getPlayerIndex() {
-        return playerIndex;
+    public String getPlayerId() {
+        return playerId;
     }
 
-    public char getLetter() {
-        return letter;
+    public int getQuestionIndex() {
+        return questionIndex;
     }
 
-    public String getAnswer() {
-        return answer;
+    public int getSelectedOption() {
+        return selectedOption;
     }
+
 }

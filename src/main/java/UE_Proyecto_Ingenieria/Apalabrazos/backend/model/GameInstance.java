@@ -116,8 +116,8 @@ public class GameInstance {
      * Set the current question index
      * @param currentQuestionIndex The index of the question to set as current
      */
-    public void setCurrentQuestionIndex(int currentQuestionIndex) {
-        this.currentQuestionIndex = currentQuestionIndex;
+    public void setNextCurrentQuestionIndex(int currentQuestionIndex) {
+        this.currentQuestionIndex = currentQuestionIndex + 1;
     }
 
     /**

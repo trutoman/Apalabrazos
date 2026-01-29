@@ -95,7 +95,7 @@ public class GameService implements EventListener {
 
         // Cargar preguntas para todos y publicar la primera
         loadQuestionsForAllPlayers();
-        publishQuestionForAllPlayers(0, QuestionStatus.INIT);
+        publishQuestionForAllPlayers(-1, QuestionStatus.INIT);
 
         log.info("Juego iniciado. TimeService iniciado");
     }
@@ -126,7 +126,15 @@ public class GameService implements EventListener {
      */
     private void publishQuestionForAllPlayers(int questionIndex, QuestionStatus status) {
         for (String playerId : GlobalGameInstance.getAllPlayerIds()) {
-            publishQuestionForPlayer(playerId, questionIndex, status);
+            GameInstance instance = GlobalGameInstance.getPlayerInstance(playerId);
+            if (instance != null) {
+                QuestionList list = instance.getQuestionList();
+                Question currentQuestion = null;
+                if (list != null && questionIndex >= 0 && questionIndex < list.getCurrentLength()) {
+                    currentQuestion = list.getQuestionAt(questionIndex);
+                }
+                publishQuestionForPlayer(playerId, questionIndex, status, currentQuestion);
+            }
         }
     }
 
@@ -134,6 +142,13 @@ public class GameService implements EventListener {
      * Publica un QuestionChangedEvent para un jugador y pregunta concretos
      */
     public void publishQuestionForPlayer(String playerId, int questionIndex, QuestionStatus status) {
+        publishQuestionForPlayer(playerId, questionIndex, status, null);
+    }
+
+    /**
+     * Publica un QuestionChangedEvent para un jugador y pregunta concretos, incluyendo la siguiente pregunta
+     */
+    public void publishQuestionForPlayer(String playerId, int questionIndex, QuestionStatus status, Question nextQuestion) {
         GameInstance instance = GlobalGameInstance.getPlayerInstance(playerId);
         if (instance == null) {
             log.warn("No GameInstance for player {}", playerId);
@@ -146,10 +161,10 @@ public class GameService implements EventListener {
             return;
         }
 
-        Question question = list.getQuestionAt(questionIndex);
-        QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, question, playerId);
+        QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion);
+        log.info("Publicando Pregunta {} para jugador {} (nextQuestion: {})", questionIndex, playerId,
+            nextQuestion != null ? "sí" : "no");
         externalBus.publish(event);
-        log.info("Pregunta {} publicada para jugador {}", questionIndex, playerId);
     }
 
     /**
@@ -289,6 +304,7 @@ public class GameService implements EventListener {
             addPlayerToGame(join.getPlayerID());
         } else if (event instanceof TimerTickEvent) {
             // Reenviar al bus externo para que el GameController actualice UI
+            log.debug("Reenviando TimerTickEvent al externalBus: {} segundos", ((TimerTickEvent)event).getElapsedSeconds());
             publishExternal(event);
         } else if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
@@ -308,7 +324,61 @@ public class GameService implements EventListener {
         } else if (event instanceof TimerTickEvent) {
             // No reenviar TimerTickEvent al mismo bus para evitar bucles
             return;
+        } else if (event instanceof AnswerSubmittedEvent) {
+            AnswerSubmittedEvent answerEvent = (AnswerSubmittedEvent) event;
+            handleAnswerSubmitted(answerEvent);
         }
+    }
+
+    /**
+     * Procesar la respuesta enviada por un jugador
+     */
+    private void handleAnswerSubmitted(AnswerSubmittedEvent event) {
+        String playerId = event.getPlayerId();
+        int questionIndex = event.getQuestionIndex();
+        int selectedOption = event.getSelectedOption();
+
+        log.info("Procesando respuesta - PlayerId: {}, QuestionIndex: {}, SelectedOption: {}",
+                 playerId, questionIndex, selectedOption);
+
+        // Obtener la instancia del jugador
+        GameInstance playerInstance = GlobalGameInstance.getPlayerInstance(playerId);
+        if (playerInstance == null) {
+            log.warn("No se encontró GameInstance para el jugador: {}", playerId);
+            return;
+        }
+
+        // Actualizar índice actual de la pregunta en la instancia del jugador
+        playerInstance.setNextCurrentQuestionIndex(questionIndex);
+
+        // Obtener la pregunta
+        QuestionList questionList = playerInstance.getQuestionList();
+        if (questionList == null || questionIndex < 0 || questionIndex >= questionList.getCurrentLength()) {
+            log.warn("Índice de pregunta inválido: {} para jugador: {}", questionIndex, playerId);
+            return;
+        }
+
+        Question question = questionList.getQuestionAt(questionIndex);
+        boolean isCorrect = question.isCorrectIndex(selectedOption);
+
+        log.info("Respuesta {} para jugador {} en pregunta {} (opción {})",
+                 isCorrect ? "CORRECTA" : "INCORRECTA", playerId, questionIndex, selectedOption);
+
+        // Calcular la siguiente pregunta (si existe)
+        Question nextQuestion = null;
+        int nextQuestionIndex = questionIndex + 1;
+        if (nextQuestionIndex < questionList.getCurrentLength()) {
+            nextQuestion = questionList.getQuestionAt(nextQuestionIndex);
+        }
+
+        // Publicar evento de validación de respuesta con la siguiente pregunta
+        QuestionStatus newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
+        publishQuestionForPlayer(playerId, nextQuestionIndex, QuestionStatus.INIT, nextQuestion);
+
+        // Aquí puedes agregar lógica adicional:
+        // - Actualizar puntuación del jugador
+        // - Verificar si el juego ha terminado
+        // - Avanzar a la siguiente pregunta
     }
 
 }
