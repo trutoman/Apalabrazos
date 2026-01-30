@@ -69,6 +69,13 @@ public class LobbyController implements EventListener {
         setupComboBoxes();
         setupGamesTable();
         setupEventHandlers();
+        
+        // Maximizar la ventana al entrar en el lobby
+        javafx.application.Platform.runLater(() -> {
+            if (gamesTable != null && gamesTable.getScene() != null && gamesTable.getScene().getWindow() != null) {
+                ((javafx.stage.Stage) gamesTable.getScene().getWindow()).setMaximized(true);
+            }
+        });
     }
 
     private void setupComboBoxes() {
@@ -184,10 +191,22 @@ public class LobbyController implements EventListener {
     }
 
     private void handleStartGame() {
-        String roomCode = roomCodeInput.getText();
+        GameLobbyEntry selectedGame = gamesTable.getSelectionModel().getSelectedItem();
+        String roomCode = selectedGame != null ? selectedGame.getRoomCode() : roomCodeInput.getText();
         if (roomCode == null || roomCode.trim().isEmpty()) {
             showAlert("Sin selección", "Por favor, selecciona una partida de la tabla.");
             return;
+        }
+
+        if (this.loggedInsideLobbyPlayer == null) {
+            String name = playerNameInput.getText() == null ? "" : playerNameInput.getText().trim();
+            if (name.isEmpty()) {
+                markError(playerNameInput);
+                showAlert("Error de validación", "Por favor, ingresa tu nombre.");
+                return;
+            }
+            this.loggedInsideLobbyPlayer = new Player(name);
+            this.usernameLabel.setText(this.loggedInsideLobbyPlayer.getPlayerID());
         }
 
         // Obtener el GameService de la sesión

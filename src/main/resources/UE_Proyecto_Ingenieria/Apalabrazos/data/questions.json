@@ -10,7 +10,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos animales es un mamífero marino?",
@@ -34,7 +34,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -47,7 +47,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Ciudad española famosa por su museo Guggenheim.",
@@ -71,7 +71,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -84,7 +84,7 @@
       ],
       "correctQuestionIndex": 3,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Instrumento que se utiliza para cortar papel.",
@@ -108,7 +108,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -121,7 +121,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Líquido rojo que circula por nuestro cuerpo.",
@@ -145,7 +145,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -158,7 +158,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Qué parte del cuerpo usamos principalmente para escuchar?",
@@ -182,7 +182,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -195,7 +195,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos animales es un pez?",
@@ -219,7 +219,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -232,7 +232,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Lugar en el que se exponen cuadros y esculturas.",
@@ -256,7 +256,7 @@
       ],
       "correctQuestionIndex": 3,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -269,7 +269,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Qué herramienta se usa para clavar clavos?",
@@ -293,7 +293,7 @@
       ],
       "correctQuestionIndex": 3,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -306,7 +306,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Área de un libro donde se muestran las imágenes que lo acompañan.",
@@ -330,7 +330,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -343,7 +343,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Juego de mesa en el que las piezas se mueven en un tablero de 64 casillas.",
@@ -367,7 +367,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -380,7 +380,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos alimentos es típico de la gastronomía turca?",
@@ -404,7 +404,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -417,7 +417,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos lugares es una parte de la casa donde se suele ver la televisión?",
@@ -441,7 +441,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -454,7 +454,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos animales dice 'miau'?",
@@ -478,7 +478,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -491,7 +491,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Persona que cuida a los pacientes en un hospital.",
@@ -515,7 +515,7 @@
       ],
       "correctQuestionIndex": 3,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -528,7 +528,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Animal que se parece al avestruz pero vive en Sudamérica.",
@@ -552,7 +552,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -565,7 +565,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Qué órgano usamos para ver?",
@@ -589,7 +589,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -602,7 +602,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos alimentos se elabora a partir de la leche?",
@@ -626,7 +626,7 @@
       ],
       "correctQuestionIndex": 3,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -639,7 +639,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Qué palabra se usa para describir algo que se hace muy deprisa?",
@@ -663,7 +663,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -676,7 +676,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Qué fenómeno aparece en el cielo después de llover y hace un arco de colores?",
@@ -700,7 +700,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -713,7 +713,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Vehículo que se mueve por raíles y transporta personas o mercancías.",
@@ -737,7 +737,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -750,7 +750,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos objetos se usa para clavar chinchetas en una pared?",
@@ -774,7 +774,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -787,7 +787,7 @@
       ],
       "correctQuestionIndex": 2,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Vehículo que se desplaza por el agua.",
@@ -811,7 +811,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -824,7 +824,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "¿Cuál de estos objetos sirve para beber agua?",
@@ -848,7 +848,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -861,7 +861,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Aplicación de mensajería muy popular cuyo nombre empieza por W.",
@@ -885,7 +885,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -898,7 +898,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Letra que se utiliza para representar incógnitas en matemáticas.",
@@ -922,7 +922,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -935,7 +935,7 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Letra que en español también se llama \"i griega\".",
@@ -959,7 +959,7 @@
       ],
       "correctQuestionIndex": 0,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     },
 
     {
@@ -972,7 +972,7 @@
       ],
       "correctQuestionIndex": 3,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "trivial"
     },
     {
       "questionText": "Insecto rayado que produce miel.",
@@ -996,8 +996,10 @@
       ],
       "correctQuestionIndex": 1,
       "questionStatus": "init",
-      "questionLevel": "easy"
+      "questionLevel": "difficult"
     }
   ],
   "max_length": 81
 }
+Comenta el archivo pon que hay que añadir otro campo
+// En el archivo questions.json se debe añadir un nuevo campo llamado "questionCategory"

@@ -35,6 +35,55 @@
 }
 
 /* ===== BOTONES DE LETRAS (A, B, C, D) ===== */
+.option-container {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 15;
+    -fx-padding: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 3);
+}
+
+.option-letter-label {
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Arial Black", "Arial", sans-serif;
+    -fx-text-fill: #FFD700;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 4, 0, 0, 2);
+}
+
+.option-answer-button {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Arial", sans-serif;
+    -fx-background-color: linear-gradient(to bottom, #003d7a, #001a3d);
+    -fx-text-fill: white;
+    -fx-border-radius: 35;
+    -fx-background-radius: 35;
+    -fx-border-color: #4a90e2;
+    -fx-border-width: 2px;
+    -fx-padding: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 8, 0, 0, 4);
+    -fx-cursor: hand;
+    -fx-alignment: center;
+    -fx-text-alignment: center;
+}
+
+.option-answer-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #005aa7, #003d7a);
+    -fx-border-color: #FFD700;
+    -fx-border-width: 3px;
+    -fx-effect: dropshadow(gaussian, rgba(255, 215, 0, 0.8), 12, 0, 0, 0);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.option-answer-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #001a3d, #000a1d);
+    -fx-border-color: #2a70c2;
+    -fx-translate-y: 2;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.8), 4, 0, 0, 2);
+}
+
+/* ===== BOTONES DE LETRAS ANTIGUOS (DEPRECATED) ===== */
 .letter-button {
     -fx-font-size: 48px;
     -fx-font-weight: bold;

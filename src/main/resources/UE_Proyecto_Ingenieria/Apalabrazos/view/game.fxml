@@ -1,3 +1,7 @@
+<!-- filepath: game.fxml -->
+<!-- Vista principal del juego donde se muestra el rosco, las preguntas y las opciones de respuesta -->
+<!-- Usa un StackPane como contenedor principal para poder superponer elementos (rosco + botón pasar) -->
+<!-- El diseño es responsive y se adapta al tamaño de la ventana automáticamente -->
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
@@ -11,129 +15,112 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.canvas.Canvas?>
 
-<GridPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
-          fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController"
-          stylesheets="@styles.css"
-          style="-fx-background-color: #1a252f;">
-    
-    <!-- 1 columna: todo centrado -->
-    <columnConstraints>
-        <ColumnConstraints percentWidth="100.0" />
-    </columnConstraints>
-    
-    <!-- 4 filas: cabecera (4%), rosco (66%), pregunta (27%), contadores (3%) -->
-    <rowConstraints>
-        <RowConstraints percentHeight="4.0" />
-        <RowConstraints percentHeight="66.0" />
-        <RowConstraints percentHeight="27.0" />
-        <RowConstraints percentHeight="3.0" />
-    </rowConstraints>
-
-    <!-- ===== FILA 0: CABECERA ===== -->
-    <VBox GridPane.columnIndex="0" GridPane.rowIndex="0" alignment="CENTER" 
-          style="-fx-padding: 8; -fx-background: linear-gradient(to bottom, #2c3e50, #34495e);">
-        <Label text="Apalabrazzos" styleClass="titulo-principal" />
-    </VBox>
-
-    <!-- ===== FILA 1: ROSCO Y OPCIONES ===== -->
-    <GridPane GridPane.columnIndex="0" GridPane.rowIndex="1" alignment="CENTER">
+<!-- CONTENEDOR PRINCIPAL: StackPane permite superponer capas (fondo + GridPane) -->
+<StackPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController"
+           stylesheets="@styles.css"
+           style="-fx-background-color: #1a252f;"> 
+    <!-- ESTRUCTURA PRINCIPAL: GridPane con 1 columna y 4 filas -->
+    <!-- FILA 0: Cabecera con título (altura fija 60px) -->
+    <!-- FILA 1: Área del rosco y botones de opciones (55% de altura) -->
+    <!-- FILA 2: Zona de pregunta y temporizador (30% de altura) -->
+    <!-- FILA 3: Contadores de aciertos y fallos (altura fija 50px) -->
+    <GridPane>
         <columnConstraints>
-            <ColumnConstraints percentWidth="25.0" />
-            <ColumnConstraints percentWidth="50.0" />
-            <ColumnConstraints percentWidth="25.0" />
+            <ColumnConstraints percentWidth="100.0" />
         </columnConstraints>
         
         <rowConstraints>
-            <RowConstraints percentHeight="100.0" />
+            <RowConstraints minHeight="60" prefHeight="60" vgrow="NEVER" />
+            <RowConstraints percentHeight="55.0" vgrow="ALWAYS" />
+            <RowConstraints percentHeight="30.0" vgrow="ALWAYS" />
+            <RowConstraints minHeight="50" prefHeight="50" vgrow="NEVER" />
         </rowConstraints>
+
+        <!-- ===== FILA 0: CABECERA ===== -->
+        <!-- Título del juego centrado con fondo semitransparente -->
+        <!-- Usa styleClass titulo-principal definido en styles.css -->
+        <VBox GridPane.rowIndex="0" alignment="CENTER" 
+              style="-fx-padding: 10; -fx-background-color: rgba(44, 62, 80, 0.4);">
+            <Label text="Apalabrazzos" styleClass="titulo-principal" 
+                   style="-fx-font-size: 26px; -fx-text-fill: white; -fx-font-weight: bold;" />
+        </VBox>
+
+        <!-- ===== FILA 1: ROSCO Y BOTONES DE OPCIONES ===== -->
+        <!-- Layout horizontal: botones izquierda (25%) | rosco centro (50%) | botones derecha (25%) -->
+        <!-- Los botones de opciones están ocultos inicialmente hasta que empiece el juego -->
+        <HBox GridPane.rowIndex="1" alignment="CENTER" spacing="20" style="-fx-padding: 10; -fx-background-color: transparent;">
+            <!-- COLUMNA IZQUIERDA: Botones de opciones 1 y 3 -->
+            <!-- prefWidth 200px para que tengan espacio para texto largo -->
+            <VBox fx:id="leftOptionsArea" alignment="CENTER" spacing="20" prefWidth="200">
+                <Button fx:id="option1Button" text="Anchoa" wrapText="true" prefWidth="200" prefHeight="70" styleClass="option-answer-button" />
+                <Button fx:id="option3Button" text="Atún" wrapText="true" prefWidth="200" prefHeight="70" styleClass="option-answer-button" />
+            </VBox>
+
+            <!-- COLUMNA CENTRAL: Rosco circular con botón PASAR superpuesto -->
+            <!-- StackPane permite apilar el Canvas (fondo), el roscoPane (letras) y el botón PASAR -->
+            <!-- Canvas con opacity 0 para reservar espacio para futuras animaciones -->
+            <StackPane alignment="CENTER" HBox.hgrow="ALWAYS" style="-fx-background-color: transparent;">
+                <children>
+                    <Canvas fx:id="playerOneCanvas" width="400" height="400" opacity="0" />
+                    <Pane fx:id="roscoPane" prefWidth="400" prefHeight="400" maxWidth="450" maxHeight="450" style="-fx-background-color: transparent;" />
+                    <Button fx:id="skipButton" text="PASAR" prefWidth="110" prefHeight="110"
+                        style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-background-color: #3498db; -fx-text-fill: white; -fx-background-radius: 55; -fx-opacity: 0.8;" />
+                </children>
+            </StackPane>
+
+            <!-- COLUMNA DERECHA: Botones de opciones 2 y 4 -->
+            <!-- Espejado de la columna izquierda para mantener simetría -->
+            <VBox fx:id="rightOptionsArea" alignment="CENTER" spacing="20" prefWidth="200">
+                <Button fx:id="option2Button" text="Anguila" wrapText="true" prefWidth="200" prefHeight="70" styleClass="option-answer-button" />
+                <Button fx:id="option4Button" text="Delfín" wrapText="true" prefWidth="200" prefHeight="70" styleClass="option-answer-button" />
+            </VBox>
+        </HBox>
+
+        <!-- ===== FILA 2: ÁREA DE PREGUNTA Y TEMPORIZADOR ===== -->
+        <!-- GridPane de 3 columnas: panel puntuaciones (30%) | pregunta centro (40%) | espacio derecho (30%) -->
+        <!-- El panel de puntuaciones muestra los resultados en tiempo real de todos los jugadores -->
+        <GridPane GridPane.rowIndex="2" fx:id="questionArea" 
+                  style="-fx-background-color: transparent; -fx-padding: 15;">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="30.0" halignment="LEFT" />
+                <ColumnConstraints percentWidth="40.0" halignment="CENTER" />
+                <ColumnConstraints percentWidth="30.0" halignment="RIGHT" />
+            </columnConstraints>
+            
+            <!-- PANEL DE PUNTUACIONES EN VIVO (multijugador) -->
+            <!-- Muestra jugadores con formato: Nombre | Aciertos Fallos Pendientes -->
+            <!-- Tiene fondo semitransparente y bordes redondeados para destacar -->
+            <VBox fx:id="liveScoresPanel" spacing="5" GridPane.columnIndex="0" alignment="CENTER_LEFT"
+                  style="-fx-padding: 15; -fx-background-color: rgba(255, 255, 255, 0.05); -fx-border-color: rgba(52, 152, 219, 0.3); -fx-border-radius: 15; -fx-background-radius: 15;">
+                <Label text="▼ PUNTUACIONES" style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #FFD700;" />
+                <VBox fx:id="liveScoresContainer" spacing="4">
+                    <HBox spacing="10"><Label text="Jugador 1" style="-fx-text-fill: white;" /><Label text="8 2 17" style="-fx-text-fill: #3498db;" /></HBox>
+                    <HBox spacing="10"><Label text="Jugador 2" style="-fx-text-fill: white;" /><Label text="5 4 18" style="-fx-text-fill: #3498db;" /></HBox>
+                    <HBox spacing="10"><Label text="Jugador 3" style="-fx-text-fill: white;" /><Label text="10 1 16" style="-fx-text-fill: #3498db;" /></HBox>
+                </VBox>
+            </VBox>
+
+            <!-- SECCIÓN CENTRAL: Temporizador y texto de la pregunta -->
+            <!-- Timer grande (50px) en color dorado para alta visibilidad -->
+            <!-- Pregunta con maxWidth 500px y texto envuelto para preguntas largas -->
+            <VBox alignment="CENTER" spacing="10" GridPane.columnIndex="1" style="-fx-background-color: transparent;">
+                <Label fx:id="timerLabel" text="53" 
+                       style="-fx-font-size: 50px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" />
+                <Label fx:id="questionLabel" wrapText="true" textAlignment="CENTER" maxWidth="500"
+                       text="¿Cuál de estos animales es un mamífero marino?"
+                       style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #FFD700;" />
+            </VBox>
+        </GridPane>
         
-        <!-- Columna izquierda: BOTONES A Y C (ocultas inicialmente) -->
-        <VBox fx:id="leftOptionsArea" GridPane.columnIndex="0" alignment="CENTER" spacing="40" 
-              style="-fx-padding: 30;"
-              visible="false" managed="false">
-            <Button fx:id="option1Button" text="A" prefWidth="120" prefHeight="120" 
-                    styleClass="letter-button" />
-            
-            <Button fx:id="option3Button" text="C" prefWidth="120" prefHeight="120" 
-                    styleClass="letter-button" />
-        </VBox>
-
-        <!-- Columna central: ROSCO centrado -->
-        <StackPane GridPane.columnIndex="1" alignment="CENTER">
-            <children>
-                <!-- Canvas para futuros dibujos - DETRÁS -->
-                <Canvas fx:id="playerOneCanvas" width="550" height="550" opacity="0" />
-                
-                <!-- Pane donde se crean dinámicamente los botones del rosco - VISIBLE -->
-                <Pane fx:id="roscoPane" prefWidth="550" prefHeight="550" minWidth="400" minHeight="400" />
-                
-                <!-- Botón de inicio (antes de empezar) - CENTRO DE REFERENCIA -->
-                <Button fx:id="startButton" text="EMPEZAR" prefWidth="150" prefHeight="150"
-                        style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-background-color: #27ae60; -fx-text-fill: white; -fx-border-radius: 75; -fx-background-radius: 75; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 10, 0, 0, 4);" />
-                
-                <!-- Botón Pasapalabra (después de empezar) - MISMO CENTRO -->
-                <Button fx:id="skipButton" text="PASAR" prefWidth="130" prefHeight="130"
-                        visible="false" managed="false"
-                        onMousePressed="#handleSkipPressed"
-                        onMouseReleased="#handleSkipReleased"
-                        style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: #3498db; -fx-text-fill: white; -fx-border-radius: 65; -fx-background-radius: 65; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0, 0, 3);" />
-            </children>
-        </StackPane>
-
-        <!-- Columna derecha: BOTONES B Y D (ocultas inicialmente) -->
-        <VBox fx:id="rightOptionsArea" GridPane.columnIndex="2" alignment="CENTER" spacing="40" 
-              style="-fx-padding: 30;"
-              visible="false" managed="false">
-            <Button fx:id="option2Button" text="B" prefWidth="120" prefHeight="120" 
-                    styleClass="letter-button" />
-            
-            <Button fx:id="option4Button" text="D" prefWidth="120" prefHeight="120" 
-                    styleClass="letter-button" />
-        </VBox>
+        <!-- ===== FILA 3: CONTADORES DE ACIERTOS Y FALLOS ===== -->
+        <!-- Barra inferior fija con altura de 50px -->
+        <!-- Muestra dos contadores: ✓ para correctas (verde) y ✗ para incorrectas (rojo) -->
+        <!-- Los íconos son texto Unicode para no depender de imágenes -->
+        <HBox GridPane.rowIndex="3" alignment="CENTER" spacing="80" 
+              style="-fx-padding: 10; -fx-background-color: transparent;">
+            <Label fx:id="correctCountLabel" text="✓ 0" style="-fx-font-size: 24px; -fx-text-fill: #27ae60; -fx-font-weight: bold;" />
+            <Label fx:id="incorrectCountLabel" text="✗ 0" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c; -fx-font-weight: bold;" />
+        </HBox>
     </GridPane>
-
-    <!-- ===== FILA 2: ÁREA DE PREGUNTAS Y OPCIONES (oculta inicialmente) ===== -->
-    <VBox fx:id="questionArea" GridPane.columnIndex="0" GridPane.rowIndex="2" 
-          alignment="CENTER" spacing="15" 
-          visible="false" managed="false"
-          style="-fx-padding: 20 40 20 40; -fx-background: linear-gradient(to bottom, #34495e, #2c3e50);">
-        <Label fx:id="questionLabel" wrapText="true" textAlignment="CENTER"
-               style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white; -fx-text-alignment: center;" />
-        
-        <!-- Área de opciones de respuesta -->
-        <VBox spacing="8" alignment="CENTER" style="-fx-padding: 10 0 0 0;">
-            <Label fx:id="optionALabel" wrapText="true" textAlignment="CENTER"
-                   style="-fx-font-size: 16px; -fx-text-fill: #FFD700; -fx-text-alignment: center; -fx-font-weight: bold;" />
-            <Label fx:id="optionBLabel" wrapText="true" textAlignment="CENTER"
-                   style="-fx-font-size: 16px; -fx-text-fill: #FFD700; -fx-text-alignment: center; -fx-font-weight: bold;" />
-            <Label fx:id="optionCLabel" wrapText="true" textAlignment="CENTER"
-                   style="-fx-font-size: 16px; -fx-text-fill: #FFD700; -fx-text-alignment: center; -fx-font-weight: bold;" />
-            <Label fx:id="optionDLabel" wrapText="true" textAlignment="CENTER"
-                   style="-fx-font-size: 16px; -fx-text-fill: #FFD700; -fx-text-alignment: center; -fx-font-weight: bold;" />
-        </VBox>
-    </VBox>
-
-    <!-- ===== FILA 3: CONTADORES ABAJO ===== -->
-    <HBox GridPane.columnIndex="0" GridPane.rowIndex="3" alignment="CENTER" spacing="50" 
-          style="-fx-padding: 8; -fx-background-color: #2c3e50;">
-        
-        <!-- TIEMPO -->
-        <HBox alignment="CENTER" spacing="10">
-            <Label text="⏱" style="-fx-font-size: 20px;" />
-            <Label fx:id="timerLabel" text="180" style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" />
-        </HBox>
-        
-        <!-- Contador ACIERTOS -->
-        <HBox alignment="CENTER" spacing="8">
-            <Label text="✓" style="-fx-font-size: 18px; -fx-text-fill: #27ae60;" />
-            <Label fx:id="correctCountLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #27ae60;" />
-        </HBox>
-        
-        <!-- Contador FALLOS -->
-        <HBox alignment="CENTER" spacing="8">
-            <Label text="✗" style="-fx-font-size: 18px; -fx-text-fill: #e74c3c;" />
-            <Label fx:id="incorrectCountLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" />
-        </HBox>
-    </HBox>
-
-</GridPane>
+</StackPane>
