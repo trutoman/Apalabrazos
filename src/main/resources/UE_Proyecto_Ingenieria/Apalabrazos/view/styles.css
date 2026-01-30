@@ -1,17 +1,14 @@
 .root {
     -fx-font-family: "Segoe UI", sans-serif;
+    -fx-background-image: url('../images/game_background.png');
+    -fx-background-size: cover;
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
 }
 
 /* ===== LAYOUT PRINCIPAL ===== */
 .game-container {
     -fx-background-color: #ecf0f1;
-}
-
-.main-grid-pane {
-    -fx-background-image: url('../images/game_background.png');
-    -fx-background-size: cover;
-    -fx-background-position: center;
-    -fx-background-repeat: no-repeat;
 }
 
 /* ===== HEADER ===== */
@@ -28,15 +25,63 @@
     -fx-font-weight: bold;
 }
 
-/* ===== BOTONES DE OPCIONES ===== */
-.option-button {
-    -fx-font-size: 14px;
+.titulo-principal {
+    -fx-font-size: 46px;
     -fx-font-weight: bold;
-    -fx-background-color: linear-gradient(to bottom, #2c3e50, #34495e);
+    -fx-font-family: "Comic Sans MS", "Chalkboard SE", "Bradley Hand", cursive;
+    -fx-text-fill: linear-gradient(to right, #FFD700, #FFA500);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.9), 8, 0, 0, 4);
+    -fx-padding: 5px;
+}
+
+/* ===== BOTONES DE LETRAS (A, B, C, D) ===== */
+.letter-button {
+    -fx-font-size: 48px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Arial Black", "Arial", sans-serif;
+    -fx-background-color: linear-gradient(to bottom, #8B7FFF, #6B5FD9);
     -fx-text-fill: white;
-    -fx-border-radius: 15;
-    -fx-background-radius: 15;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);
+    -fx-border-radius: 60;
+    -fx-background-radius: 60;
+    -fx-border-color: #000000;
+    -fx-border-width: 6px;
+    -fx-min-width: 120px;
+    -fx-min-height: 120px;
+    -fx-effect: dropshadow(gaussian, #000000, 8, 0.0, 3, 5);
+    -fx-cursor: hand;
+}
+
+.letter-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #A599FF, #8B7FFF);
+    -fx-effect: dropshadow(gaussian, #000000, 10, 0.0, 4, 6);
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
+    -fx-border-width: 7px;
+}
+
+.letter-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #6B5FD9, #5B4FC9);
+    -fx-effect: dropshadow(gaussian, #000000, 4, 0.0, 2, 3);
+    -fx-translate-y: 4px;
+    -fx-border-width: 5px;
+}
+
+/* ===== BOTONES DE OPCIONES (Legacy - por si se usan) ===== */
+.option-button {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Arial Black", "Arial", sans-serif;
+    -fx-background-color: linear-gradient(to bottom, #8B7FFF, #6B5FD9);
+    -fx-text-fill: white;
+    -fx-border-radius: 50;
+    -fx-background-radius: 50;
+    -fx-border-color: #000000;
+    -fx-border-width: 6px;
+    -fx-padding: 20px 40px;
+    -fx-min-width: 260px;
+    -fx-min-height: 100px;
+    -fx-effect: dropshadow(gaussian, #000000, 8, 0.0, 3, 5);
+    -fx-cursor: hand;
 }
 
 /* ===== BOTÓN DE INICIO ===== */
@@ -111,6 +156,11 @@
     -fx-border-color: #020009ff;
 }
 
+.rosco-letter-skipped {
+    -fx-background-color: linear-gradient(to bottom, #5dade2, #3498db);
+    -fx-border-color: #2980b9;
+}
+
 /* ===== EFECTOS GENERALES DE BOTONES ===== */
 .button {
     -fx-cursor: hand;
@@ -126,6 +176,21 @@
     -fx-opacity: 0.7;
     -fx-scale-x: 0.98;
     -fx-scale-y: 0.98;
+}
+
+.option-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #A599FF, #8B7FFF);
+    -fx-effect: dropshadow(gaussian, #000000, 10, 0.0, 4, 6);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-border-width: 7px;
+}
+
+.option-button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #6B5FD9, #5B4FC9);
+    -fx-effect: dropshadow(gaussian, #000000, 4, 0.0, 2, 3);
+    -fx-translate-y: 4px;
+    -fx-border-width: 5px;
 }
 
 /* ===== MENÚ PRINCIPAL ===== */
