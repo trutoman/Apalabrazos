@@ -130,7 +130,7 @@ public class GameService implements EventListener {
             if (instance != null) {
                 QuestionList list = instance.getQuestionList();
                 Question currentQuestion = null;
-                if (list != null && questionIndex >= 0 && questionIndex < list.getCurrentLength()) {
+                if (list != null && questionIndex >= -1 && questionIndex < list.getCurrentLength()) {
                     currentQuestion = list.getQuestionAt(questionIndex);
                 }
                 publishQuestionForPlayer(playerId, questionIndex, status, currentQuestion);
@@ -152,12 +152,6 @@ public class GameService implements EventListener {
         GameInstance instance = GlobalGameInstance.getPlayerInstance(playerId);
         if (instance == null) {
             log.warn("No GameInstance for player {}", playerId);
-            return;
-        }
-
-        QuestionList list = instance.getQuestionList();
-        if (list == null || questionIndex < 0 || questionIndex >= list.getCurrentLength()) {
-            log.warn("Invalid question index {} for player {}", questionIndex, playerId);
             return;
         }
 
@@ -373,12 +367,7 @@ public class GameService implements EventListener {
 
         // Publicar evento de validación de respuesta con la siguiente pregunta
         QuestionStatus newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
-        publishQuestionForPlayer(playerId, nextQuestionIndex, QuestionStatus.INIT, nextQuestion);
-
-        // Aquí puedes agregar lógica adicional:
-        // - Actualizar puntuación del jugador
-        // - Verificar si el juego ha terminado
-        // - Avanzar a la siguiente pregunta
+        publishQuestionForPlayer(playerId, questionIndex, newStatus, nextQuestion);
     }
 
 }

@@ -75,10 +75,12 @@ public class QuestionList implements Serializable {
      * @return The question at the specified index
      */
     public Question getQuestionAt(int index) {
-        if (index < 0 || index >= questionList.size()) {
+        if (index < -1 || index >= questionList.size()) {
             throw new IndexOutOfBoundsException("Index out of bounds: " + index
                     + ". Valid range is 0.." + (questionList.size() - 1));
         }
+        if (index == -1)
+            index = 0;
         Question question = questionList.get(index);
         return question;
     }

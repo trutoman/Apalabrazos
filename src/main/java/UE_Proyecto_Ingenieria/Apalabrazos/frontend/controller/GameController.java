@@ -174,10 +174,17 @@ public class GameController implements EventListener {
                     recreateRosco();
                 }
             });
+            // Crear el rosco cuando el layout ya tenga tamaño
+            Platform.runLater(this::recreateRosco);
         }
 
         // Inicializar estados de letras
         initializeLetterStates();
+
+        // Crear el rosco inmediatamente para que letterButtons esté listo
+        if (roscoPane != null && letterButtons.isEmpty()) {
+            createRosco();
+        }
 
         // Configurar eventos de los botones de opciones
         setupOptionButtons();
@@ -300,10 +307,6 @@ public class GameController implements EventListener {
             // Agregar al panel
             roscoPane.getChildren().add(btn);
         }
-
-        // NO ocultar el rosco inicialmente - dejarlo visible pero sin contenido hasta START
-        // roscoPane.setVisible(false);
-        // roscoPane.setManaged(false);
     }
 
     /**
@@ -348,10 +351,6 @@ public class GameController implements EventListener {
             skipButton.setVisible(true);
             skipButton.setManaged(true);
         }
-
-        // Mostrar la primera pregunta pendiente
-        log.debug("Llamando a showNextPendingQuestion()...");
-        showNextPendingQuestion();
     }
 
     /**
@@ -397,15 +396,6 @@ public class GameController implements EventListener {
             letterStates[i] = "pending";
             pendingLetters.add(i);
         }
-    }
-
-    /**
-     * Mostrar la siguiente pregunta pendiente
-     */
-    private void showNextPendingQuestion() {
-        log.debug("showNextPendingQuestion()");
-        // Ya no mantenemos una lista local de preguntas
-        // Las preguntas se recibirán del GameService a través del evento
     }
 
     /**
@@ -487,21 +477,22 @@ public class GameController implements EventListener {
             Platform.runLater(() -> {
                 // Remover todas las clases de estado previas
                 btn.getStyleClass().removeAll("rosco-letter-pending", "rosco-letter-correct",
-                                              "rosco-letter-incorrect", "rosco-letter-current", "rosco-letter-skipped");
+                                              "rosco-letter-incorrect", "rosco-letter-current");
 
                 // Agregar la clase correspondiente al nuevo estado
+                // Estados guardados: "responded_ok", "responded_fail", "init", "passed", "pending"
                 switch (state.toLowerCase()) {
-                    case "correct":
+                    case "responded_ok":
                         btn.getStyleClass().add("rosco-letter-correct");
                         break;
-                    case "incorrect":
+                    case "responded_fail":
                         btn.getStyleClass().add("rosco-letter-incorrect");
                         break;
-                    case "current":
+                    case "init":
                         btn.getStyleClass().add("rosco-letter-current");
                         break;
-                    case "skipped":
-                        btn.getStyleClass().add("rosco-letter-skipped");
+                    case "passed":
+                        btn.getStyleClass().add("rosco-letter-pending");
                         break;
                     case "pending":
                         btn.getStyleClass().add("rosco-letter-pending");
@@ -533,67 +524,87 @@ public class GameController implements EventListener {
             });
         } else if (event instanceof QuestionChangedEvent) {
             QuestionChangedEvent questionEvent = (QuestionChangedEvent) event;
-            // Filtrar por destinatario si el evento viene dirigido a un jugador concreto
-            if (questionEvent.getPlayerId() != null && localPlayerId != null &&
-                !questionEvent.getPlayerId().equals(localPlayerId)) {
-                log.debug("Evento ignorado: destinado a {} pero este controlador es de {}",
-                         questionEvent.getPlayerId(), localPlayerId);
-                return; // Evento para otro jugador; ignorar
-            }
+            String playerId = questionEvent.getPlayerId();
             int questionIndex = questionEvent.getQuestionIndex();
             QuestionStatus status = questionEvent.getStatus();
-
-            // Actualizar el índice actual de la pregunta
-            this.currentQuestionIndex = questionIndex;
-
-            if (this.currentQuestionIndex == -1)
-                this.currentQuestionIndex = 0; // Ajuste inicial si es -1
-            log.debug("currentQuestionIndex actualizado a: {}", currentQuestionIndex);
-
-            // Obtener la letra correspondiente al índice
-            String letter = AlphabetMap.getLetter(this.currentQuestionIndex);
-
-            // Actualizar el botón del rosco según el estado de la pregunta
-            Button letterButton = letterButtons.get(letter.toUpperCase());
-            if (letterButton != null) {
-                Platform.runLater(() -> {
-                    letterButton.getStyleClass().removeAll("rosco-letter-pending", "rosco-letter-correct", "rosco-letter-wrong", "rosco-letter-current");
-                    switch (status) {
-                        case INIT:
-                            letterButton.getStyleClass().add("rosco-letter-current");
-                            break;
-                        case PASSED:
-                            letterButton.getStyleClass().add("rosco-letter-pending");
-                            break;
-                        case RESPONDED_OK:
-                            letterButton.getStyleClass().add("rosco-letter-correct");
-                            break;
-                        case RESPONDED_FAIL:
-                            letterButton.getStyleClass().add("rosco-letter-wrong");
-                            break;
-                        default:
-                            letterButton.getStyleClass().add("rosco-letter-pending");
-                    }
-                });
-            }
-
-
-            // Obtener la siguiente pregunta del evento
             Question nextQuestion = questionEvent.getNextQuestion();
+            handleQuestionChangedEvent(playerId, questionIndex, status, nextQuestion);
+        }
+    }
 
-            // Mostrar la siguiente pregunta si existe
-            if (nextQuestion != null) {
-                String questionText = nextQuestion.getQuestionText();
-                List<String> responses = nextQuestion.getQuestionResponsesList();
+    /**
+     * Manejar el evento de cambio de pregunta
+     */
+    private void handleQuestionChangedEvent(String playerId, int questionIndex, QuestionStatus status, Question nextQuestion) {
+        log.debug("handleQuestionChangedEvent(playerId={}, questionIndex={}, status={}, nextQuestion={})",
+                  playerId, questionIndex, status, nextQuestion);
 
-                Platform.runLater(() -> {
-                    questionLabel.setText(questionText);
-                    if (responses.size() > 0) optionALabel.setText("A) " + responses.get(0));
-                    if (responses.size() > 1) optionBLabel.setText("B) " + responses.get(1));
-                    if (responses.size() > 2) optionCLabel.setText("C) " + responses.get(2));
-                    if (responses.size() > 3) optionDLabel.setText("D) " + responses.get(3));
-                });
+        // Filtrar por destinatario si el evento viene dirigido a un jugador concreto
+        if (playerId != null && localPlayerId != null && !playerId.equals(localPlayerId)) {
+            log.debug("Evento ignorado: destinado a {} pero este controlador es de {}",
+                     playerId, localPlayerId);
+            return; // Evento para otro jugador; ignorar
+        }
+
+        String letter;
+        // Obtener la letra correspondiente al índice
+        if (questionIndex == -1) {
+            letter = AlphabetMap.getLetter(0);
+        } else {
+            letter = AlphabetMap.getLetter(questionIndex);
+        }
+
+        log.info("handleQuestionChangedEvent - letra: {}, status: {}, questionIndex: {}", letter, status, questionIndex);
+        log.info("letterButtons keys: {}", letterButtons.keySet());
+
+        // Actualizar el botón del rosco según el estado de la pregunta
+        Button letterButton = letterButtons.get(letter.toUpperCase());
+        if (letterButton != null) {
+            // Guardar el estado en letterStates
+            int letterIndex = AlphabetMap.getIndex(letter);
+            if (letterIndex >= 0 && letterIndex < letterStates.length) {
+                letterStates[letterIndex] = status.toString().toLowerCase();
+                log.info("Estado de letra guardado - letterIndex: {}, state: {}", letterIndex, letterStates[letterIndex]);
             }
+
+            Platform.runLater(() -> {
+                letterButton.getStyleClass().removeAll("rosco-letter-pending", "rosco-letter-correct", "rosco-letter-incorrect", "rosco-letter-current");
+                switch (status) {
+                    case INIT:
+                        letterButton.getStyleClass().add("rosco-letter-current");
+                        break;
+                    case PASSED:
+                        letterButton.getStyleClass().add("rosco-letter-pending");
+                        break;
+                    case RESPONDED_OK:
+                        letterButton.getStyleClass().add("rosco-letter-correct");
+                        break;
+                    case RESPONDED_FAIL:
+                        letterButton.getStyleClass().add("rosco-letter-incorrect");
+                        log.info("Aplicada clase 'rosco-letter-incorrect' a letra: {}", letter);
+                        break;
+                    default:
+                        letterButton.getStyleClass().add("rosco-letter-pending");
+                }
+            });
+        } else {
+            log.warn("BOTÓN NO ENCONTRADO para letra: {} (buscado como: {})", letter, letter.toUpperCase());
+            log.warn("Letras disponibles: {}", letterButtons.keySet());
+        }
+
+        // Mostrar la siguiente pregunta si existe
+        if (nextQuestion != null) {
+            String questionText = nextQuestion.getQuestionText();
+            List<String> responses = nextQuestion.getQuestionResponsesList();
+
+            Platform.runLater(() -> {
+                questionLabel.setText(questionText);
+                if (responses.size() > 0) optionALabel.setText("A) " + responses.get(0));
+                if (responses.size() > 1) optionBLabel.setText("B) " + responses.get(1));
+                if (responses.size() > 2) optionCLabel.setText("C) " + responses.get(2));
+                if (responses.size() > 3) optionDLabel.setText("D) " + responses.get(3));
+            });
+            this.currentQuestionIndex = questionIndex + 1;
         }
     }
 }
