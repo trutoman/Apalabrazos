@@ -11,16 +11,28 @@ public class AnswerValidatedEvent extends GameEvent {
     private final String answer;
     private final QuestionStatus status;
     private final String correctAnswer;
+    private final int totalCorrect;
+    private final int totalIncorrect;
 
     public AnswerValidatedEvent(int playerIndex, char letter, String answer,
-                                QuestionStatus status, String correctAnswer) {
+                                QuestionStatus status, String correctAnswer,
+                                int totalCorrect, int totalIncorrect) {
         super();
         this.playerIndex = playerIndex;
         this.letter = letter;
         this.answer = answer;
         this.status = status;
         this.correctAnswer = correctAnswer;
+        this.totalCorrect = totalCorrect;
+        this.totalIncorrect = totalIncorrect;
     }
+
+    // Constructor de compatibilidad temporal para evitar romper otros tests si los hubiera
+    // aunque lo ideal es migrar todo.
+    public AnswerValidatedEvent(int playerIndex, char letter, String answer,
+                                QuestionStatus status, String correctAnswer) {
+        this(playerIndex, letter, answer, status, correctAnswer, 0, 0);
+    } 
 
     public int getPlayerIndex() {
         return playerIndex;
@@ -40,6 +52,14 @@ public class AnswerValidatedEvent extends GameEvent {
 
     public String getCorrectAnswer() {
         return correctAnswer;
+    }
+
+    public int getTotalCorrect() {
+        return totalCorrect;
+    }
+
+    public int getTotalIncorrect() {
+        return totalIncorrect;
     }
 
     public boolean isCorrect() {

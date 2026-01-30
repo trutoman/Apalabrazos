@@ -265,6 +265,10 @@ public class GameController implements EventListener {
             playerNameLabel.setManaged(true);
             playerNameLabel.setText(playerConfig.getPlayer().getName());
         }
+
+        if (liveScoresPanel != null) {
+            liveScoresPanel.setVisible(true);
+        }
     }
 
     /**
@@ -360,8 +364,13 @@ public class GameController implements EventListener {
                     letterButton.getStyleClass().add("rosco-letter-incorrect");
                 }
                 
-                // Actualizar contadores si existen (asumiendo que el evento trae el total, si no, habría que llevar la cuenta)
-                // log.info("Actualizando contadores visuales...");
+                // LEANDRO -> Actualizar contadores visuales con datos del evento
+                if (correctCountLabel != null) {
+                    correctCountLabel.setText(String.valueOf(event.getTotalCorrect()));
+                }
+                if (incorrectCountLabel != null) {
+                    incorrectCountLabel.setText(String.valueOf(event.getTotalIncorrect()));
+                }
             });
         }
     }

@@ -382,7 +382,17 @@ public class GameService implements EventListener {
         // LEANDRO -> Validar respuesta y publicar resultado
         final boolean isCorrect = question.isCorrectIndex(selectedIndex);
         log.info("Respuesta: índice {} - {}", selectedIndex, isCorrect ? "✅ CORRECTA" : "❌ INCORRECTA");
-        publishValidation(playerIndex, roscoLetter, selectedAnswer, isCorrect, correctAnswerText);
+        
+        // LEANDRO -> Actualizar contadores en GameRecord
+        GameRecord record = instance.getGameResult();
+        if (isCorrect) {
+            record.setCorrectAnswers(record.getCorrectAnswers() + 1);
+        } else {
+            record.setIncorrectAnswers(record.getIncorrectAnswers() + 1);
+        }
+
+        publishValidation(playerIndex, roscoLetter, selectedAnswer, isCorrect, correctAnswerText, 
+                          record.getCorrectAnswers(), record.getIncorrectAnswers());
 
         // LEANDRO -> Avanzar a siguiente pregunta (circular)
         advanceToNextQuestion(instance, questionList, playerId, questionIndex);
@@ -412,16 +422,25 @@ public class GameService implements EventListener {
 
     /**
      * Publica AnswerValidatedEvent al frontend con el resultado de la validación.
+     * Sobrecarga para mantener compatibilidad con errores de validación (score 0,0).
      */
     private void publishValidation(int playerIndex, char letter, String answer, 
                                    boolean isCorrect, String correctAnswer) {
+        publishValidation(playerIndex, letter, answer, isCorrect, correctAnswer, 0, 0);
+    }
+
+    /**
+     * Publica AnswerValidatedEvent al frontend con el resultado de la validación y scores actualizados.
+     */
+    private void publishValidation(int playerIndex, char letter, String answer, 
+                                   boolean isCorrect, String correctAnswer, int totalCorrect, int totalIncorrect) {
         final QuestionStatus status = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
         final AnswerValidatedEvent event = new AnswerValidatedEvent(
-            playerIndex, letter, answer, status, correctAnswer
+            playerIndex, letter, answer, status, correctAnswer, totalCorrect, totalIncorrect
         );
         
         externalBus.publish(event);
-        log.debug("Validación publicada: {} para letra '{}'", status, letter);
+        log.debug("Validación publicada: {} para letra '{}'. Score: {}/{}", status, letter, totalCorrect, totalIncorrect);
     }
 
     /**
