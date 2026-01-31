@@ -22,11 +22,13 @@ public class Question implements Serializable {
     private int correctQuestionIndex = -1;
     private QuestionStatus questionStatus = QuestionStatus.INIT;
     private QuestionLevel questionLevel = QuestionLevel.EASY;
+    private String questionLetter = "a";
 
     /**
      * Default constructor
      */
     public Question() {
+        this.questionLetter = "a";
     }
 
     /**
@@ -42,7 +44,8 @@ public class Question implements Serializable {
                     @JsonProperty("questionResponsesList") List<String> responses,
                     @JsonProperty("correctQuestionIndex") int correctIndex,
                     @JsonProperty(value = "questionStatus", required = true) QuestionStatus status,
-                    @JsonProperty(value = "questionLevel", required = true) QuestionLevel level) {
+                    @JsonProperty(value = "questionLevel", required = true) QuestionLevel level,
+                    @JsonProperty("questionLetter") String questionLetter) {
         setQuestionText(questionText);
         setQuestionResponsesList(responses);
         setCorrectQuestionIndex(correctIndex);
@@ -54,6 +57,14 @@ public class Question implements Serializable {
             throw new IllegalArgumentException("questionLevel cannot be null");
         }
         this.questionLevel = level;
+        this.questionLetter = (questionLetter == null) ? "a" : questionLetter;
+    }
+    public String getQuestionLetter() {
+        return questionLetter;
+    }
+
+    public void setQuestionLetter(String questionLetter) {
+        this.questionLetter = questionLetter;
     }
 
     /**
@@ -63,7 +74,11 @@ public class Question implements Serializable {
      * @param correctIndex Index of the correct answer (0-3)
      */
     public Question(String questionText, List<String> responses, int correctIndex) {
-        this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY);
+        this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY, "a");
+    }
+
+    public Question(String questionText, List<String> responses, int correctIndex, String questionLetter) {
+        this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY, questionLetter);
     }
 
     /**

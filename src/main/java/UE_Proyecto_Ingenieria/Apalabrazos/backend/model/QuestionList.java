@@ -10,7 +10,8 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Representa una lista depregunta del juego Apalabrazos.
+ * Representa una lista de preguntas del juego Apalabrazos.
+ * Cada pregunta ahora incluye el campo 'questionLetter'.
  */
 public class QuestionList implements Serializable {
     private static final long serialVersionUID = 1L;
