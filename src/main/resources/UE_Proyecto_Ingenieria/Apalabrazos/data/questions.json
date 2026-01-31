@@ -13,7 +13,7 @@
     "questionLevel" : "easy"
   }, {
     "questionText" : "Question #3: choose the correct option",
-    "questionResponsesList" : [ "Option A - seed 3", "Option B - seed 3", "Option C - seed 3", "Option D - seed 3" ],
+    "questionResponsesList" : [ "DDDDOption A - seed 3", "DDDDOption B - seed 3", "DDDDOption C - seed 3", "Option D - seed 3" ],
     "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "easy"

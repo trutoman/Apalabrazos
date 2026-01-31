@@ -3,6 +3,8 @@ package UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller;
 import UE_Proyecto_Ingenieria.Apalabrazos.frontend.ViewNavigator;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GamePlayerConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameType;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionLevel;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -13,11 +15,15 @@ import javafx.scene.layout.VBox;
 import javafx.scene.image.ImageView;
 import javafx.animation.TranslateTransition;
 import javafx.util.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Controller for the main menu with game mode selection.
  */
 public class MenuController {
+
+    private static final Logger log = LoggerFactory.getLogger(MenuController.class);
 
     @FXML
     private ImageView profileImage;
@@ -26,7 +32,7 @@ public class MenuController {
     private Label usernameLabel;
 
     @FXML
-    private Button singlePlayerButton;
+    private Button jugarButton;
 
     @FXML
     private TextField playerNameInput;
@@ -41,10 +47,10 @@ public class MenuController {
     private ComboBox<String> difficultyInput;
 
     @FXML
-    private VBox singlePlayerInputs;
+    private ComboBox<String> gameTypeInput;
 
     @FXML
-    private Button multiplayerButton;
+    private VBox jugarInputs;
 
     @FXML
     private Button scoresButton;
@@ -71,15 +77,20 @@ public class MenuController {
             difficultyInput.setValue("EASY"); // Valor por defecto
         }
 
+        // Poblar tipo de partida
+        if (gameTypeInput != null) {
+            gameTypeInput.getItems().clear();
+            gameTypeInput.getItems().addAll("HIGHER_POINTS_WINS", "NUMBER_WINS");
+            gameTypeInput.setValue("HIGHER_POINTS_WINS"); // Valor por defecto
+        }
+
         // Configurar los eventos de los botones
-        singlePlayerButton.setOnAction(event -> handleSinglePlayer());
-        multiplayerButton.setOnAction(event -> handleMultiplayer());
+        jugarButton.setOnAction(event -> handleMultiplayer());
         scoresButton.setOnAction(event -> handleViewScores());
         exitButton.setOnAction(event -> handleExit());
 
         // Efectos hover para los botones
-        setupButtonHoverEffects(singlePlayerButton, "#2980b9");
-        setupButtonHoverEffects(multiplayerButton, "#27ae60");
+        setupButtonHoverEffects(jugarButton, "#2980b9");
         setupButtonHoverEffects(scoresButton, "#e67e22");
         setupButtonHoverEffects(exitButton, "#c0392b");
     }
@@ -94,55 +105,10 @@ public class MenuController {
         });
     }
 
-    private void handleSinglePlayer() {
-        if (!singlePlayerInputs.isVisible()) {
-            // Animación ligera del botón
-            TranslateTransition transition = new TranslateTransition(Duration.millis(250), singlePlayerButton);
-            transition.setByY(-8);
-            transition.play();
-
-            // Mostrar todos los inputs
-            singlePlayerInputs.setVisible(true);
-            singlePlayerInputs.setManaged(true);
-            playerNameInput.requestFocus();
-            return;
-        }
-
-        // Validar campos
-        String name = playerNameInput.getText().trim();
-        String questionsStr = questionCountInput.getText().trim();
-        String durationStr = durationSecondsInput.getText().trim();
-        String difficultyStr = difficultyInput.getValue() == null ? "" : difficultyInput.getValue().trim().toUpperCase();
-
-        boolean error = false;
-        if (name.isEmpty()) {
-            markError(playerNameInput);
-            error = true;
-        }
-        int questionCount = parsePositiveInt(questionsStr, questionCountInput);
-        if (questionCount == -1)
-            error = true;
-        int durationSeconds = parsePositiveInt(durationStr, durationSecondsInput);
-        if (durationSeconds == -1)
-            error = true;
-        if (!(difficultyStr.equals("EASY") || difficultyStr.equals("MEDIUM") || difficultyStr.equals("HARD"))) {
-            markErrorCombo(difficultyInput);
-            error = true;
-        }
-        if (error) {
-            return; // Hay errores, no continuar
-        }
-
-        System.out.println("Single player -> name=" + name + ", questions=" + questionCount + ", duration=" + durationSeconds + ", difficulty=" + difficultyStr);
-
+    private void handleMultiplayer() {
+        // Por ahora, el lobby se abre desde "Un jugador" (temporal)
         if (navigator != null) {
-            Player player = new Player(name, "resources/images/default-profile.png");
-            GamePlayerConfig playerOneConfig = new GamePlayerConfig();
-            playerOneConfig.setPlayer(player);
-            playerOneConfig.setQuestionNumber(questionCount);
-            playerOneConfig.setTimerSeconds(durationSeconds);
-            playerOneConfig.setDifficultyLevel(UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionLevel.valueOf(difficultyStr));
-            navigator.startGame(playerOneConfig);
+            navigator.showLobby();
         }
     }
 
@@ -163,14 +129,6 @@ public class MenuController {
             markError(field);
             return -1;
         }
-    }
-
-    private void handleMultiplayer() {
-        System.out.println("Iniciando modo Multijugador...");
-        // // Navegar al juego en modo multijugador
-        // if (navigator != null) {
-        // navigator.startGame("Jugador 1", "Jugador 2");
-        // }
     }
 
     private void handleViewScores() {

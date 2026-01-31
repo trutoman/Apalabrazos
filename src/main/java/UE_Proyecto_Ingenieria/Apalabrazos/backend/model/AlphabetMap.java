@@ -63,4 +63,22 @@ public final class AlphabetMap {
         }
         return s;
     }
+
+    /**
+     * Get the index associated with the given letter
+     * @param letter The letter (case-insensitive)
+     * @return The corresponding index (0..26), or -1 if not found
+     */
+    public static int getIndex(String letter) {
+        if (letter == null || letter.isEmpty()) {
+            return -1;
+        }
+        String normalizedLetter = letter.toLowerCase();
+        for (Map.Entry<Integer, String> entry : MAP.entrySet()) {
+            if (entry.getValue().equals(normalizedLetter)) {
+                return entry.getKey();
+            }
+        }
+        return -1;
+    }
 }

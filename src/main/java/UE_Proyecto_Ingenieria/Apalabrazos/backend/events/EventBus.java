@@ -2,37 +2,28 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.events;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * EventBus simplificado para comunicación entre componentes del juego.
  * Permite publicar eventos y recibir notificaciones cuando ocurren.
  *
- * Patrón Singleton: solo existe una instancia compartida en toda la aplicación.
+ * Cada instancia es independiente. Se puede crear una instancia global compartida
+ * o instancias locales según sea necesario.
  */
 public class EventBus {
 
-    // La única instancia del EventBus (patrón Singleton)
-    private static EventBus instance;
+    private static final Logger log = LoggerFactory.getLogger(EventBus.class);
 
     // Listeners que escuchan diferentes tipos de eventos
     private List<EventListener> listeners;
 
     /**
-     * Constructor privado para evitar crear múltiples instancias
+     * Constructor público para crear instancias independientes del bus
      */
-    private EventBus() {
+    public EventBus() {
         this.listeners = new ArrayList<>();
-    }
-
-    /**
-     * Obtener la única instancia del EventBus
-     * @return La instancia compartida del EventBus
-     */
-    public static EventBus getInstance() {
-        if (instance == null) {
-            instance = new EventBus();
-        }
-        return instance;
     }
 
     /**
@@ -63,8 +54,8 @@ public class EventBus {
             try {
                 listener.onEvent(event);
             } catch (Exception e) {
-                System.err.println("Error al procesar evento: " + e.getMessage());
-                e.printStackTrace();
+                log.error("Error processing event: {}", e.getMessage(), e);
+
             }
         }
     }

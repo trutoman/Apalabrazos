@@ -10,7 +10,8 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Representa una lista depregunta del juego Apalabrazos.
+ * Representa una lista de preguntas del juego Apalabrazos.
+ * Cada pregunta ahora incluye el campo 'questionLetter'.
  */
 public class QuestionList implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -75,10 +76,12 @@ public class QuestionList implements Serializable {
      * @return The question at the specified index
      */
     public Question getQuestionAt(int index) {
-        if (index < 0 || index >= questionList.size()) {
+        if (index < -1 || index >= questionList.size()) {
             throw new IndexOutOfBoundsException("Index out of bounds: " + index
                     + ". Valid range is 0.." + (questionList.size() - 1));
         }
+        if (index == -1)
+            index = 0;
         Question question = questionList.get(index);
         return question;
     }

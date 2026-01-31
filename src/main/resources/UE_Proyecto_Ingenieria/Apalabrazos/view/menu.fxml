@@ -40,12 +40,12 @@
                    style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
 
             <VBox spacing="15" alignment="CENTER" style="-fx-padding: 30 0 0 0;">
-                <Button fx:id="singlePlayerButton" text="Jugar Solo"
+                <Button fx:id="jugarButton" text="Jugar"
                         prefWidth="250.0" prefHeight="50.0"
                         style="-fx-font-size: 16px; -fx-background-color: #3498db; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
 
                                 <!-- Contenedor de inputs para modo un jugador -->
-                                <VBox fx:id="singlePlayerInputs" spacing="10" alignment="CENTER"
+                                <VBox fx:id="jugarInputs" spacing="10" alignment="CENTER"
                                             prefWidth="250.0" maxWidth="250.0" minWidth="250.0"
                                             visible="false" managed="false">
                                         <children>
@@ -60,12 +60,10 @@
                                                                      style="-fx-font-size: 14px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #3498db; -fx-border-width: 2px; -fx-padding: 8; -fx-prompt-text-fill: #95a5a6;"/>
                                                 <ComboBox fx:id="difficultyInput" promptText="Dificultad" prefWidth="250.0" maxWidth="250.0" minWidth="250.0"
                                                           style="-fx-font-size: 14px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #3498db; -fx-border-width: 2px; -fx-padding: 2;" />
+                                                <ComboBox fx:id="gameTypeInput" promptText="Tipo de Juego" prefWidth="250.0" maxWidth="250.0" minWidth="250.0"
+                                                          style="-fx-font-size: 14px; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #3498db; -fx-border-width: 2px; -fx-padding: 2;" />
                                         </children>
                                 </VBox>
-
-                <Button fx:id="multiplayerButton" text="Jugar Multijugador"
-                        prefWidth="250.0" prefHeight="50.0"
-                        style="-fx-font-size: 16px; -fx-background-color: #2ecc71; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;"/>
 
                 <Button fx:id="scoresButton" text="Ver Puntuaciones"
                         prefWidth="250.0" prefHeight="50.0"

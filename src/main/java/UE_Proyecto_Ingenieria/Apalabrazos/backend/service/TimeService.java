@@ -1,12 +1,17 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.service;
 
-import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.GlobalEventBus;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.TimerTickEvent;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.EventBus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Usa un único Thread con un bucle y sleep de 1 segundo.
  */
 public class TimeService {
+
+    private static final Logger log = LoggerFactory.getLogger(TimeService.class);
 
     private final EventBus eventBus;
     private Thread worker;
@@ -14,13 +19,14 @@ public class TimeService {
     private int elapsedSeconds = 0;
 
     public TimeService() {
-        this.eventBus = EventBus.getInstance();
+        this.eventBus = GlobalEventBus.getInstance();
     }
 
     // Inicia el hilo si aún no está iniciado
     public synchronized void start() {
         if (running) return;
         running = true;
+        log.info("TimeService iniciado");
         worker = new Thread(() -> {
             while (running) {
                 try {
@@ -33,6 +39,7 @@ public class TimeService {
                 if (!running)
                     break;
                 elapsedSeconds++;
+                log.debug("TimerTickEvent -> {}s", elapsedSeconds);
                 eventBus.publish(new TimerTickEvent(elapsedSeconds));
             }
         }, "TimeService_Thread");
@@ -48,6 +55,7 @@ public class TimeService {
         if (worker != null) {
             worker.interrupt();
         }
+        log.info("TimeService detenido en {}s", elapsedSeconds);
     }
 
     public int getElapsedSeconds() {
