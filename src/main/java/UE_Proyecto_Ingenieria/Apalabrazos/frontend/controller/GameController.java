@@ -574,7 +574,7 @@ public class GameController implements EventListener {
                         letterButton.getStyleClass().add("rosco-letter-current");
                         break;
                     case PASSED:
-                        letterButton.getStyleClass().add("rosco-letter-pending");
+                        letterButton.getStyleClass().add("rosco-letter-skipped");
                         break;
                     case RESPONDED_OK:
                         letterButton.getStyleClass().add("rosco-letter-correct");

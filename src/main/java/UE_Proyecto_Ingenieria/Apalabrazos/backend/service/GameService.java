@@ -156,7 +156,7 @@ public class GameService implements EventListener {
         }
 
         QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion);
-        log.info("Publicando Pregunta {} para jugador {} (nextQuestion: {})", questionIndex, playerId,
+        log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {})", questionIndex, playerId,
             nextQuestion != null ? "sí" : "no");
         externalBus.publish(event);
     }
@@ -353,10 +353,19 @@ public class GameService implements EventListener {
         }
 
         Question question = questionList.getQuestionAt(questionIndex);
-        boolean isCorrect = question.isCorrectIndex(selectedOption);
 
-        log.info("Respuesta {} para jugador {} en pregunta {} (opción {})",
+        QuestionStatus newStatus = QuestionStatus.RESPONDED_FAIL;
+
+        if (selectedOption == -1) {
+            newStatus = QuestionStatus.PASSED;
+            log.info("Jugador {} pasó la pregunta {}", playerId, questionIndex);
+        } else {
+            boolean isCorrect = question.isCorrectIndex(selectedOption);
+            log.info("Respuesta {} para jugador {} en pregunta {} (opción {})",
                  isCorrect ? "CORRECTA" : "INCORRECTA", playerId, questionIndex, selectedOption);
+            // Publicar evento de validación de respuesta con la siguiente pregunta
+            newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
+        }
 
         // Calcular la siguiente pregunta (si existe)
         Question nextQuestion = null;
@@ -365,8 +374,6 @@ public class GameService implements EventListener {
             nextQuestion = questionList.getQuestionAt(nextQuestionIndex);
         }
 
-        // Publicar evento de validación de respuesta con la siguiente pregunta
-        QuestionStatus newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
         publishQuestionForPlayer(playerId, questionIndex, newStatus, nextQuestion);
     }
 
