@@ -528,14 +528,16 @@ public class GameController implements EventListener {
             int questionIndex = questionEvent.getQuestionIndex();
             QuestionStatus status = questionEvent.getStatus();
             Question nextQuestion = questionEvent.getNextQuestion();
-            handleQuestionChangedEvent(playerId, questionIndex, status, nextQuestion);
+            int totalCorrect = questionEvent.getTotalCorrect();
+            int totalIncorrect = questionEvent.getTotalIncorrect();
+            handleQuestionChangedEvent(playerId, questionIndex, status, nextQuestion, totalCorrect, totalIncorrect);
         }
     }
 
     /**
      * Manejar el evento de cambio de pregunta
      */
-    private void handleQuestionChangedEvent(String playerId, int questionIndex, QuestionStatus status, Question nextQuestion) {
+    private void handleQuestionChangedEvent(String playerId, int questionIndex, QuestionStatus status, Question nextQuestion, int totalCorrect, int totalIncorrect) {
         log.debug("handleQuestionChangedEvent(playerId={}, questionIndex={}, status={}, nextQuestion={})",
                   playerId, questionIndex, status, nextQuestion);
 
@@ -603,6 +605,10 @@ public class GameController implements EventListener {
                 if (responses.size() > 1 && option2Description != null) option2Description.setText(responses.get(1));
                 if (responses.size() > 2 && option3Description != null) option3Description.setText(responses.get(2));
                 if (responses.size() > 3 && option4Description != null) option4Description.setText(responses.get(3));
+
+                // Actualizar contadores de aciertos y fallos
+                if (correctCountLabel != null) correctCountLabel.setText(String.valueOf(totalCorrect));
+                if (incorrectCountLabel != null) incorrectCountLabel.setText(String.valueOf(totalIncorrect));
             });
             this.currentQuestionIndex = questionIndex + 1;
         }

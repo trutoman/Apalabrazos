@@ -155,9 +155,14 @@ public class GameService implements EventListener {
             return;
         }
 
-        QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion);
-        log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {})", questionIndex, playerId,
-            nextQuestion != null ? "sí" : "no");
+        // Calcular totales de aciertos y fallos usando método de GameInstance
+        int[] totals = instance.getCorrectIncorrectTotals();
+        int totalCorrect = totals[0];
+        int totalIncorrect = totals[1];
+
+        QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion, totalCorrect, totalIncorrect);
+        log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {}, correct: {}, incorrect: {})", 
+            questionIndex, playerId, nextQuestion != null ? "sí" : "no", totalCorrect, totalIncorrect);
         externalBus.publish(event);
     }
 
@@ -366,6 +371,9 @@ public class GameService implements EventListener {
             // Publicar evento de validación de respuesta con la siguiente pregunta
             newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
         }
+
+        // Registrar el resultado de la respuesta en la Question dentro de la QuestionList
+        question.setUserResponseRecorded(newStatus.getValue());
 
         // Calcular la siguiente pregunta (si existe)
         Question nextQuestion = null;

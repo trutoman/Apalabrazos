@@ -37,22 +37,6 @@ public class GameInstance {
     }
 
     /**
-     * @param timer in seconds
-     * @param questionList The list of questions for the game
-     * @param gameResult The result of the game
-     * @param player The player participating in the game
-     * @param difficulty The difficulty level of the game
-     */
-    public GameInstance(QuestionList questionList,
-                        GameRecord gameResult,
-                        Player player) {
-        this.questionList = questionList;
-        this.gameResult = gameResult;
-        this.currentQuestionIndex = 0;
-        this.gameInstanceState = GameState.PENDING;
-    }
-
-    /**
      * Convenience constructor to initialize a game instance directly from configuration.
      *
      * @param timerSeconds    initial timer in seconds
@@ -166,6 +150,29 @@ public class GameInstance {
      */
     public void reset() {
         this.gameInstanceState = GameState.PENDING;
+    }
+
+    /**
+     * Calcular totales de respuestas correctas e incorrectas
+     * @return Array de 2 elementos: [totalCorrect, totalIncorrect]
+     */
+    public int[] getCorrectIncorrectTotals() {
+        int totalCorrect = 0;
+        int totalIncorrect = 0;
+
+        if (questionList != null) {
+            for (int i = 0; i < questionList.getCurrentLength(); i++) {
+                Question q = questionList.getQuestionAt(i);
+                String userResponse = q.getUserResponseRecorded();
+                if ("responsed_ok".equals(userResponse)) {
+                    totalCorrect++;
+                } else if ("responsed_fail".equals(userResponse)) {
+                    totalIncorrect++;
+                }
+            }
+        }
+
+        return new int[]{totalCorrect, totalIncorrect};
     }
 
 }

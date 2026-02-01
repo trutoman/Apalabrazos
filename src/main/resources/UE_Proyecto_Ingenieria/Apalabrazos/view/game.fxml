@@ -137,17 +137,17 @@
         <HBox alignment="CENTER" spacing="12">
             <Label text="⏱" style="-fx-font-size: 24px;" />
             <Label fx:id="timerLabel" text="180"
-                style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" />
+                style="-fx-font-size: 44px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" />
         </HBox>
 
         <HBox alignment="CENTER" spacing="80">
-            <HBox alignment="CENTER" spacing="10">
+            <HBox alignment="CENTER" spacing="4">
                 <Label text="✓" style="-fx-font-size: 20px; -fx-text-fill: #27ae60;" />
                 <Label fx:id="correctCountLabel" text="0"
                     style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #27ae60;" />
             </HBox>
 
-            <HBox alignment="CENTER" spacing="10">
+            <HBox alignment="CENTER" spacing="4">
                 <Label text="✗" style="-fx-font-size: 20px; -fx-text-fill: #e74c3c;" />
                 <Label fx:id="incorrectCountLabel" text="0"
                     style="-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" />
