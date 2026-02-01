@@ -510,8 +510,15 @@ public class GameController implements EventListener {
         log.debug("onEvent(event={})", event);
         // Verificar el tipo de evento y llamar al método apropiado
         if (event instanceof TimerTickEvent) {
-            int remaining = ((TimerTickEvent) event).getElapsedSeconds();
-            Platform.runLater(() -> timerLabel.setText(String.valueOf(remaining)));
+            int remaining = ((TimerTickEvent) event).getRemainingSeconds();
+            Platform.runLater(() -> {
+                timerLabel.setText(String.valueOf(remaining));
+
+                // Cambiar estilo si quedan pocos segundos
+                if (remaining <= 10 && remaining > 0) {
+                    timerLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+                }
+            });
         } else if (event instanceof CreatorInitGameEvent) {
             // Validación correcta del inicio del juego por el creador
             Platform.runLater(() -> {

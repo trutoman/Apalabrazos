@@ -23,7 +23,16 @@
             stylesheets="@styles.css">
 
     <top>
-        <HBox  spacing="10" styleClass="profile-container">
+        <HBox spacing="10" styleClass="profile-container" alignment="CENTER">
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Título Principal -->
+            <Label text="Apalabrazos"
+                   style="-fx-font-size: 56px; -fx-font-weight: bold; -fx-text-fill: #ff9900;"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- Perfil del Usuario -->
             <VBox alignment="CENTER" spacing="5">
                 <ImageView fx:id="profileImage" fitHeight="50.0" preserveRatio="true" styleClass="profile-image">
                     <image>

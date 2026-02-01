@@ -34,6 +34,7 @@ public class GameGlobal {
     private int maxPlayers;
     private int numberOfQuestions;
     private int gameDuration; // Duration in seconds
+    private int remainingSeconds; // Tiempo restante en la partida
 
     /**
      * Default constructor
@@ -46,6 +47,7 @@ public class GameGlobal {
         this.maxPlayers = 1;
         this.numberOfQuestions = 10;
         this.gameDuration = 300; // 5 minutes default
+        this.remainingSeconds = 300; // Inicializar con la duración
     }
 
     /**
@@ -60,6 +62,7 @@ public class GameGlobal {
         this.maxPlayers = config.getMaxPlayers() > 0 ? config.getMaxPlayers() : 1;
         this.numberOfQuestions = config.getQuestionNumber() > 0 ? config.getQuestionNumber() : 10;
         this.gameDuration = config.getTimerSeconds() > 0 ? config.getTimerSeconds() : 300; // 5 minutes default
+        this.remainingSeconds = this.gameDuration; // Inicializar con la duración configurada
     }
 
     /**
@@ -257,6 +260,38 @@ public class GameGlobal {
      */
     public boolean hasPlayer(String playerId) {
         return playerInstances.containsKey(playerId);
+    }
+
+    /**
+     * Get remaining seconds in the game
+     * @return The remaining seconds
+     */
+    public int getRemainingSeconds() {
+        return remainingSeconds;
+    }
+
+    /**
+     * Decrement the remaining time by one second
+     */
+    public void decrementTime() {
+        if (remainingSeconds > 0) {
+            remainingSeconds--;
+        }
+    }
+
+    /**
+     * Check if time is up
+     * @return true if no time remaining
+     */
+    public boolean isTimeUp() {
+        return remainingSeconds <= 0;
+    }
+
+    /**
+     * Reset the timer to the initial game duration
+     */
+    public void resetTimer() {
+        this.remainingSeconds = this.gameDuration;
     }
 
     /**

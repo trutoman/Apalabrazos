@@ -36,7 +36,7 @@
     <!-- ===== FILA 0: CABECERA ===== -->
     <VBox GridPane.columnIndex="0" GridPane.rowIndex="0" alignment="CENTER"
           style="-fx-padding: 8; -fx-background: linear-gradient(to bottom, #2c3e50, #34495e);">
-        <Label text="Apalabrazzos" styleClass="titulo-principal" />
+        <Label text="Apalabrazos" styleClass="titulo-principal" />
     </VBox>
 
     <!-- ===== FILA 1: ROSCO Y OPCIONES ===== -->
@@ -135,9 +135,8 @@
       style="-fx-padding: 15; -fx-background-color: #2c3e50;">
 
         <HBox alignment="CENTER" spacing="12">
-            <Label text="⏱" style="-fx-font-size: 24px;" />
             <Label fx:id="timerLabel" text="180"
-                style="-fx-font-size: 44px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" />
+                style="-fx-font-size: 48px; -fx-font-weight: bold; -fx-text-fill: #f39c12;" />
         </HBox>
 
         <HBox alignment="CENTER" spacing="80">
