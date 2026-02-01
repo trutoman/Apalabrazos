@@ -48,7 +48,9 @@ public class QuestionFileLoader {
 
     public List<Question> selectQuestionByLetter (QuestionList all) {
         java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> selectedQuestions = new java.util.ArrayList<>();
-        for (Integer letter : AlphabetMap.MAP.keySet()) {
+        java.util.List<Integer> orderedKeys = new java.util.ArrayList<>(AlphabetMap.MAP.keySet());
+        java.util.Collections.sort(orderedKeys);
+        for (Integer letter : orderedKeys) {
             String letterStr = AlphabetMap.MAP.get(letter);
             for (UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question q : all.getQuestionList()) {
                 if (q.getQuestionLetter().toLowerCase().equals(letterStr.toLowerCase())) {
@@ -86,7 +88,6 @@ public class QuestionFileLoader {
         // Create a QuestionList with limit equal to "count"
 
         java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> subset = selectQuestionByLetter(all);
-
         return new UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionList(subset, count);
     }
 
