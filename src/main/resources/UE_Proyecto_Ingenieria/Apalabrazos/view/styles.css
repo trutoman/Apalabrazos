@@ -20,9 +20,15 @@
 }
 
 .timer-label {
-    -fx-font-size: 32px;
-    -fx-text-fill: #ffffffff;
+    -fx-font-size: 48px;
     -fx-font-weight: bold;
+    -fx-text-fill: #f39c12;
+}
+
+.timer-label-warning {
+    -fx-font-size: 50px;
+    -fx-font-weight: bold;
+    -fx-text-fill: red;
 }
 
 .titulo-principal {
