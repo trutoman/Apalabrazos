@@ -516,7 +516,9 @@ public class GameController implements EventListener {
 
                 // Cambiar estilo si quedan pocos segundos
                 if (remaining <= 10 && remaining > 0) {
-                    timerLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+                    timerLabel.getStyleClass().add("timer-label-warning");
+                } else {
+                    timerLabel.getStyleClass().remove("timer-label-warning");
                 }
             });
         } else if (event instanceof CreatorInitGameEvent) {
