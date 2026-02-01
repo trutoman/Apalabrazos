@@ -38,16 +38,16 @@ public class GameController implements EventListener {
     private Label questionLabel;
 
     @FXML
-    private Label optionALabel;
+    private Label option1Description;
 
     @FXML
-    private Label optionBLabel;
+    private Label option2Description;
 
     @FXML
-    private Label optionCLabel;
+    private Label option3Description;
 
     @FXML
-    private Label optionDLabel;
+    private Label option4Description;
 
     @FXML
     private Label timerLabel;
@@ -599,10 +599,10 @@ public class GameController implements EventListener {
 
             Platform.runLater(() -> {
                 questionLabel.setText(questionText);
-                if (responses.size() > 0) optionALabel.setText("A) " + responses.get(0));
-                if (responses.size() > 1) optionBLabel.setText("B) " + responses.get(1));
-                if (responses.size() > 2) optionCLabel.setText("C) " + responses.get(2));
-                if (responses.size() > 3) optionDLabel.setText("D) " + responses.get(3));
+                if (responses.size() > 0 && option1Description != null) option1Description.setText(responses.get(0));
+                if (responses.size() > 1 && option2Description != null) option2Description.setText(responses.get(1));
+                if (responses.size() > 2 && option3Description != null) option3Description.setText(responses.get(2));
+                if (responses.size() > 3 && option4Description != null) option4Description.setText(responses.get(3));
             });
             this.currentQuestionIndex = questionIndex + 1;
         }

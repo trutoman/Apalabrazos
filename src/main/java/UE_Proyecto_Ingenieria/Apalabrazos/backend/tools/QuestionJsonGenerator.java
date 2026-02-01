@@ -38,7 +38,8 @@ public class QuestionJsonGenerator {
                     responses,
                     correctIndex,
                     QuestionStatus.INIT,
-                    QuestionLevel.EASY
+                    QuestionLevel.EASY,
+                    "a"
             );
             questions.add(q);
         }

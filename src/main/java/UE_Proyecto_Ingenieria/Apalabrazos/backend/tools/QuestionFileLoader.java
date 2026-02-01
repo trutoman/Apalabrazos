@@ -1,10 +1,14 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.AlphabetMap;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionList;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Clase encargada de cargar las preguntas desde un archivo JSON.
@@ -13,7 +17,7 @@ import java.io.IOException;
 public class QuestionFileLoader {
 
     // Ruta por defecto del archivo de preguntas
-    private String defaultQuestionsFile = "src/main/resources/UE_Proyecto_Ingenieria/Apalabrazos/data/questions.json";
+    private String defaultQuestionsFile = "src/main/resources/UE_Proyecto_Ingenieria/Apalabrazos/data/questions2.json";
 
     /**
      * Carga las preguntas desde el archivo por defecto.
@@ -42,6 +46,22 @@ public class QuestionFileLoader {
         return questions;
     }
 
+    public List<Question> selectQuestionByLetter (QuestionList all) {
+        java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> selectedQuestions = new java.util.ArrayList<>();
+        java.util.List<Integer> orderedKeys = new java.util.ArrayList<>(AlphabetMap.MAP.keySet());
+        java.util.Collections.sort(orderedKeys);
+        for (Integer letter : orderedKeys) {
+            String letterStr = AlphabetMap.MAP.get(letter);
+            for (UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question q : all.getQuestionList()) {
+                if (q.getQuestionLetter().toLowerCase().equals(letterStr.toLowerCase())) {
+                    selectedQuestions.add(q);
+                    break;
+                }
+            }
+        }
+        return selectedQuestions;
+    }
+
     /**
      * Carga exactamente "numero" preguntas del archivo indicado.
      * Si el archivo contiene menos de ese número, lanza excepción.
@@ -63,9 +83,11 @@ public class QuestionFileLoader {
                     "El archivo solo contiene " + available + " preguntas, se solicitaron " + count);
         }
         // Take the first "count" questions
-        java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> subset =
-                all.getQuestionList().subList(0, count);
+        // java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> subset =
+        //        all.getQuestionList().subList(0, count);
         // Create a QuestionList with limit equal to "count"
+
+        java.util.List<UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Question> subset = selectQuestionByLetter(all);
         return new UE_Proyecto_Ingenieria.Apalabrazos.backend.model.QuestionList(subset, count);
     }
 
