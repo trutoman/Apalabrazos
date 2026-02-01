@@ -23,6 +23,7 @@ public class Question implements Serializable {
     private QuestionStatus questionStatus = QuestionStatus.INIT;
     private QuestionLevel questionLevel = QuestionLevel.EASY;
     private String questionLetter = "a";
+    private String userResponseRecorded = "init";
 
     /**
      * Default constructor
@@ -44,7 +45,8 @@ public class Question implements Serializable {
                     @JsonProperty("correctQuestionIndex") int correctIndex,
                     @JsonProperty(value = "questionStatus", required = true) QuestionStatus status,
                     @JsonProperty(value = "questionLevel", required = true) QuestionLevel level,
-                    @JsonProperty(value = "questionLetter", required = true) String questionLetter) {
+                    @JsonProperty(value = "questionLetter", required = true) String questionLetter,
+                    @JsonProperty(value = "userResponseRecorded") String userResponseRecorded) {
         setQuestionText(questionText);
         setQuestionResponsesList(responses);
         setCorrectQuestionIndex(correctIndex);
@@ -57,6 +59,7 @@ public class Question implements Serializable {
         }
         this.questionLevel = level;
         this.questionLetter = questionLetter;
+        this.userResponseRecorded = (userResponseRecorded != null) ? userResponseRecorded : "init";
     }
 
     /**
@@ -66,7 +69,7 @@ public class Question implements Serializable {
      * @param correctIndex Index of the correct answer (0-3)
      */
     public Question(String questionText, List<String> responses, int correctIndex) {
-        this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY, "a");
+        this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY, "a", "init");
     }
 
     /**
@@ -209,6 +212,26 @@ public class Question implements Serializable {
             throw new IllegalArgumentException("questionLetter cannot be null or empty");
         }
         this.questionLetter = questionLetter;
+    }
+
+    /**
+     * Get the user response recorded status.
+     * Values: "init", "responsed_ok", "responsed_fail", "passed"
+     * @return The user response status
+     */
+    @JsonProperty("userResponseRecorded")
+    public String getUserResponseRecorded() {
+        return userResponseRecorded;
+    }
+
+    /**
+     * Set the user response recorded status.
+     * Values: "init", "responsed_ok", "responsed_fail", "passed"
+     * @param userResponseRecorded The user response status
+     */
+    @JsonProperty("userResponseRecorded")
+    public void setUserResponseRecorded(String userResponseRecorded) {
+        this.userResponseRecorded = (userResponseRecorded != null) ? userResponseRecorded : "init";
     }
 
     /**

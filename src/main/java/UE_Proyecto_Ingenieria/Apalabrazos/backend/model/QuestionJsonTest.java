@@ -17,7 +17,7 @@ public class QuestionJsonTest {
             String r3 = "Respuesta C";
             String r4 = "Respuesta D";
 
-            Question q = new Question("¿Cuál es la respuesta correcta?", Arrays.asList(r1, r2, r3, r4), 1, QuestionStatus.INIT, QuestionLevel.EASY, "a");
+            Question q = new Question("¿Cuál es la respuesta correcta?", Arrays.asList(r1, r2, r3, r4), 1, QuestionStatus.INIT, QuestionLevel.EASY, "a", "init");
 
             ObjectMapper m = new ObjectMapper();
             m.enable(SerializationFeature.INDENT_OUTPUT);
