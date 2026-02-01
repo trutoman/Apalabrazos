@@ -161,7 +161,7 @@ public class GameService implements EventListener {
         int totalIncorrect = totals[1];
 
         QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion, totalCorrect, totalIncorrect);
-        log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {}, correct: {}, incorrect: {})", 
+        log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {}, correct: {}, incorrect: {})",
             questionIndex, playerId, nextQuestion != null ? "sí" : "no", totalCorrect, totalIncorrect);
         externalBus.publish(event);
     }
@@ -174,10 +174,10 @@ public class GameService implements EventListener {
     }
 
     /**
-     * Exponer segundos transcurridos (si el servicio está activo)
+     * Obtener segundos restantes en la partida
      */
-    public int getElapsedSeconds() {
-        return timeService != null ? timeService.getElapsedSeconds() : 0;
+    public int getRemainingSeconds() {
+        return GlobalGameInstance != null ? GlobalGameInstance.getRemainingSeconds() : 0;
     }
 
     /**
@@ -302,9 +302,7 @@ public class GameService implements EventListener {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
             addPlayerToGame(join.getPlayerID());
         } else if (event instanceof TimerTickEvent) {
-            // Reenviar al bus externo para que el GameController actualice UI
-            log.debug("Reenviando TimerTickEvent al externalBus: {} segundos", ((TimerTickEvent)event).getElapsedSeconds());
-            publishExternal(event);
+            handleTimerTick((TimerTickEvent) event);
         } else if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
@@ -327,6 +325,55 @@ public class GameService implements EventListener {
             AnswerSubmittedEvent answerEvent = (AnswerSubmittedEvent) event;
             handleAnswerSubmitted(answerEvent);
         }
+    }
+
+    /**
+     * Manejar el tick del timer: decrementar tiempo y verificar si se agotó
+     */
+    private void handleTimerTick(TimerTickEvent event) {
+        if (GlobalGameInstance != null && GlobalGameInstance.getState() == GameGlobal.GameGlobalState.PLAYING) {
+            GlobalGameInstance.decrementTime();
+            int remaining = GlobalGameInstance.getRemainingSeconds();
+
+            // Publicar evento actualizado con tiempo restante
+            log.debug("Tiempo restante: {} segundos", remaining);
+            publishExternal(new TimerTickEvent(remaining));
+
+            // Si el tiempo se agotó, finalizar juego
+            if (GlobalGameInstance.isTimeUp()) {
+                log.info("Tiempo agotado. Finalizando juego...");
+                finishGame();
+            }
+        }
+    }
+
+    /**
+     * Finalizar el juego
+     */
+    private void finishGame() {
+        if (GlobalGameInstance != null) {
+            GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
+        }
+        if (timeService != null) {
+            timeService.stop();
+        }
+
+        // Obtener los GameRecords de los jugadores (si existen)
+        GameRecord playerOneRecord = null;
+        GameRecord playerTwoRecord = null;
+
+        if (GlobalGameInstance != null) {
+            java.util.List<GameInstance> instances = new java.util.ArrayList<>(GlobalGameInstance.getAllPlayerInstances());
+            if (instances.size() > 0) {
+                playerOneRecord = instances.get(0).getGameResult();
+            }
+            if (instances.size() > 1) {
+                playerTwoRecord = instances.get(1).getGameResult();
+            }
+        }
+
+        publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord));
+        log.info("Juego finalizado");
     }
 
     /**

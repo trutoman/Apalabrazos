@@ -16,7 +16,6 @@ public class TimeService {
     private final EventBus eventBus;
     private Thread worker;
     private volatile boolean running = false;
-    private int elapsedSeconds = 0;
 
     public TimeService() {
         this.eventBus = GlobalEventBus.getInstance();
@@ -38,9 +37,8 @@ public class TimeService {
 
                 if (!running)
                     break;
-                elapsedSeconds++;
-                log.debug("TimerTickEvent -> {}s", elapsedSeconds);
-                eventBus.publish(new TimerTickEvent(elapsedSeconds));
+                log.debug("TimerTickEvent emitido");
+                eventBus.publish(new TimerTickEvent(0)); // GameService gestionará el valor real
             }
         }, "TimeService_Thread");
         worker.setDaemon(true); // No bloquea salida de la app
@@ -55,10 +53,6 @@ public class TimeService {
         if (worker != null) {
             worker.interrupt();
         }
-        log.info("TimeService detenido en {}s", elapsedSeconds);
-    }
-
-    public int getElapsedSeconds() {
-        return elapsedSeconds;
+        log.info("TimeService detenido");
     }
 }

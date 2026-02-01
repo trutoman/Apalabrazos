@@ -36,8 +36,8 @@
     <!-- Menú central con botones verticales -->
     <center>
         <VBox alignment="CENTER" spacing="20" style="-fx-padding: 40;">
-            <Label text="Apalabrazos 2D"
-                   style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
+            <Label text="Apalabrazos"
+                   style="-fx-font-size: 56px; -fx-font-weight: bold; -fx-text-fill: #ff9900;"/>
 
             <VBox spacing="15" alignment="CENTER" style="-fx-padding: 30 0 0 0;">
                 <Button fx:id="jugarButton" text="Jugar"
