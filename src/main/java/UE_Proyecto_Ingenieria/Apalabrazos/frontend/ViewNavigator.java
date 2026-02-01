@@ -20,8 +20,8 @@ import javafx.stage.Stage;
 public class ViewNavigator {
 
     private final Stage stage;
-    private static final int SCENE_WIDTH = 1280;
-    private static final int SCENE_HEIGHT = 720;
+    private static final int SCENE_WIDTH = 1400;
+    private static final int SCENE_HEIGHT = 910;
 
     // public ViewNavigator(Stage stage) {
     //     this.stage = stage;
