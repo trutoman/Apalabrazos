@@ -28,7 +28,6 @@ public class Question implements Serializable {
      * Default constructor
      */
     public Question() {
-        this.questionLetter = "a";
     }
 
     /**
@@ -45,7 +44,7 @@ public class Question implements Serializable {
                     @JsonProperty("correctQuestionIndex") int correctIndex,
                     @JsonProperty(value = "questionStatus", required = true) QuestionStatus status,
                     @JsonProperty(value = "questionLevel", required = true) QuestionLevel level,
-                    @JsonProperty("questionLetter") String questionLetter) {
+                    @JsonProperty(value = "questionLetter", required = true) String questionLetter) {
         setQuestionText(questionText);
         setQuestionResponsesList(responses);
         setCorrectQuestionIndex(correctIndex);
@@ -57,13 +56,6 @@ public class Question implements Serializable {
             throw new IllegalArgumentException("questionLevel cannot be null");
         }
         this.questionLevel = level;
-        this.questionLetter = (questionLetter == null) ? "a" : questionLetter;
-    }
-    public String getQuestionLetter() {
-        return questionLetter;
-    }
-
-    public void setQuestionLetter(String questionLetter) {
         this.questionLetter = questionLetter;
     }
 
@@ -75,10 +67,6 @@ public class Question implements Serializable {
      */
     public Question(String questionText, List<String> responses, int correctIndex) {
         this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY, "a");
-    }
-
-    public Question(String questionText, List<String> responses, int correctIndex, String questionLetter) {
-        this(questionText, responses, correctIndex, QuestionStatus.INIT, QuestionLevel.EASY, questionLetter);
     }
 
     /**
@@ -200,6 +188,27 @@ public class Question implements Serializable {
             throw new IllegalArgumentException("questionLevel cannot be null");
         }
         this.questionLevel = questionLevel;
+    }
+
+    /**
+     * Get the question letter
+     * @return The question letter
+     */
+    @JsonProperty("questionLetter")
+    public String getQuestionLetter() {
+        return questionLetter;
+    }
+
+    /**
+     * Set the question letter
+     * @param questionLetter The letter associated with the question
+     */
+    @JsonProperty("questionLetter")
+    public void setQuestionLetter(String questionLetter) {
+        if (questionLetter == null || questionLetter.isEmpty()) {
+            throw new IllegalArgumentException("questionLetter cannot be null or empty");
+        }
+        this.questionLetter = questionLetter;
     }
 
     /**
