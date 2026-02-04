@@ -11,7 +11,7 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.canvas.Canvas?>
 
-<GridPane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+<GridPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
           fx:controller="UE_Proyecto_Ingenieria.Apalabrazos.frontend.controller.GameController"
           stylesheets="@styles.css"
           style="-fx-background-color: #1a252f;">
