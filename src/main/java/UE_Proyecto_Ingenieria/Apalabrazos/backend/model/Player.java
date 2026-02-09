@@ -1,48 +1,98 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.model;
 
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.network.MessageSender;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 /**
- * Represents a player of the game. Holds identity, image resource and game history.
+ * Represents a player in the system - the "anchor" of the architecture.
+ * This class lives for the entire user session, from connection to disconnection.
+ * It bridges the physical world (network) with the logical world (game rules).
+ *
+ * Combines three facets:
+ * - Identity: Who they are (ID, Username, Avatar)
+ * - State: Where they are (LOBBY, PLAYING, DISCONNECTED, etc.)
+ * - Channel: How we communicate with them (MessageSender abstraction)
  */
 public class Player {
 
+    // ===== Identity =====
+    private final UUID sessionId;           // Unique session identifier
     private String name;
-    private String imageResource; // Can be a local path or a URL
-    private String playerID; // ID único: nombre-xxxx
+    private String imageResource;           // Can be a local path or a URL
+    private String playerID;                // Human-readable ID: nombre-xxxx
+
+    // ===== State =====
+    private PlayerState state;              // Current logical state
+    private UUID currentMatchId;            // null if not in a match
+
+    // ===== Channel (Network Abstraction) =====
+    private final MessageSender sender;     // Communication channel
+
+    // ===== Game Data =====
     private final List<GameRecord> history = new ArrayList<>();
 
     /**
-     * Default constructor
+     * Default constructor (for backward compatibility)
+     * Creates a player without network capabilities (for testing/legacy code)
      */
     public Player() {
+        this.sessionId = UUID.randomUUID();
         this.name = "";
         this.imageResource = null;
         this.playerID = generatePlayerID("");
+        this.state = PlayerState.LOBBY;
+        this.sender = null;
+        this.currentMatchId = null;
     }
 
     /**
-     * Constructor with name
+     * Constructor with name (for backward compatibility)
      * @param name Player name
      */
     public Player(String name) {
+        this.sessionId = UUID.randomUUID();
         this.name = name;
         this.imageResource = "resources/images/default-profile.png";
         this.playerID = generatePlayerID(name);
+        this.state = PlayerState.LOBBY;
+        this.sender = null;
+        this.currentMatchId = null;
     }
 
     /**
-     * Constructor with name and image resource
+     * Constructor with name and image resource (for backward compatibility)
      * @param name Player name
      * @param imageResource Image path or URL
      */
     public Player(String name, String imageResource) {
+        this.sessionId = UUID.randomUUID();
         this.name = name;
         this.imageResource = imageResource;
         this.playerID = generatePlayerID(name);
+        this.state = PlayerState.LOBBY;
+        this.sender = null;
+        this.currentMatchId = null;
+    }
+
+    /**
+     * Full constructor for connected player (PRIMARY CONSTRUCTOR FOR SERVER)
+     * @param sessionId Unique session identifier
+     * @param name Player name
+     * @param sender Communication channel to the client
+     */
+    public Player(UUID sessionId, String name, MessageSender sender) {
+        this.sessionId = sessionId;
+        this.name = name;
+        this.sender = sender;
+        this.imageResource = "resources/images/default-profile.png";
+        this.playerID = generatePlayerID(name);
+        this.state = PlayerState.LOBBY;
+        this.currentMatchId = null;
     }
 
     /**
@@ -114,6 +164,95 @@ public class Player {
      * Establecer el ID único del jugador (usado cuando se necesita mantener consistencia)
      * @param playerID ID del jugador
      */
+
+    // ===== Session Management Methods =====
+
+    /**
+     * Get the unique session identifier
+     * @return Session UUID
+     */
+    public UUID getSessionId() {
+        return sessionId;
+    }
+
+    /**
+     * Get the current player state
+     * @return Current PlayerState
+     */
+    public PlayerState getState() {
+        return state;
+    }
+
+    /**
+     * Set the player state
+     * @param state New state
+     */
+    public void setState(PlayerState state) {
+        this.state = state;
+    }
+
+    /**
+     * Get the current match ID (if in a match)
+     * @return Match UUID or null
+     */
+    public UUID getCurrentMatchId() {
+        return currentMatchId;
+    }
+
+    /**
+     * Set the current match ID
+     * @param currentMatchId Match UUID
+     */
+    public void setCurrentMatchId(UUID currentMatchId) {
+        this.currentMatchId = currentMatchId;
+    }
+
+    /**
+     * Check if player is currently in a match
+     * @return true if in a match
+     */
+    public boolean isInMatch() {
+        return currentMatchId != null && state == PlayerState.PLAYING;
+    }
+
+    /**
+     * Send a message to the client through the communication channel.
+     * This is the key method for the game logic to communicate with the client.
+     * Only sends if the player is not disconnected and has a valid sender.
+     * @param message The message to send
+     */
+    public void sendMessage(Object message) {
+        if (sender != null && state != PlayerState.DISCONNECTED) {
+            sender.send(message);
+        }
+    }
+
+    /**
+     * Check if the player has an active connection
+     * @return true if connected
+     */
+    public boolean isConnected() {
+        return sender != null && sender.isConnected() && state != PlayerState.DISCONNECTED;
+    }
+
+    /**
+     * Mark player as disconnected
+     */
+    public void disconnect() {
+        this.state = PlayerState.DISCONNECTED;
+        if (sender != null) {
+            sender.close();
+        }
+    }
+
+    /**
+     * Get the message sender (for advanced use cases)
+     * @return The MessageSender instance
+     */
+    public MessageSender getSender() {
+        return sender;
+    }
+
     public void setPlayerID(String playerID) {
         this.playerID = playerID;
     }

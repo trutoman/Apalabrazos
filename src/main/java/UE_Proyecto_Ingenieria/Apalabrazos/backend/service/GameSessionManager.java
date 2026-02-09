@@ -2,32 +2,69 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.service;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.events.*;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.GameGlobal;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service responsible for managing multiplayer game sessions.
  * Handles creation, deletion, and listing of active game sessions.
+ * Singleton pattern to ensure only one instance manages all sessions.
+ *
+ * This is the Level 2 - Session Manager:
+ * - Maintains active connections (Map<SessionID, Player>)
+ * - Routes events to appropriate game sessions
+ * - Handles player lifecycle (connect, disconnect, reconnect)
  */
 public class GameSessionManager implements EventListener {
 
     private static final Logger log = LoggerFactory.getLogger(GameSessionManager.class);
 
-    private final EventBus eventBus;
-    private final Map<String, GameService> activeSessions;
-    private final Map<String, String> sessionCreators; // roomId -> creatorUsername
+    // Singleton instance
+    private static volatile GameSessionManager instance;
 
-    public GameSessionManager() {
-        this.eventBus = GlobalEventBus.getInstance();
+    private final AsyncEventBus eventBus;
+
+    // ===== Connection Registry (Level 1 → Level 2 Bridge) =====
+    // Maps physical connections (sessionId) to Player objects
+    private final Map<UUID, Player> activeConnections;
+
+    // ===== Game Session Registry =====
+    private final Map<String, GameService> activeSessions;
+    private final Map<String, String> sessionCreators; // roomId -> creatorPlayerId
+
+    /**
+     * Private constructor to prevent direct instantiation
+     */
+    private GameSessionManager() {
+        this.eventBus = GlobalAsyncEventBus.getInstance();
+        this.activeConnections = new ConcurrentHashMap<>();
         this.activeSessions = new ConcurrentHashMap<>();
         this.sessionCreators = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
+        log.info("GameSessionManager singleton initialized");
+    }
+
+    /**
+     * Get the singleton instance of GameSessionManager
+     * @return The singleton instance
+     */
+    public static GameSessionManager getInstance() {
+        if (instance == null) {
+            synchronized (GameSessionManager.class) {
+                if (instance == null) {
+                    instance = new GameSessionManager();
+                }
+            }
+        }
+        return instance;
     }
 
     @Override
@@ -220,5 +257,98 @@ public class GameSessionManager implements EventListener {
     public void clearAllSessions() {
         activeSessions.clear();
         log.info("All sessions cleared");
+    }
+
+    // ===== Connection Management (Level 1 Bridge) =====
+
+    /**
+     * Register a new player connection.
+     * This is called when a physical connection (WebSocket) is established.
+     * @param player The Player object representing the connected user
+     * @return true if registered successfully
+     */
+    public boolean registerConnection(Player player) {
+        if (player == null || player.getSessionId() == null) {
+            log.error("Cannot register null player or player without sessionId");
+            return false;
+        }
+
+        activeConnections.put(player.getSessionId(), player);
+        log.info("Player connected: {} (SessionID: {})",
+                 player.getName(), player.getSessionId());
+        return true;
+    }
+
+    /**
+     * Unregister a player connection.
+     * Called when a connection is closed or times out.
+     * @param sessionId The session identifier
+     * @return The removed Player, or null if not found
+     */
+    public Player unregisterConnection(UUID sessionId) {
+        Player player = activeConnections.remove(sessionId);
+        if (player != null) {
+            player.disconnect();
+            log.info("Player disconnected: {} (SessionID: {})",
+                     player.getName(), sessionId);
+        }
+        return player;
+    }
+
+    /**
+     * Get a player by their session ID
+     * @param sessionId The session identifier
+     * @return The Player object, or null if not found
+     */
+    public Player getPlayerBySessionId(UUID sessionId) {
+        return activeConnections.get(sessionId);
+    }
+
+    /**
+     * Get all connected players
+     * @return List of all active players
+     */
+    public List<Player> getAllConnectedPlayers() {
+        return new ArrayList<>(activeConnections.values());
+    }
+
+    /**
+     * Get the count of active connections
+     * @return Number of connected players
+     */
+    public int getActiveConnectionCount() {
+        return activeConnections.size();
+    }
+
+    /**
+     * Check if a session is active
+     * @param sessionId The session identifier
+     * @return true if the session exists
+     */
+    public boolean isSessionActive(UUID sessionId) {
+        return activeConnections.containsKey(sessionId);
+    }
+
+    /**
+     * Broadcast a message to all connected players
+     * @param message The message to broadcast
+     */
+    public void broadcastToAll(Object message) {
+        activeConnections.values().forEach(player -> player.sendMessage(message));
+    }
+
+    /**
+     * Send a message to a specific player
+     * @param sessionId The session identifier
+     * @param message The message to send
+     * @return true if message was sent
+     */
+    public boolean sendToPlayer(UUID sessionId, Object message) {
+        Player player = activeConnections.get(sessionId);
+        if (player != null && player.isConnected()) {
+            player.sendMessage(message);
+            return true;
+        }
+        return false;
     }
 }
