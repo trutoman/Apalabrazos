@@ -4,6 +4,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.network.ConnectionHandler;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameSessionManager;
 import io.javalin.Javalin;
+import io.javalin.http.staticfiles.Location;
 import io.javalin.websocket.WsContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +50,14 @@ public class EmbeddedWebSocketServer {
         try {
             log.info("Iniciando Servidor WebSocket Javalin...");
 
-            app = Javalin.create().start(port);
+            app = Javalin.create(config -> {
+                // Configurar archivos estáticos
+                config.staticFiles.add(staticFiles -> {
+                    staticFiles.hostedPath = "/";
+                    staticFiles.directory = "/public";
+                    staticFiles.location = Location.CLASSPATH;
+                });
+            }).start(port);
 
             // Registrar endpoint WebSocket
             app.ws("/ws/game/:username", ws -> {
@@ -66,8 +74,9 @@ public class EmbeddedWebSocketServer {
             });
 
             log.info("✓ Servidor WebSocket corriendo en puerto {}", port);
-            log.info("  Endpoint: ws://localhost:{}/ws/game/{username}", port);
-            log.info("  Ejemplo: ws://localhost:{}/ws/game/Alice", port);
+            log.info("  Endpoint WebSocket: ws://localhost:{}/ws/game/{username}", port);
+            log.info("  Ejemplo WebSocket: ws://localhost:{}/ws/game/Alice", port);
+            log.info("  Archivos estáticos: http://localhost:{}/", port);
             log.info("  Estado: ESCUCHANDO");
 
         } catch (Exception e) {
