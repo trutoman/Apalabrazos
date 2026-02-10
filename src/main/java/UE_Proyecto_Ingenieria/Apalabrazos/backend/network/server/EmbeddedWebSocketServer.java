@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Servidor WebSocket embebido usando Javalin.
@@ -33,7 +34,7 @@ public class EmbeddedWebSocketServer {
 
     private final int port;
     private Javalin app;
-    private final Map<String, UUID> sessionMap = new HashMap<>();
+    private final Map<String, UUID> sessionMap = new ConcurrentHashMap<>();
 
     /**
      * Crear servidor WebSocket embebido
@@ -48,7 +49,7 @@ public class EmbeddedWebSocketServer {
      */
     public void start() {
         try {
-            log.info("Iniciando Servidor WebSocket Javalin...");
+            log.info("Iniciando Servidor HTTP Javalin...");
 
             app = Javalin.create(config -> {
                 // Configurar archivos estáticos
@@ -59,8 +60,9 @@ public class EmbeddedWebSocketServer {
                 });
             }).start(port);
 
+            log.info("Iniciando Servidor WebSocket Javalin...");
             // Registrar endpoint WebSocket
-            app.ws("/ws/game/:username", ws -> {
+            app.ws("/ws/game/{username}", ws -> {
                 ws.onConnect(ctx -> onConnect(ctx));
                 ws.onMessage(ctx -> {
                     // En Javalin 6, el mensaje se obtiene del contexto
@@ -75,7 +77,6 @@ public class EmbeddedWebSocketServer {
 
             log.info("✓ Servidor WebSocket corriendo en puerto {}", port);
             log.info("  Endpoint WebSocket: ws://localhost:{}/ws/game/{username}", port);
-            log.info("  Ejemplo WebSocket: ws://localhost:{}/ws/game/Alice", port);
             log.info("  Archivos estáticos: http://localhost:{}/", port);
             log.info("  Estado: ESCUCHANDO");
 
