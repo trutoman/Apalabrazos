@@ -18,9 +18,8 @@ public class WebSocketMessageSender implements MessageSender {
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketMessageSender.class);
 
-    // La sesión WebSocket (podría ser javax.websocket.Session o Spring WebSocket)
-    // Para mantener independencia, usamos Object y delegamos en la interfaz
-    private final Object session;
+    // La sesión WebSocket de Javalin
+    private final io.javalin.websocket.WsContext session;
     private boolean connected = true;
     private final String clientId;
 
@@ -28,12 +27,15 @@ public class WebSocketMessageSender implements MessageSender {
     private final Queue<Object> messageQueue = new ConcurrentLinkedQueue<>();
 
     /**
-     * Constructor para WebSocket genérico
-     * @param session La sesión WebSocket
+     * Constructor para WebSocket Javalin
+     * @param session La sesión WebSocket (WsContext)
      * @param clientId Identificador del cliente (IP, sessionId, etc)
      */
     public WebSocketMessageSender(Object session, String clientId) {
-        this.session = session;
+        if (!(session instanceof io.javalin.websocket.WsContext)) {
+             throw new IllegalArgumentException("Se esperaba una sesión de tipo WsContext");
+        }
+        this.session = (io.javalin.websocket.WsContext) session;
         this.clientId = clientId;
         log.info("WebSocketMessageSender creado para cliente: {}", clientId);
     }
@@ -47,12 +49,13 @@ public class WebSocketMessageSender implements MessageSender {
         }
 
         try {
-            // Aquí se enviaría a través del WebSocket
-            // String json = serializeToJson(message);
-            // session.getBasicRemote().sendText(json);
+            // Convertir a String (JSON) - Por ahora toString() para probar
+            String messageStr = message instanceof String ? (String) message : message.toString();
 
-            // Por ahora solo registramos (será implementado cuando se añada el servidor WebSocket)
-            log.debug("Enviando mensaje a {}: {}", clientId, message);
+            // Enviar usando Javalin
+            session.send(messageStr);
+
+            log.debug("Enviando mensaje a {}: {}", clientId, messageStr);
 
         } catch (Exception e) {
             log.error("Error enviando mensaje a {}: {}", clientId, e.getMessage());

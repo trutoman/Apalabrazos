@@ -33,10 +33,16 @@ public abstract class ConnectionHandler {
      * @param session La sesión WebSocket (tipo depende del framework)
      * @param username El nombre de usuario (viene del cliente)
      */
-    protected void onClientConnect(Object session, String username) {
+    public void onClientConnect(Object session, String username) {
         try {
             // 1. Nivel 1: Crear abstracción de la conexión física
             UUID sessionId = UUID.randomUUID();
+
+            // Intento de guardar el ID en la propia sesión si es soportado (caso Javalin)
+            if (session instanceof io.javalin.websocket.WsContext) {
+                 ((io.javalin.websocket.WsContext) session).attribute("session-uuid", sessionId);
+            }
+
             WebSocketMessageSender messageSender = new WebSocketMessageSender(session, sessionId.toString());
 
             // 2. Nivel 2: Crear el Player (el ancla)
@@ -64,7 +70,7 @@ public abstract class ConnectionHandler {
      * @param sessionId El ID de sesión del cliente
      * @param messageContent El contenido del mensaje (JSON o texto)
      */
-    protected void onClientMessage(UUID sessionId, String messageContent) {
+    public void onClientMessage(UUID sessionId, String messageContent) {
         try {
             Player player = sessionManager.getPlayerBySessionId(sessionId);
 
@@ -88,7 +94,7 @@ public abstract class ConnectionHandler {
      *
      * @param sessionId El ID de sesión del cliente
      */
-    protected void onClientDisconnect(UUID sessionId) {
+    public void onClientDisconnect(UUID sessionId) {
         try {
             Player player = sessionManager.unregisterConnection(sessionId);
 
