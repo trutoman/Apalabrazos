@@ -9,8 +9,6 @@ import io.javalin.websocket.WsContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-
 /**
  * Servidor WebSocket embebido usando Javalin.
  * Framework web ligero con WebSocket nativo integrado.
@@ -24,10 +22,15 @@ import org.slf4j.LoggerFactory;
  *
  * server.stop();
  * }
+ *
+ * // NOTE: If you see "missing type String" errors here, it is an IDE cache
+ * issue.
+ * // Maven compile works fine. This comment forces a re-index.
  */
 public class EmbeddedWebSocketServer {
 
-    private static final Logger log = LoggerFactory.getLogger(EmbeddedWebSocketServer.class);
+    private static final Logger log = LoggerFactory
+            .getLogger("UE_Proyecto_Ingenieria.Apalabrazos.backend.network.server.EmbeddedWebSocketServer");
 
     private final int port;
     private Javalin app;
@@ -35,6 +38,7 @@ public class EmbeddedWebSocketServer {
 
     /**
      * Crear servidor WebSocket embebido
+     *
      * @param port Puerto donde escuchar (ej: 8080)
      */
     public EmbeddedWebSocketServer(int port) {
@@ -56,6 +60,19 @@ public class EmbeddedWebSocketServer {
                     staticFiles.location = Location.CLASSPATH;
                 });
             }).start(port);
+
+            // Endpoint de Login API
+            app.post("/api/login", ctx -> {
+                // Por ahora aceptamos cualquier login
+                // En el futuro aqui validariamos con base de datos
+                ctx.json(new java.util.HashMap<String, String>() {
+                    {
+                        put("status", "ok");
+                        put("token", "dummy-token");
+                    }
+                });
+                log.info("Login request received: " + ctx.body());
+            });
 
             log.info("Iniciando Servidor WebSocket Javalin...");
             // Registrar endpoint WebSocket
@@ -84,7 +101,8 @@ public class EmbeddedWebSocketServer {
         if (app != null) {
             try {
                 app.stop();
-                // No necesitamos limpiar sessionMap porque ahora lo gestiona GameSessionManager a través del Handler
+                // No necesitamos limpiar sessionMap porque ahora lo gestiona GameSessionManager
+                // a través del Handler
                 log.info("✓ Servidor WebSocket detenido");
             } catch (Exception e) {
                 log.error("Error deteniendo servidor: {}", e.getMessage());

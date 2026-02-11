@@ -31,7 +31,7 @@
             <version>5.9.2</version>
             <scope>test</scope>
         </dependency>
-        
+
         <!-- Javalin: Framework web ligero con WebSocket nativo -->
         <dependency>
             <groupId>io.javalin</groupId>
