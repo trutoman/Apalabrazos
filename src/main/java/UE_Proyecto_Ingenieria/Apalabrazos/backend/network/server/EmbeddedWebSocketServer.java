@@ -1,5 +1,6 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.network.server;
 
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.dto.RegisterRequest;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.network.ConnectionHandler;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameSessionManager;
@@ -72,6 +73,25 @@ public class EmbeddedWebSocketServer {
                     }
                 });
                 log.info("Login request received: " + ctx.body());
+            });
+
+            // Endpoint de Registro API
+            app.post("/api/register", ctx -> {
+                try {
+                    RegisterRequest req = ctx.bodyAsClass(RegisterRequest.class);
+                    log.info("Received REGISTER request -> User: {}, Email: {}, Password: [PROTECTED]", req.username,
+                            req.email);
+
+                    ctx.json(new java.util.HashMap<String, String>() {
+                        {
+                            put("status", "ok");
+                            put("message", "User registered successfully (stub)");
+                        }
+                    });
+                } catch (Exception e) {
+                    log.error("Error parsing register request: {}", e.getMessage());
+                    ctx.status(400).result("Invalid JSON");
+                }
             });
 
             log.info("Iniciando Servidor WebSocket Javalin...");

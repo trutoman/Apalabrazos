@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apalabrazos - Online</title>
     <link rel="stylesheet" href="css/style.css">
-    </head>
+</head>
+
 <body>
 
     <section id="view-login" class="game-view">
@@ -33,12 +35,50 @@
                     </div>
 
                     <div class="footer">
-                        ¿No tienes cuenta? Regístrate <a href="#">Registro</a>
+                        ¿No tienes cuenta? <a href="#" id="link-to-register">Regístrate</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section id="view-register" class="game-view hidden">
+        <div class="login-card">
+            <h1>REGISTRO</h1>
+            <form id="register-form">
+                <div class="input-group">
+                    <label for="reg-email">EMAIL</label>
+                    <input type="email" id="reg-email" placeholder="tu@email.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-username">USUARIO</label>
+                    <input type="text" id="reg-username" placeholder="Nombre de usuario" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-password">CONTRASEÑA</label>
+                    <input type="password" id="reg-password" placeholder="••••••••" required>
+                    <span class="tooltip">Minimum 8 characters, letters and numbers.</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-confirm-password">CONFIRMAR CONTRASEÑA</label>
+                    <input type="password" id="reg-confirm-password" placeholder="••••••••" required>
+                    <span class="tooltip">Minimum 8 characters, letters and numbers.</span>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn-primary">Registrarse</button>
+
+                    <div class="footer">
+                        ¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia Sesión</a>
                     </div>
                 </div>
             </form>
         </div>
     </section>
     <script type="module" src="js/main.js" defer></script>
-  </body>
+</body>
+
 </html>

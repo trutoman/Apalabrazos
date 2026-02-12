@@ -1,8 +1,8 @@
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Courier New', monospace;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Courier New', monospace;
 }
 
 :root {
@@ -13,11 +13,13 @@
 }
 
 html {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
-*, *::before, *::after {
-    box-sizing: inherit;
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
 }
 
 body {
@@ -61,8 +63,8 @@ h1 {
 }
 
 .subtitle {
-    color: #7f8c8d;
-    margin-bottom: 2rem;
+  color: #7f8c8d;
+  margin-bottom: 2rem;
 }
 
 .input-group {
@@ -92,11 +94,41 @@ input:focus {
   box-shadow: 4px 4px 0px var(--primary);
 }
 
+.input-error {
+  border-color: red !important;
+}
+
+.tooltip {
+  visibility: hidden;
+  width: 200px;
+  background-color: var(--primary);
+  color: var(--secondary);
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -100px;
+  /* Use half of the width to center the tooltip */
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 12px;
+  pointer-events: none;
+  /* Evitar que el tooltip interfiera con el mouse */
+}
+
+.input-group:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
 .actions {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 button {
@@ -125,7 +157,8 @@ button:hover {
   font-weight: bold;
 }
 
-.divider::before, .divider::after {
+.divider::before,
+.divider::after {
   content: "";
   flex: 1;
   border-bottom: 2px solid var(--primary);
@@ -167,16 +200,16 @@ button:hover {
 }
 
 button:hover {
-    opacity: 0.9;
+  opacity: 0.9;
 }
 
 
 /* Clase para ocultar las vistas que no necesitamos */
 .hidden {
-    display: none !important;
+  display: none !important;
 }
 
 .game-view {
-    /* Estilos comunes para todas las pantallas (centrado, etc.) */
-    transition: opacity 0.3s ease;
+  /* Estilos comunes para todas las pantallas (centrado, etc.) */
+  transition: opacity 0.3s ease;
 }
