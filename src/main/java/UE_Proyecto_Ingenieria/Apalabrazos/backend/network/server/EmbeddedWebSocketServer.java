@@ -2,7 +2,9 @@ package UE_Proyecto_Ingenieria.Apalabrazos.backend.network.server;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.dto.RegisterRequest;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.User;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.network.ConnectionHandler;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.repository.UserRepository;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameSessionManager;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
@@ -36,6 +38,7 @@ public class EmbeddedWebSocketServer {
     private final int port;
     private Javalin app;
     private final JavalinConnectionHandler connectionHandler = new JavalinConnectionHandler();
+    private final UserRepository userRepository = new UserRepository();
 
     /**
      * Crear servidor WebSocket embebido
@@ -79,13 +82,38 @@ public class EmbeddedWebSocketServer {
             app.post("/api/register", ctx -> {
                 try {
                     RegisterRequest req = ctx.bodyAsClass(RegisterRequest.class);
+
+                    // Validation
+                    java.util.List<String> errors = req.validate();
+                    if (!errors.isEmpty()) {
+                        ctx.status(400).json(new java.util.HashMap<String, Object>() {
+                            {
+                                put("status", "error");
+                                put("errors", errors);
+                            }
+                        });
+                        log.warn("Register validation failed: {}", errors);
+                        return;
+                    }
+
                     log.info("Received REGISTER request -> User: {}, Email: {}, Password: [PROTECTED]", req.username,
                             req.email);
+
+                    // Create User object and save to DB
+                    User user = new User(req.username, req.email, req.password);
+                    try {
+                        userRepository.save(user);
+                        log.info("User registered and saved to DB: {}", req.username);
+                    } catch (Exception e) {
+                        log.error("Failed to save user to DB: {}", e.getMessage());
+                        ctx.status(500).result("Internal Server Error: Failed to save user");
+                        return;
+                    }
 
                     ctx.json(new java.util.HashMap<String, String>() {
                         {
                             put("status", "ok");
-                            put("message", "User registered successfully (stub)");
+                            put("message", "User registered successfully");
                         }
                     });
                 } catch (Exception e) {
@@ -103,14 +131,14 @@ public class EmbeddedWebSocketServer {
                 ws.onError(connectionHandler::onError);
             });
 
-            log.info("✓ Servidor WebSocket corriendo en puerto {}", port);
+            log.info("✓ Websocker server running on port {}", port);
             log.info("  Endpoint WebSocket: ws://localhost:{}/ws/game/{username}", port);
-            log.info("  Archivos estáticos: http://localhost:{}/", port);
-            log.info("  Estado: ESCUCHANDO");
+            log.info("  Static files: http://localhost:{}/", port);
+            log.info("  Status: LISTENING");
 
         } catch (Exception e) {
-            log.error("✗ Error iniciando servidor WebSocket: {}", e.getMessage(), e);
-            throw new RuntimeException("No se pudo iniciar servidor WebSocket", e);
+            log.error("✗ Error starting websocket server: {}", e.getMessage(), e);
+            throw new RuntimeException("Could not start websocket server", e);
         }
     }
 
@@ -123,9 +151,9 @@ public class EmbeddedWebSocketServer {
                 app.stop();
                 // No necesitamos limpiar sessionMap porque ahora lo gestiona GameSessionManager
                 // a través del Handler
-                log.info("✓ Servidor WebSocket detenido");
+                log.info("✓ Websocker server stopped");
             } catch (Exception e) {
-                log.error("Error deteniendo servidor: {}", e.getMessage());
+                log.error("Error stopping websocket server: {}", e.getMessage());
             }
         }
     }
