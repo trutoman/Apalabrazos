@@ -30,7 +30,15 @@ public class CosmosDBConfig {
 
                 if (endpoint == null || key == null) {
                     log.error("COSMOS_DB_ENDPOINT or COSMOS_DB_KEY environment variables are not set!");
+                    log.error("Expected format for COSMOS_DB_ENDPOINT: https://your-account-name-region.documents.azure.com");
                     throw new RuntimeException("Missing Cosmos DB credentials");
+                }
+                
+                // Ensure endpoint doesn't end with :443/ (handled by SDK)
+                if (endpoint.endsWith(":443/")) {
+                    endpoint = endpoint.substring(0, endpoint.length() - 5);
+                } else if (endpoint.endsWith("/")) {
+                    endpoint = endpoint.substring(0, endpoint.length() - 1);
                 }
 
                 log.info("Connecting to Cosmos DB at {}", endpoint);

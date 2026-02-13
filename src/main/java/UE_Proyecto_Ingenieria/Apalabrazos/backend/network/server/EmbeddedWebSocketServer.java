@@ -6,6 +6,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.User;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.network.ConnectionHandler;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.repository.UserRepository;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameSessionManager;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.websocket.WsContext;
@@ -99,8 +100,12 @@ public class EmbeddedWebSocketServer {
                     log.info("Received REGISTER request -> User: {}, Email: {}, Password: [PROTECTED]", req.username,
                             req.email);
 
-                    // Create User object and save to DB
-                    User user = new User(req.username, req.email, req.password);
+                    // Generate salt and hash password
+                    String salt = PasswordHasher.generateSalt();
+                    String hashedPassword = PasswordHasher.hashPassword(req.password, salt);
+
+                    // Create User object with hashed password and salt
+                    User user = new User(req.username, req.email, hashedPassword, salt);
                     try {
                         userRepository.save(user);
                         log.info("User registered and saved to DB: {}", req.username);
