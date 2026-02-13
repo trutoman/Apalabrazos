@@ -14,15 +14,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Servidor WebSocket embebido usando Javalin.
- * Framework web ligero con WebSocket nativo integrado.
+ * Embedded WebSocket server built with Javalin.
+ * Lightweight web framework with native WebSocket support.
  *
- * Uso:
+ * Usage:
  * {@code
  * EmbeddedWebSocketServer server = new EmbeddedWebSocketServer(8080);
  * server.start();
  *
- * // Clientes pueden conectar a: ws://localhost:8080/ws/game/Alice
+ * // Clients can connect to: ws://localhost:8080/ws/game/Alice
  *
  * server.stop();
  * }
@@ -42,23 +42,23 @@ public class EmbeddedWebSocketServer {
     private final UserRepository userRepository = new UserRepository();
 
     /**
-     * Crear servidor WebSocket embebido
+     * Creates an embedded WebSocket server.
      *
-     * @param port Puerto donde escuchar (ej: 8080)
+     * @param port Port to listen on (e.g., 8080)
      */
     public EmbeddedWebSocketServer(int port) {
         this.port = port;
     }
 
     /**
-     * Iniciar el servidor WebSocket
+     * Starts the WebSocket server.
      */
     public void start() {
         try {
-            log.info("Iniciando Servidor HTTP Javalin...");
+            log.info("Starting Javalin HTTP server...");
 
             app = Javalin.create(config -> {
-                // Configurar archivos estáticos
+                // Configure static files
                 config.staticFiles.add(staticFiles -> {
                     staticFiles.hostedPath = "/";
                     staticFiles.directory = "/public";
@@ -66,10 +66,10 @@ public class EmbeddedWebSocketServer {
                 });
             }).start(port);
 
-            // Endpoint de Login API
+            // Login API endpoint
             app.post("/api/login", ctx -> {
-                // Por ahora aceptamos cualquier login
-                // En el futuro aqui validariamos con base de datos
+                // For now, any login is accepted
+                // In the future this should be validated against the database
                 ctx.json(new java.util.HashMap<String, String>() {
                     {
                         put("status", "ok");
@@ -79,7 +79,7 @@ public class EmbeddedWebSocketServer {
                 log.info("Login request received: " + ctx.body());
             });
 
-            // Endpoint de Registro API
+            // Register API endpoint
             app.post("/api/register", ctx -> {
                 try {
                     RegisterRequest req = ctx.bodyAsClass(RegisterRequest.class);
@@ -127,8 +127,8 @@ public class EmbeddedWebSocketServer {
                 }
             });
 
-            log.info("Iniciando Servidor WebSocket Javalin...");
-            // Registrar endpoint WebSocket
+            log.info("Starting Javalin WebSocket server...");
+            // Register WebSocket endpoint
             app.ws("/ws/game/{username}", ws -> {
                 ws.onConnect(connectionHandler::onConnect);
                 ws.onMessage(connectionHandler::onMessage);
@@ -136,49 +136,49 @@ public class EmbeddedWebSocketServer {
                 ws.onError(connectionHandler::onError);
             });
 
-            log.info("✓ Websocker server running on port {}", port);
+            log.info("✓ WebSocket server running on port {}", port);
             log.info("  Endpoint WebSocket: ws://localhost:{}/ws/game/{username}", port);
             log.info("  Static files: http://localhost:{}/", port);
             log.info("  Status: LISTENING");
 
         } catch (Exception e) {
-            log.error("✗ Error starting websocket server: {}", e.getMessage(), e);
+            log.error("✗ Error starting WebSocket server: {}", e.getMessage(), e);
             throw new RuntimeException("Could not start websocket server", e);
         }
     }
 
     /**
-     * Detener el servidor WebSocket
+     * Stops the WebSocket server.
      */
     public void stop() {
         if (app != null) {
             try {
                 app.stop();
-                // No necesitamos limpiar sessionMap porque ahora lo gestiona GameSessionManager
-                // a través del Handler
-                log.info("✓ Websocker server stopped");
+                // No need to clear sessionMap because GameSessionManager now handles it
+                // through the handler
+                log.info("✓ WebSocket server stopped");
             } catch (Exception e) {
-                log.error("Error stopping websocket server: {}", e.getMessage());
+                log.error("Error stopping WebSocket server: {}", e.getMessage());
             }
         }
     }
 
     /**
-     * Método main para ejecutar el servidor directamente
+     * Main method to run the server directly.
      */
     public static void main(String[] args) {
         EmbeddedWebSocketServer server = new EmbeddedWebSocketServer(8080);
 
-        // Hook para shutdown graceful
+        // Hook for graceful shutdown
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Shutdown signal recibido, deteniendo servidor...");
+            log.info("Shutdown signal received, stopping server...");
             server.stop();
         }));
 
         server.start();
 
         try {
-            log.info("Presiona Ctrl+C para detener el servidor...");
+            log.info("Press Ctrl+C to stop the server...");
             Thread.currentThread().join();
         } catch (InterruptedException e) {
             log.error("Interrupción: {}", e.getMessage());
