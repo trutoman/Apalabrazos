@@ -7,6 +7,7 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.User;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.network.ConnectionHandler;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.repository.UserRepository;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.service.GameSessionManager;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.JwtService;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
@@ -41,6 +42,7 @@ public class EmbeddedWebSocketServer {
     private Javalin app;
     private final JavalinConnectionHandler connectionHandler = new JavalinConnectionHandler();
     private final UserRepository userRepository = new UserRepository();
+    private final JwtService jwtService = new JwtService();
 
     /**
      * Creates an embedded WebSocket server.
@@ -114,9 +116,8 @@ public class EmbeddedWebSocketServer {
                         return;
                     }
 
-                    // Login successful - generate token
-                    // TODO: In production, generate a proper JWT token
-                    String token = "dummy-token-" + java.util.UUID.randomUUID().toString();
+                    // Login successful - generate JWT token
+                    String token = jwtService.generateToken(user);
 
                     ctx.json(new java.util.HashMap<String, String>() {
                         {

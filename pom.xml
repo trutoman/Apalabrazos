@@ -45,6 +45,13 @@
             <artifactId>azure-cosmos</artifactId>
             <version>4.55.0</version>
         </dependency>
+
+        <!-- JWT generation/validation -->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>4.4.0</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

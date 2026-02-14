@@ -1,6 +1,8 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.network.server;
 
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.network.ConnectionHandler;
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.tools.JwtService;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import io.javalin.websocket.WsCloseContext;
 import io.javalin.websocket.WsConnectContext;
 import io.javalin.websocket.WsContext;
@@ -17,6 +19,7 @@ import java.util.UUID;
 public class JavalinConnectionHandler extends ConnectionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(JavalinConnectionHandler.class);
+    private final JwtService jwtService = new JwtService();
 
     public void onConnect(WsConnectContext ctx) {
         // Extract token from query parameter
@@ -29,28 +32,23 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             return;
         }
 
-        // TODO: In production, validate token properly (JWT, session, etc.)
-        // For now, accept any non-empty token
-        if (!isValidToken(token)) {
+        DecodedJWT jwt = jwtService.verifyToken(token);
+        if (jwt == null) {
             log.warn("WebSocket connection rejected: Invalid token");
             ctx.closeSession(4002, "Invalid authentication token");
             return;
         }
 
-        log.info("WebSocket connection authenticated with token");
-
         String username = ctx.pathParam("username");
-        onClientConnect(ctx, username);
-    }
+        String tokenUsername = jwtService.extractUsername(jwt);
+        if (tokenUsername == null || !tokenUsername.equalsIgnoreCase(username)) {
+            log.warn("WebSocket connection rejected: Username does not match token");
+            ctx.closeSession(4003, "User mismatch");
+            return;
+        }
 
-    /**
-     * Validates the authentication token.
-     * TODO: Implement proper token validation (JWT, database session, etc.)
-     */
-    private boolean isValidToken(String token) {
-        // For now, accept "dummy-token" or any non-empty token
-        // In production, validate against JWT or session store
-        return token != null && !token.trim().isEmpty();
+        log.info("WebSocket connection authenticated for user {}", username);
+        onClientConnect(ctx, username);
     }
 
     public void onMessage(WsMessageContext ctx) {
