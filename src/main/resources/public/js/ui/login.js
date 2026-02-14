@@ -2,14 +2,21 @@ import { UIManager } from './ui-manager.js';
 import { API_ENDPOINTS, buildApiUrl } from '../config.js';
 
 export const LoginUI = {
-    init(onLoginAttempt) {
+    init(onLoginAttempt, onRegisterAttempt) {
         const form = document.getElementById('auth-form');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const data = {
-                user: document.getElementById('email').value,
+                email: document.getElementById('email').value,
                 pass: document.getElementById('password').value
             };
+
+            // 1. Validate Email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(data.email)) {
+                LoginUI.showError("Por favor, introduce un email válido.", "reg-email");
+                return;
+            }
 
             // Validate Password Complexity
             if (!this.validatePassword(data.pass, 'password')) {
@@ -68,40 +75,12 @@ export const LoginUI = {
                     return;
                 }
 
-                // 4. Send Registration Request
-                const registerUrl = buildApiUrl(API_ENDPOINTS.register);
-
-                fetch(registerUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        email: email,
-                        password: password
-                    })
-                })
-                    .then(response => {
-                        if (response.ok) {
-                            return response.json();
-                        } else {
-                            return response.json().then(data => {
-                                throw new Error(data.message || "Error en el registro");
-                            }).catch(e => {
-                                // Fallback if response is not JSON or other error
-                                throw new Error(e.message || "Error desconocido en el registro");
-                            });
-                        }
-                    })
-                    .then(data => {
-                        alert("Registro exitoso! Por favor, inicia sesión.");
-                        UIManager.switchView('view-login');
-                    })
-                    .catch(error => {
-                        console.error("Registration error:", error);
-                        LoginUI.showError(error.message || "No se pudo conectar con el servidor.");
-                    });
+                // 4. Notify orchestrator with registration data
+                onRegisterAttempt({
+                    username: username,
+                    email: email,
+                    password: password
+                });
             });
         }
     },

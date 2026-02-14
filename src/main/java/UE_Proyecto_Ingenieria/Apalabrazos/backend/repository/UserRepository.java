@@ -4,6 +4,8 @@ import UE_Proyecto_Ingenieria.Apalabrazos.backend.config.CosmosDBConfig;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.User;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosException;
+import com.azure.cosmos.models.CosmosQueryRequestOptions;
+import com.azure.cosmos.util.CosmosPagedIterable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +35,53 @@ public class UserRepository {
         } catch (Exception e) {
             log.error("Unexpected error saving user {}: {}", user.username, e.getMessage());
             throw new RuntimeException("Error saving user", e);
+        }
+    }
+
+    /**
+     * Finds a user by email address.
+     *
+     * @param email The email to search for (will be normalized to lowercase)
+     * @return User object if found, null otherwise
+     */
+    public User findByEmail(String email) {
+        try {
+            if (email == null || email.isBlank()) {
+                return null;
+            }
+
+            String normalizedEmail = email.trim().toLowerCase();
+            CosmosContainer container = CosmosDBConfig.getUserContainer();
+
+            if (container == null) {
+                log.warn("Cosmos DB container not initialized, cannot find user by email");
+                return null;
+            }
+
+            String query = "SELECT * FROM c WHERE c.email = @email";
+            CosmosQueryRequestOptions options = new CosmosQueryRequestOptions();
+
+            CosmosPagedIterable<User> results = container.queryItems(
+                query.replace("@email", "'" + normalizedEmail + "'"),
+                options,
+                User.class
+            );
+
+            // Get first result
+            for (User user : results) {
+                log.debug("User found by email: {}", normalizedEmail);
+                return user;
+            }
+
+            log.debug("No user found with email: {}", normalizedEmail);
+            return null;
+
+        } catch (CosmosException e) {
+            log.error("Failed to find user by email {}: {}", email, e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error finding user by email {}: {}", email, e.getMessage());
+            return null;
         }
     }
 

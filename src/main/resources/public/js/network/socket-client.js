@@ -2,20 +2,22 @@
 
 export const SocketClient = {
     socket: null,
-    listeners: new Set(), // Para que varios módulos escuchen mensajes
+    listeners: new Set(), // Allow multiple modules to listen to messages
 
-    connect(url) {
+    connect(url, token = null) {
         return new Promise((resolve, reject) => {
             try {
-                this.socket = new WebSocket(url);
+                // If there's a token, add it as query parameter
+                const wsUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+                this.socket = new WebSocket(wsUrl);
 
                 this.socket.onopen = () => {
-                    console.log("✅ Conectado al servidor de Apalabrazos");
+                    console.log("✅ Connected to Apalabrazos server");
                     resolve();
                 };
 
                 this.socket.onerror = (err) => {
-                    console.error("❌ Error en la conexión");
+                    console.error("❌ Connection error");
                     reject(err);
                 };
 
@@ -25,8 +27,8 @@ export const SocketClient = {
                 };
 
                 this.socket.onclose = () => {
-                    console.warn("⚠️ Conexión cerrada");
-                    // Aquí podrías implementar lógica de reconexión
+                    console.warn("⚠️ Connection closed");
+                    // Here you could implement reconnection logic
                 };
 
             } catch (e) {
@@ -35,17 +37,17 @@ export const SocketClient = {
         });
     },
 
-    // Envía un objeto al servidor transformándolo a JSON
+    // Sends an object to the server transforming it to JSON
     send(type, payload) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             const message = JSON.stringify({ type, data: payload });
             this.socket.send(message);
         } else {
-            console.error("No se puede enviar: Socket no conectado");
+            console.error("Cannot send: Socket not connected");
         }
     },
 
-    // Permite que otros módulos (Lobby, Match) se suscriban a mensajes
+    // Allow other modules (Lobby, Match) to subscribe to messages
     onMessage(callback) {
         this.listeners.add(callback);
     },

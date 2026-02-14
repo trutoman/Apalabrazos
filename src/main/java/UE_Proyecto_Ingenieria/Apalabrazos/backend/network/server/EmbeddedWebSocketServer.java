@@ -1,5 +1,6 @@
 package UE_Proyecto_Ingenieria.Apalabrazos.backend.network.server;
 
+import UE_Proyecto_Ingenieria.Apalabrazos.backend.dto.LoginRequest;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.dto.RegisterRequest;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.Player;
 import UE_Proyecto_Ingenieria.Apalabrazos.backend.model.User;
@@ -68,15 +69,72 @@ public class EmbeddedWebSocketServer {
 
             // Login API endpoint
             app.post("/api/login", ctx -> {
-                // For now, any login is accepted
-                // In the future this should be validated against the database
-                ctx.json(new java.util.HashMap<String, String>() {
-                    {
-                        put("status", "ok");
-                        put("token", "dummy-token");
+                try {
+                    LoginRequest req = ctx.bodyAsClass(LoginRequest.class);
+
+                    // Validation
+                    java.util.List<String> errors = req.validate();
+                    if (!errors.isEmpty()) {
+                        ctx.status(400).json(new java.util.HashMap<String, Object>() {
+                            {
+                                put("status", "error");
+                                put("message", "Validation failed");
+                                put("errors", errors);
+                            }
+                        });
+                        log.warn("Login validation failed: {}", errors);
+                        return;
                     }
-                });
-                log.info("Login request received: " + ctx.body());
+
+                    log.info("Login request received for email: {}", req.email);
+
+                    // Find user by email
+                    User user = userRepository.findByEmail(req.email);
+                    if (user == null) {
+                        ctx.status(401).json(new java.util.HashMap<String, String>() {
+                            {
+                                put("status", "error");
+                                put("message", "Invalid email or password");
+                            }
+                        });
+                        log.warn("Login failed: User not found with email {}", req.email);
+                        return;
+                    }
+
+                    // Verify password
+                    String hashedInputPassword = PasswordHasher.hashPassword(req.pass, user.salt);
+                    if (!hashedInputPassword.equals(user.password)) {
+                        ctx.status(401).json(new java.util.HashMap<String, String>() {
+                            {
+                                put("status", "error");
+                                put("message", "Invalid email or password");
+                            }
+                        });
+                        log.warn("Login failed: Invalid password for user {}", req.email);
+                        return;
+                    }
+
+                    // Login successful - generate token
+                    // TODO: In production, generate a proper JWT token
+                    String token = "dummy-token-" + java.util.UUID.randomUUID().toString();
+
+                    ctx.json(new java.util.HashMap<String, String>() {
+                        {
+                            put("status", "ok");
+                            put("token", token);
+                        }
+                    });
+                    log.info("Login successful for user: {}", user.username);
+
+                } catch (Exception e) {
+                    log.error("Error processing login request: {}", e.getMessage());
+                    ctx.status(400).json(new java.util.HashMap<String, String>() {
+                        {
+                            put("status", "error");
+                            put("message", "Invalid request");
+                        }
+                    });
+                }
             });
 
             // Register API endpoint
@@ -111,7 +169,12 @@ public class EmbeddedWebSocketServer {
                         log.info("User registered and saved to DB: {}", req.username);
                     } catch (Exception e) {
                         log.error("Failed to save user to DB: {}", e.getMessage());
-                        ctx.status(500).result("Internal Server Error: Failed to save user");
+                        ctx.status(500).json(new java.util.HashMap<String, String>() {
+                            {
+                                put("status", "error");
+                                put("message", "Internal Server Error: Failed to save user");
+                            }
+                        });
                         return;
                     }
 
@@ -123,7 +186,12 @@ public class EmbeddedWebSocketServer {
                     });
                 } catch (Exception e) {
                     log.error("Error parsing register request: {}", e.getMessage());
-                    ctx.status(400).result("Invalid JSON");
+                    ctx.status(400).json(new java.util.HashMap<String, String>() {
+                        {
+                            put("status", "error");
+                            put("message", "Invalid JSON");
+                        }
+                    });
                 }
             });
 

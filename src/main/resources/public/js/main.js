@@ -4,57 +4,98 @@ import { SocketClient } from './network/socket-client.js';
 import { UIManager } from './ui/ui-manager.js';
 import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.js';
 
-// 1. Inicializar la interfaz de Login
-LoginUI.init(async (credentials) => {
-    try {
-        // 2. Enviar login por POST al backend HTTP
-        const loginUrl = buildApiUrl(API_ENDPOINTS.login);
-        const loginResponse = await fetch(loginUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                user: credentials.user,
-                pass: credentials.pass
-            })
-        });
+// 1. Initialize Login interface
+LoginUI.init(
+    // onLoginAttempt callback
+    async (credentials) => {
+        try {
+            // 2. Send login via POST to HTTP backend
+            const loginUrl = buildApiUrl(API_ENDPOINTS.login);
+            const loginResponse = await fetch(loginUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: credentials.email,
+                    pass: credentials.pass
+                })
+            });
 
-        if (!loginResponse.ok) {
-            let errorMessage = "Credenciales incorrectas.";
-            try {
-                const errorBody = await loginResponse.json();
-                if (errorBody && errorBody.reason) {
-                    errorMessage = errorBody.reason;
+            if (!loginResponse.ok) {
+                let errorMessage = "Credenciales incorrectas.";
+                try {
+                    const errorBody = await loginResponse.json();
+                    if (errorBody && errorBody.message) {
+                        errorMessage = errorBody.message;
+                    }
+                } catch (e) {
+                    // Respuesta no JSON, usar mensaje por defecto
                 }
-            } catch (e) {
-                // Respuesta no JSON, usar mensaje por defecto
+                LoginUI.showError(errorMessage);
+                return;
             }
-            LoginUI.showError(errorMessage);
-            return;
+
+            // 3. Extract token from response
+            const loginData = await loginResponse.json();
+            const token = loginData.token;
+
+            if (!token) {
+                LoginUI.showError("Error: No authentication token received");
+                return;
+            }
+
+            // 4. Connect to WebSocket with token
+            const serverUrl = buildWsUrl(WS_ENDPOINTS.game);
+            await SocketClient.connect(serverUrl, token);
+
+            // 5. WebSocket authenticated, switch to lobby
+            console.log("✅ Authentication successful, entering lobby...");
+            UIManager.switchView('view-lobby');
+
+            // 6. Listen for server messages
+            SocketClient.onMessage((msg) => {
+                console.log("Message received:", msg);
+                // Here you can handle other game events
+            });
+
+        } catch (error) {
+            LoginUI.showError("No se pudo conectar con el servidor.");
         }
+    },
+    // onRegisterAttempt callback
+    async (registerData) => {
+        try {
+            const registerUrl = buildApiUrl(API_ENDPOINTS.register);
 
-        // 3. Intentar conectar al servidor Java (Nivel 1 del backend)
-        const serverUrl = buildWsUrl(WS_ENDPOINTS.game);
-        await SocketClient.connect(serverUrl);
+            const response = await fetch(registerUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: registerData.username,
+                    email: registerData.email,
+                    password: registerData.password
+                })
+            });
 
-        // 4. Una vez conectados, enviamos el comando de login
-        SocketClient.send("LOGIN_ATTEMPT", {
-            user: credentials.user,
-            pass: credentials.pass
-        });
-
-        // 5. Escuchamos la respuesta del servidor (esto es un ejemplo)
-        SocketClient.onMessage((msg) => {
-            if (msg.type === "LOGIN_SUCCESS") {
-                console.log("Login correcto, entrando al lobby...");
-                UIManager.switchView('view-lobby');
-            } else if (msg.type === "LOGIN_ERROR") {
-                LoginUI.showError(msg.data.reason);
+            if (response.ok) {
+                const data = await response.json();
+                alert("Registro exitoso! Por favor, inicia sesión.");
+                UIManager.switchView('view-login');
+            } else {
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Error en el registro");
+                } catch (e) {
+                    // Fallback if response is not JSON or other error
+                    throw new Error(e.message || "Error desconocido en el registro");
+                }
             }
-        });
-
-    } catch (error) {
-        LoginUI.showError("No se pudo conectar con el servidor.");
+        } catch (error) {
+            console.error("Registration error:", error);
+            LoginUI.showError(error.message || "No se pudo conectar con el servidor.");
+        }
     }
-});
+);
