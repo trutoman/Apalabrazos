@@ -72,7 +72,15 @@ LoginUI.init(
 
             // 4. Connect to WebSocket with token
             const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(username)}`;
-            await SocketClient.connect(serverUrl, token);
+            console.log("Connecting to WebSocket:", serverUrl);
+
+            try {
+                await SocketClient.connect(serverUrl, token);
+            } catch (wsError) {
+                console.error("WebSocket connection error:", wsError);
+                LoginUI.showError("Error al conectar con el servidor WebSocket. Verifica que el servidor esté en línea.");
+                return;
+            }
 
             // 5. WebSocket authenticated, switch to lobby
             console.log("✅ Authentication successful, entering lobby...");
@@ -85,6 +93,7 @@ LoginUI.init(
             });
 
         } catch (error) {
+            console.error("Login error:", error);
             LoginUI.showError("No se pudo conectar con el servidor.");
         }
     },

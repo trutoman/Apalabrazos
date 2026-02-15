@@ -1,7 +1,12 @@
 // js/config.js
 
-export const API_BASE_URL = ""; // Set to full backend URL when needed, e.g. "https://api.example.com"
-export const WS_BASE_URL = "ws://localhost:8080"; // Set to full WS base URL when needed, e.g. "wss://api.example.com"
+// Auto-detect protocol and host for both API and WebSocket
+const isHttps = window.location.protocol === 'https:';
+const host = window.location.hostname;
+const port = window.location.port || (isHttps ? 443 : 80);
+
+export const API_BASE_URL = ""; // Relative URLs work better
+export const WS_BASE_URL = `${isHttps ? 'wss' : 'ws'}://${host}${port && port !== (isHttps ? 443 : 80) ? ':' + port : ''}`;
 
 export const API_ENDPOINTS = {
     login: "/api/login",

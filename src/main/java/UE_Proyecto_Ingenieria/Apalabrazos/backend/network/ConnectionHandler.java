@@ -35,35 +35,47 @@ public abstract class ConnectionHandler {
      */
     public void onClientConnect(Object session, String username) {
         try {
+            log.info("[CLIENT-CONNECT] Iniciando proceso de conexión para: {}", username);
+
             // 1. Nivel 1: Crear abstracción de la conexión física
             UUID sessionId = UUID.randomUUID();
+            log.debug("[CLIENT-CONNECT] SessionID generado: {}", sessionId);
 
             // Intento de guardar el ID en la propia sesión si es soportado (caso Javalin)
             if (session instanceof io.javalin.websocket.WsContext) {
                  ((io.javalin.websocket.WsContext) session).attribute("session-uuid", sessionId);
+                 log.debug("[CLIENT-CONNECT] SessionID guardado en WsContext");
+            } else {
+                log.warn("[CLIENT-CONNECT] Sesión no es WsContext, tipo: {}", session.getClass().getName());
             }
 
+            log.debug("[CLIENT-CONNECT] Creando WebSocketMessageSender para cliente: {}", sessionId);
             WebSocketMessageSender messageSender = new WebSocketMessageSender(session, sessionId.toString());
 
             // 2. Nivel 2: Crear el Player (el ancla)
+            log.debug("[CLIENT-CONNECT] Creando Player para usuario: {}", username);
             Player player = new Player(sessionId, username, messageSender);
 
             // 3. Registrar en GameSessionManager
+            log.debug("[CLIENT-CONNECT] Registrando conexión en GameSessionManager");
             boolean registered = sessionManager.registerConnection(player);
 
             if (registered) {
-                log.info("✓ Cliente conectado: {} (SessionID: {})", username, sessionId);
+                log.info("[CLIENT-CONNECT] ✓ Cliente conectado exitosamente: {} (SessionID: {})", username, sessionId);
+                log.debug("[CLIENT-CONNECT] Enviando mensaje de bienvenida");
                 String welcomeMessage = "{\"type\":\"system\",\"message\":\"¡Bienvenido "
                     + username
                     + "! Conexión establecida.\"}";
                 player.sendMessage(welcomeMessage);
+                log.debug("[CLIENT-CONNECT] Mensaje de bienvenida enviado");
             } else {
-                log.error("✗ No se pudo registrar el jugador: {}", username);
+                log.error("[CLIENT-CONNECT] ❌ No se pudo registrar el jugador: {} en GameSessionManager", username);
                 messageSender.close();
+                log.info("[CLIENT-CONNECT] MessageSender cerrado");
             }
 
         } catch (Exception e) {
-            log.error("Error procesando nueva conexión: {}", e.getMessage(), e);
+            log.error("[CLIENT-CONNECT] ❌ Error procesando nueva conexión para {}: {}", username, e.getMessage(), e);
         }
     }
 
@@ -75,20 +87,22 @@ public abstract class ConnectionHandler {
      */
     public void onClientMessage(UUID sessionId, String messageContent) {
         try {
+            log.debug("[CLIENT-MESSAGE] Buscando player para sesión: {}", sessionId);
             Player player = sessionManager.getPlayerBySessionId(sessionId);
 
             if (player == null) {
-                log.error("Sesión no encontrada: {}", sessionId);
+                log.error("[CLIENT-MESSAGE] ❌ Sesión no encontrada: {}", sessionId);
                 return;
             }
 
-            log.debug("Mensaje de {}: {}", player.getName(), messageContent);
+            log.debug("[CLIENT-MESSAGE] 📨 Mensaje recibido de {}: {}", player.getName(), messageContent);
 
             // Aquí iría la lógica de procesar el mensaje
             // Por ahora solo lo registramos
+            log.debug("[CLIENT-MESSAGE] ✓ Mensaje procesado");
 
         } catch (Exception e) {
-            log.error("Error procesando mensaje: {}", e.getMessage(), e);
+            log.error("[CLIENT-MESSAGE] ❌ Error procesando mensaje para sesión {}: {}", sessionId, e.getMessage(), e);
         }
     }
 
@@ -99,17 +113,19 @@ public abstract class ConnectionHandler {
      */
     public void onClientDisconnect(UUID sessionId) {
         try {
+            log.info("[CLIENT-DISCONNECT] 🔌 Procesando desconexión para sesión: {}", sessionId);
             Player player = sessionManager.unregisterConnection(sessionId);
 
             if (player != null) {
-                log.info("✓ Cliente desconectado: {} (SessionID: {})",
+                log.info("[CLIENT-DISCONNECT] ✓ Cliente desconectado exitosamente: {} (SessionID: {})",
                         player.getName(), sessionId);
+                log.debug("[CLIENT-DISCONNECT] Estado final del jugador: {}", player.getState());
             } else {
-                log.warn("Intento de desconectar sesión no registrada: {}", sessionId);
+                log.warn("[CLIENT-DISCONNECT] ⚠️ Intento de desconectar sesión no registrada: {}", sessionId);
             }
 
         } catch (Exception e) {
-            log.error("Error procesando desconexión: {}", e.getMessage(), e);
+            log.error("[CLIENT-DISCONNECT] ❌ Error procesando desconexión para sesión {}: {}", sessionId, e.getMessage(), e);
         }
     }
 

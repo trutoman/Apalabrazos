@@ -43,7 +43,8 @@ public class WebSocketMessageSender implements MessageSender {
     @Override
     public void send(Object message) {
         if (!connected) {
-            log.warn("Cliente {} desconectado. Encolando mensaje: {}", clientId, message);
+            log.warn("[SEND] ⚠️ Cliente {} desconectado. Encolando mensaje (queue size: {})",
+                clientId, messageQueue.size() + 1);
             messageQueue.offer(message);
             return;
         }
@@ -52,14 +53,16 @@ public class WebSocketMessageSender implements MessageSender {
             // Convertir a String (JSON) - Por ahora toString() para probar
             String messageStr = message instanceof String ? (String) message : message.toString();
 
+            log.debug("[SEND] 📤 Enviando mensaje a {}: {}", clientId, messageStr);
+
             // Enviar usando Javalin
             session.send(messageStr);
-
-            log.debug("Enviando mensaje a {}: {}", clientId, messageStr);
+            log.debug("[SEND] ✓ Mensaje enviado exitosamente a: {}", clientId);
 
         } catch (Exception e) {
-            log.error("Error enviando mensaje a {}: {}", clientId, e.getMessage());
+            log.error("[SEND] ❌ Error enviando mensaje a {}: {}", clientId, e.getMessage(), e);
             this.connected = false;
+            log.warn("[SEND] Conexión marcada como desconectada. Encolando mensaje");
             messageQueue.offer(message); // Encolar para luego
         }
     }
@@ -72,12 +75,14 @@ public class WebSocketMessageSender implements MessageSender {
     @Override
     public void close() {
         this.connected = false;
-        log.info("WebSocketMessageSender cerrado para cliente: {}", clientId);
+        log.info("[CLOSE] 🔌 WebSocketMessageSender cerrado para cliente: {} (mensajes en cola: {})",
+            clientId, messageQueue.size());
 
         try {
             // session.close() si es necesario
+            log.debug("[CLOSE] ✓ Conexión cerrada correctamente");
         } catch (Exception e) {
-            log.error("Error cerrando conexión para {}: {}", clientId, e.getMessage());
+            log.error("[CLOSE] ❌ Error cerrando conexión para {}: {}", clientId, e.getMessage(), e);
         }
     }
 
@@ -85,13 +90,21 @@ public class WebSocketMessageSender implements MessageSender {
      * Reconectar después de una desconexión temporal
      */
     public void reconnect() {
-        this.connected = true;
-        log.info("Cliente {} reconectado. Enviando {} mensajes en cola", clientId, messageQueue.size());
+        try {
+            this.connected = true;
+            int queuedMessages = messageQueue.size();
+            log.info("[RECONNECT] 🔄 Cliente {} reconectado. Enviando {} mensajes en cola", clientId, queuedMessages);
 
-        // Enviar todos los mensajes encolados
-        while (!messageQueue.isEmpty()) {
-            Object queuedMessage = messageQueue.poll();
-            send(queuedMessage);
+            // Enviar todos los mensajes encolados
+            int sent = 0;
+            while (!messageQueue.isEmpty()) {
+                Object queuedMessage = messageQueue.poll();
+                log.debug("[RECONNECT] 📤 Enviando mensaje encolado {}/{}", ++sent, queuedMessages);
+                send(queuedMessage);
+            }
+            log.info("[RECONNECT] ✓ Reconexión completada. {} mensajes reenviados", sent);
+        } catch (Exception e) {
+            log.error("[RECONNECT] ❌ Error durante reconexión del cliente {}: {}", clientId, e.getMessage(), e);
         }
     }
 

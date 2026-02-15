@@ -58,7 +58,7 @@ public class EmbeddedWebSocketServer {
      */
     public void start() {
         try {
-            log.info("Starting Javalin HTTP server...");
+            log.info("[SERVER] Starting Javalin HTTP server...");
 
             app = Javalin.create(config -> {
                 // Configure static files
@@ -66,8 +66,10 @@ public class EmbeddedWebSocketServer {
                     staticFiles.hostedPath = "/";
                     staticFiles.directory = "/public";
                     staticFiles.location = Location.CLASSPATH;
+                    log.debug("[SERVER] Static files configured: /public");
                 });
             }).start(port);
+            log.info("[SERVER] HTTP server started on port {}", port);
 
             // Login API endpoint
             app.post("/api/login", ctx -> {
@@ -88,7 +90,7 @@ public class EmbeddedWebSocketServer {
                         return;
                     }
 
-                    log.info("Login request received for email: {}", req.email);
+                    log.info("[LOGIN] Request for email: {}", req.email);
 
                     // Find user by email
                     User user = userRepository.findByEmail(req.email);
@@ -199,10 +201,23 @@ public class EmbeddedWebSocketServer {
             log.info("Starting Javalin WebSocket server...");
             // Register WebSocket endpoint
             app.ws("/ws/game/{username}", ws -> {
-                ws.onConnect(connectionHandler::onConnect);
-                ws.onMessage(connectionHandler::onMessage);
-                ws.onClose(connectionHandler::onClose);
-                ws.onError(connectionHandler::onError);
+                log.info("[WEBSOCKET] Registering endpoint: /ws/game/{username}");
+                ws.onConnect(ctx -> {
+                    log.info("[WEBSOCKET-CONNECT] Connection received for: {}", ctx.pathParam("username"));
+                    connectionHandler.onConnect(ctx);
+                });
+                ws.onMessage(ctx -> {
+                    log.debug("[WEBSOCKET-MESSAGE] Message received");
+                    connectionHandler.onMessage(ctx);
+                });
+                ws.onClose(ctx -> {
+                    log.info("[WEBSOCKET-CLOSE] Connection closed");
+                    connectionHandler.onClose(ctx);
+                });
+                ws.onError(ctx -> {
+                    log.error("[WEBSOCKET-ERROR] Error occurred");
+                    connectionHandler.onError(ctx);
+                });
             });
 
             log.info("✓ WebSocket server running on port {}", port);

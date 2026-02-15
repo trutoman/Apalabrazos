@@ -268,15 +268,26 @@ public class GameSessionManager implements EventListener {
      * @return true if registered successfully
      */
     public boolean registerConnection(Player player) {
-        if (player == null || player.getSessionId() == null) {
-            log.error("Cannot register null player or player without sessionId");
+        try {
+            if (player == null || player.getSessionId() == null) {
+                log.error("[REGISTER] ❌ No se puede registrar: Player null o sin sessionId");
+                return false;
+            }
+
+            log.debug("[REGISTER] 🔐 Registrando jugador: {} con SessionID: {}",
+                player.getName(), player.getSessionId());
+
+            activeConnections.put(player.getSessionId(), player);
+
+            log.info("[REGISTER] ✅ Jugador registrado exitosamente: {} (SessionID: {}). Conexiones activas: {}",
+                     player.getName(), player.getSessionId(), activeConnections.size());
+            log.debug("[REGISTER] Estado del jugador: {}", player.getState());
+
+            return true;
+        } catch (Exception e) {
+            log.error("[REGISTER] ❌ Error registrando jugador: {}", e.getMessage(), e);
             return false;
         }
-
-        activeConnections.put(player.getSessionId(), player);
-        log.info("Player connected: {} (SessionID: {})",
-                 player.getName(), player.getSessionId());
-        return true;
     }
 
     /**
@@ -286,13 +297,26 @@ public class GameSessionManager implements EventListener {
      * @return The removed Player, or null if not found
      */
     public Player unregisterConnection(UUID sessionId) {
-        Player player = activeConnections.remove(sessionId);
-        if (player != null) {
-            player.disconnect();
-            log.info("Player disconnected: {} (SessionID: {})",
-                     player.getName(), sessionId);
+        try {
+            log.debug("[UNREGISTER] 🔍 Buscando jugador con SessionID: {}", sessionId);
+
+            Player player = activeConnections.remove(sessionId);
+
+            if (player != null) {
+                log.debug("[UNREGISTER] 📤 Desconectando jugador: {}", player.getName());
+                player.disconnect();
+                log.info("[UNREGISTER] ✅ Jugador desregistrado exitosamente: {} (SessionID: {}). Conexiones restantes: {}",
+                         player.getName(), sessionId, activeConnections.size());
+                log.debug("[UNREGISTER] Estado final del jugador: {}", player.getState());
+            } else {
+                log.warn("[UNREGISTER] ⚠️ Intento de desregistrar SessionID no encontrada: {}", sessionId);
+            }
+
+            return player;
+        } catch (Exception e) {
+            log.error("[UNREGISTER] ❌ Error desregistrando SessionID {}: {}", sessionId, e.getMessage(), e);
+            return null;
         }
-        return player;
     }
 
     /**
@@ -301,7 +325,18 @@ public class GameSessionManager implements EventListener {
      * @return The Player object, or null if not found
      */
     public Player getPlayerBySessionId(UUID sessionId) {
-        return activeConnections.get(sessionId);
+        try {
+            Player player = activeConnections.get(sessionId);
+            if (player == null) {
+                log.warn("[GET-PLAYER] ⚠️ Jugador no encontrado para SessionID: {}", sessionId);
+            } else {
+                log.debug("[GET-PLAYER] ✓ Jugador encontrado: {} (SessionID: {})", player.getName(), sessionId);
+            }
+            return player;
+        } catch (Exception e) {
+            log.error("[GET-PLAYER] ❌ Error obteniendo jugador para SessionID {}: {}", sessionId, e.getMessage(), e);
+            return null;
+        }
     }
 
     /**
@@ -309,7 +344,14 @@ public class GameSessionManager implements EventListener {
      * @return List of all active players
      */
     public List<Player> getAllConnectedPlayers() {
-        return new ArrayList<>(activeConnections.values());
+        try {
+            List<Player> players = new ArrayList<>(activeConnections.values());
+            log.debug("[GET-ALL-PLAYERS] 📊 Obteniendo lista de {} jugadores conectados", players.size());
+            return players;
+        } catch (Exception e) {
+            log.error("[GET-ALL-PLAYERS] ❌ Error obteniendo lista de jugadores: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -317,7 +359,9 @@ public class GameSessionManager implements EventListener {
      * @return Number of connected players
      */
     public int getActiveConnectionCount() {
-        return activeConnections.size();
+        int count = activeConnections.size();
+        log.debug("[CONNECTION-COUNT] 📊 Total de conexiones activas: {}", count);
+        return count;
     }
 
     /**

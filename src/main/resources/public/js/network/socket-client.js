@@ -9,29 +9,52 @@ export const SocketClient = {
             try {
                 // If there's a token, add it as query parameter
                 const wsUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+                console.log("🔗 WebSocket URL:", wsUrl);
                 this.socket = new WebSocket(wsUrl);
 
+                // Add timeout to detect connection failures
+                const connectionTimeout = setTimeout(() => {
+                    if (this.socket.readyState !== WebSocket.OPEN) {
+                        console.error("❌ WebSocket connection timeout");
+                        this.socket.close();
+                        reject(new Error("Connection timeout - server may be unreachable"));
+                    }
+                }, 5000);
+
                 this.socket.onopen = () => {
+                    clearTimeout(connectionTimeout);
                     console.log("✅ Connected to Apalabrazos server");
                     resolve();
                 };
 
                 this.socket.onerror = (err) => {
-                    console.error("❌ Connection error");
-                    reject(err);
+                    clearTimeout(connectionTimeout);
+                    console.error("❌ WebSocket error:", err);
+                    reject(err || new Error("WebSocket error"));
                 };
 
                 this.socket.onmessage = (event) => {
-                    const message = JSON.parse(event.data);
-                    this._dispatch(message);
+                    try {
+                        console.log("📨 Raw message from server:", event.data);
+                        const message = JSON.parse(event.data);
+                        console.log("📦 Parsed message:", message);
+                        this._dispatch(message);
+                    } catch (e) {
+                        console.error("Error parsing message:", e);
+                    }
                 };
 
-                this.socket.onclose = () => {
-                    console.warn("⚠️ Connection closed");
+                this.socket.onclose = (event) => {
+                    console.warn("⚠️ Connection closed", {
+                        code: event.code,
+                        reason: event.reason,
+                        wasClean: event.wasClean
+                    });
                     // Here you could implement reconnection logic
                 };
 
             } catch (e) {
+                console.error("❌ Error creating WebSocket:", e);
                 reject(e);
             }
         });
