@@ -80,12 +80,79 @@
     </section>
 
     <section id="view-lobby" class="game-view hidden">
-        <div class="lobby-container">
-            <h1>SALA DE ESPERA</h1>
-            <div class="lobby-content">
-                <p id="lobby-status">Conectado al servidor...</p>
-                <button class="btn-primary" id="btn-create-game">Crear Partida</button>
-                <button class="btn-secondary" id="btn-join-game">Unirse a Partida</button>
+        <div class="lobby-grid-container">
+            <!-- ROW 0: User Info Header (2rem height) - Spans both columns -->
+            <div class="lobby-header">
+                <div class="user-info">
+                    <span class="user-name" id="lobby-username">Alvaro</span>
+                    <span class="user-status" id="lobby-status">🟢 Conectado</span>
+                </div>
+            </div>
+
+            <!-- ROW 1-2: Chat (Left - Col 0) -->
+            <div class="chat-container">
+                <h2>💬 Chat</h2>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-message other">
+                        <span class="chat-sender">Jugador 1</span>
+                        <span class="chat-text">Hola, ¿empezamos?</span>
+                    </div>
+                    <div class="chat-message self">
+                        <span class="chat-sender">Tú</span>
+                        <span class="chat-text">Claro, vamos!</span>
+                    </div>
+                </div>
+                <div class="chat-input-group">
+                    <input type="text" class="chat-input" placeholder="Escribe un mensaje..." />
+                    <button class="btn-send">📤</button>
+                </div>
+            </div>
+
+            <!-- ROW 1-2: Games (Right - Col 1) -->
+            <div class="games-container">
+                <h2>🎮 Partidas Online</h2>
+                <div class="games-list" id="games-list">
+                    <div class="game-card-neo">
+                        <div class="game-card-title">Partida 1</div>
+                        <div class="game-card-row">
+                            <span class="game-prop-name">Jugadores:</span>
+                            <span class="game-prop-value">2/4</span>
+                        </div>
+                        <div class="game-card-row">
+                            <span class="game-prop-name">Dificultad:</span>
+                            <span class="game-prop-value">Media</span>
+                        </div>
+                    </div>
+                    <div class="game-card-neo">
+                        <div class="game-card-title">Partida 2</div>
+                        <div class="game-card-row">
+                            <span class="game-prop-name">Jugadores:</span>
+                            <span class="game-prop-value">1/2</span>
+                        </div>
+                        <div class="game-card-row">
+                            <span class="game-prop-name">Dificultad:</span>
+                            <span class="game-prop-value">Fácil</span>
+                        </div>
+                    </div>
+                    <div class="game-card-neo">
+                        <div class="game-card-title">Partida 3</div>
+                        <div class="game-card-row">
+                            <span class="game-prop-name">Jugadores:</span>
+                            <span class="game-prop-value">3/3</span>
+                        </div>
+                        <div class="game-card-row">
+                            <span class="game-prop-name">Dificultad:</span>
+                            <span class="game-prop-value">Difícil</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 3: Action Buttons (Col 0 only) -->
+            <div class="lobby-actions">
+                <button class="btn-primary" id="btn-create-game">🎮 Crear Partida</button>
+                <button class="btn-secondary" id="btn-join-game">📋 Unirse</button>
+                <button class="btn-logout" id="btn-logout">🚪 Salir</button>
             </div>
         </div>
     </section>

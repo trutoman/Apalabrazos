@@ -14,6 +14,9 @@
 
 html {
   box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 *,
@@ -27,8 +30,8 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  padding: 20px;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .login-card {
@@ -38,8 +41,12 @@ body {
   padding: 40px 30px;
   background-color: var(--secondary);
   box-shadow: var(--shadow);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  margin: 20px;
   position: relative;
   border-radius: 12px;
+  flex-shrink: 0;
 }
 
 .login-card::before {
@@ -47,8 +54,8 @@ body {
   position: absolute;
   top: 6px;
   left: 6px;
-  right: -6px;
-  bottom: -6px;
+  right: 6px;
+  bottom: 6px;
   border: 1px solid var(--primary);
   z-index: -1;
   border-radius: 12px;
@@ -146,7 +153,6 @@ button {
 
 button:hover {
   box-shadow: 4px 4px 0px var(--primary);
-  transform: translate(-2px, -2px);
 }
 
 .divider {
@@ -212,4 +218,490 @@ button:hover {
 .game-view {
   /* Estilos comunes para todas las pantallas (centrado, etc.) */
   transition: opacity 0.3s ease;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Vistas específicas */
+
+/* LOGIN VIEW - Centrado en pantalla */
+#view-login,
+#view-register {
+  justify-content: center;
+  align-items: center;
+}
+
+#view-login .login-card,
+#view-register .login-card {
+  flex-shrink: 0;
+}
+
+/* LOBBY VIEW - Fullscreen */
+#view-lobby {
+  width: 100%;
+  height: 100%;
+}
+
+/* ==================== LOBBY GRID LAYOUT ==================== */
+
+.lobby-grid-container {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  grid-template-rows: 2rem 1fr auto;
+  gap: 12px;
+  height: 100%;
+  width: 100%;
+  padding: 12px;
+  background-color: var(--secondary);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ROW 0: Header (spans both columns) */
+.lobby-header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--secondary);
+  border: 2px solid var(--primary);
+  border-radius: 6px;
+  position: relative;
+}
+
+.lobby-header::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid var(--primary);
+  z-index: -1;
+  border-radius: 6px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.user-name {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.user-status {
+  font-size: 0.9rem;
+  color: var(--primary);
+  margin-left: auto;
+}
+
+/* ROW 1-2, COL 0: Chat Container */
+.chat-container {
+  grid-column: 1;
+  grid-row: 2;
+  background-color: var(--secondary);
+  border: 2px solid var(--primary);
+  border-radius: 6px;
+  padding: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.chat-container::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid var(--primary);
+  z-index: -1;
+  border-radius: 6px;
+}
+
+.chat-container h2 {
+  font-size: 1rem;
+  color: var(--primary);
+  margin: 0;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background-color: var(--secondary);
+  max-width: 90%;
+}
+
+.chat-message.self {
+  align-self: flex-end;
+  background-color: #f0f0f0;
+}
+
+.chat-message.other {
+  align-self: flex-start;
+}
+
+.chat-sender {
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.chat-text {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.chat-input-group {
+  display: flex;
+  gap: 6px;
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  padding: 4px;
+  background-color: var(--secondary);
+}
+
+.chat-input {
+  flex: 1;
+  border: none;
+  padding: 8px;
+  font-size: 0.9rem;
+  background-color: var(--secondary);
+  color: var(--primary);
+  outline: none;
+}
+
+.chat-input::placeholder {
+  color: #999;
+}
+
+.btn-send {
+  padding: 6px 10px;
+  border: 1px solid var(--primary);
+  background-color: var(--secondary);
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 4px;
+}
+
+/* ROW 1-2, COL 1: Games Container */
+.games-container {
+  grid-column: 2;
+  grid-row: 2;
+  background-color: var(--secondary);
+  border: 2px solid var(--primary);
+  border-radius: 6px;
+  padding: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.games-container::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid var(--primary);
+  z-index: -1;
+  border-radius: 6px;
+}
+
+.games-container h2 {
+  font-size: 1rem;
+  color: var(--primary);
+  margin: 0;
+}
+
+.games-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-card-neo {
+  background-color: var(--secondary);
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  padding: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.game-card-neo::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  border: 1px solid var(--primary);
+  z-index: -1;
+  border-radius: 4px;
+}
+
+.game-card-neo:hover {
+  box-shadow: 4px 4px 0px var(--primary);
+}
+
+.game-card-title {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.game-card-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 4px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.game-card-row:last-child {
+  border-bottom: none;
+}
+
+.game-prop-name {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.game-prop-value {
+  color: #333;
+}
+
+/* ROW 3, COL 0: Actions (only in col 0) */
+.lobby-actions {
+  grid-column: 1;
+  grid-row: 3;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background-color: var(--secondary);
+  border: 2px solid var(--primary);
+  border-radius: 6px;
+  position: relative;
+}
+
+.lobby-actions::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid var(--primary);
+  z-index: -1;
+  border-radius: 6px;
+}
+
+.lobby-actions button {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  max-width: 150px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: var(--secondary);
+  color: var(--primary);
+}
+
+.lobby-actions .btn-primary {
+  background-color: var(--accent);
+  color: white;
+}
+
+.lobby-actions .btn-primary:hover {
+  box-shadow: 4px 4px 0px var(--primary);
+}
+
+.lobby-actions .btn-secondary {
+  background-color: #4A90E2;
+  color: white;
+}
+
+.lobby-actions .btn-secondary:hover {
+  box-shadow: 4px 4px 0px var(--primary);
+}
+
+.lobby-actions .btn-logout {
+  background-color: #999;
+  color: white;
+}
+
+.lobby-actions .btn-logout:hover {
+  box-shadow: 4px 4px 0px var(--primary);
+}
+
+/* ROW 1: User Header (spans both columns) */
+.lobby-header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background-color: #FFD700; /* AMARILLO - Header */
+  border: 2px solid var(--primary);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.user-name {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.user-status {
+  font-size: 0.9rem;
+  color: var(--primary);
+  margin-left: auto;
+}
+
+
+
+.btn-logout:hover {
+  background-color: #666;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* Tabletas y pantallas medianas */
+@media (max-width: 768px) {
+  .lobby-grid-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .chat-container {
+    grid-column: 1;
+    grid-row: 2;
+    max-height: 250px;
+  }
+
+  .games-container {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .lobby-actions {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  .lobby-actions button {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+  .lobby-grid-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .lobby-header {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .chat-container {
+    grid-column: 1;
+    grid-row: 2;
+    max-height: 300px;
+  }
+
+  .games-container {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .lobby-actions {
+    grid-column: 1;
+    grid-row: 4;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .lobby-grid-container {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .lobby-header {
+    padding: 6px 12px;
+  }
+
+  .user-name {
+    font-size: 1rem;
+  }
+
+  .user-status {
+    font-size: 0.8rem;
+  }
+
+  .chat-container h2,
+  .games-container h2 {
+    font-size: 0.95rem;
+  }
+
+  .game-card-neo {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+
+  .lobby-actions button {
+    font-size: 0.85rem;
+    padding: 10px 12px;
+  }
 }
