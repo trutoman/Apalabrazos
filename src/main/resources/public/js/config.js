@@ -9,7 +9,7 @@ export const API_ENDPOINTS = {
 };
 
 export const WS_ENDPOINTS = {
-    game: "/game"
+    game: "/ws/game"
 };
 
 export function buildApiUrl(path) {

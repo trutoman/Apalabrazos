@@ -4,6 +4,24 @@ import { SocketClient } from './network/socket-client.js';
 import { UIManager } from './ui/ui-manager.js';
 import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.js';
 
+function decodeJwtPayload(token) {
+    try {
+        const payload = token.split('.')[1];
+        if (!payload) {
+            return null;
+        }
+        let base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padLength = base64.length % 4;
+        if (padLength) {
+            base64 += '='.repeat(4 - padLength);
+        }
+        const json = atob(base64);
+        return JSON.parse(json);
+    } catch (e) {
+        return null;
+    }
+}
+
 // 1. Initialize Login interface
 LoginUI.init(
     // onLoginAttempt callback
@@ -45,8 +63,15 @@ LoginUI.init(
                 return;
             }
 
+            const jwtPayload = decodeJwtPayload(token);
+            const username = jwtPayload && jwtPayload.username;
+            if (!username) {
+                LoginUI.showError("Error: Token missing username");
+                return;
+            }
+
             // 4. Connect to WebSocket with token
-            const serverUrl = buildWsUrl(WS_ENDPOINTS.game);
+            const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(username)}`;
             await SocketClient.connect(serverUrl, token);
 
             // 5. WebSocket authenticated, switch to lobby

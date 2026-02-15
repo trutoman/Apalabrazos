@@ -53,7 +53,10 @@ public abstract class ConnectionHandler {
 
             if (registered) {
                 log.info("✓ Cliente conectado: {} (SessionID: {})", username, sessionId);
-                player.sendMessage("¡Bienvenido " + username + "! Conexión establecida.");
+                String welcomeMessage = "{\"type\":\"system\",\"message\":\"¡Bienvenido "
+                    + username
+                    + "! Conexión establecida.\"}";
+                player.sendMessage(welcomeMessage);
             } else {
                 log.error("✗ No se pudo registrar el jugador: {}", username);
                 messageSender.close();
