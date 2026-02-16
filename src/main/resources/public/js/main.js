@@ -21,6 +21,7 @@ function decodeJwtPayload(token) {
         return null;
     }
 }
+//UIManager.switchView('view-lobby');
 
 // 1. Initialize Login interface
 LoginUI.init(

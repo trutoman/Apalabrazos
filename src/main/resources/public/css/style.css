@@ -138,16 +138,19 @@ input:focus {
   margin-top: 1.5rem;
 }
 
+.actions .btn-primary {
+  padding: 12px;
+}
+
 button {
   width: 100%;
-  padding: 12px;
   background-color: var(--accent);
   color: var(--secondary);
   border: 2px solid var(--primary);
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
-  margin-top: 10px;
+  /* margin-top: 10px; */
   transition: all 0.3s;
 }
 
@@ -294,7 +297,7 @@ button:hover {
 }
 
 .user-name {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: bold;
   color: var(--primary);
 }
@@ -309,12 +312,14 @@ button:hover {
 .chat-container {
   grid-column: 1;
   grid-row: 2;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 3rem;
   background-color: var(--secondary);
   border: 2px solid var(--primary);
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 12px;
   position: relative;
-  display: flex;
+  display: grid;
   flex-direction: column;
   gap: 8px;
   overflow: hidden;
@@ -329,7 +334,7 @@ button:hover {
   bottom: 4px;
   border: 1px solid var(--primary);
   z-index: -1;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .chat-container h2 {
@@ -379,16 +384,22 @@ button:hover {
 }
 
 .chat-input-group {
+  grid-column: -1 / 1;
+  grid-row: 2;
   display: flex;
-  gap: 6px;
+  align-items: center;
+  align-content: stretch;
+  gap: 4px;
   border: 2px solid var(--primary);
   border-radius: 4px;
   padding: 4px;
   background-color: var(--secondary);
+  align-items: stretch;
 }
 
 .chat-input {
   flex: 1;
+  flex-wrap: wrap;
   border: none;
   padding: 8px;
   font-size: 0.9rem;
@@ -402,15 +413,18 @@ button:hover {
 }
 
 .btn-send {
-  padding: 6px 10px;
+  flex: 2;
+  justify-content: flex-end;
   border: 1px solid var(--primary);
-  background-color: var(--secondary);
   cursor: pointer;
   font-weight: bold;
   border-radius: 4px;
+  max-width: 4rem;
+  height: 100%;
+  align-self: stretch;
 }
 
-/* ROW 1-2, COL 1: Games Container */
+/* ROW 1-2, COL 2: Games Container */
 .games-container {
   grid-column: 2;
   grid-row: 2;
@@ -551,6 +565,7 @@ button:hover {
 .lobby-actions .btn-primary {
   background-color: var(--accent);
   color: white;
+  white-space: nowrap;
 }
 
 .lobby-actions .btn-primary:hover {
@@ -607,8 +622,6 @@ button:hover {
   margin-left: auto;
 }
 
-
-
 .btn-logout:hover {
   background-color: #666;
   box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
@@ -643,7 +656,7 @@ button:hover {
     flex: 1;
     min-width: 100px;
   }
-}
+
   .lobby-grid-container {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
