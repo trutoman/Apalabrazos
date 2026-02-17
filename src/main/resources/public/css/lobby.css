@@ -1,0 +1,344 @@
+/* LOBBY VIEW - Fullscreen */
+#view-lobby {
+    width: 100%;
+    height: 100%;
+}
+
+/* ==================== LOBBY GRID LAYOUT ==================== */
+
+.lobby-grid-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: 2rem 1fr auto;
+    gap: 12px;
+    height: 100%;
+    width: 100%;
+    padding: 12px;
+    background-color: var(--secondary);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* ROW 0: Header (spans both columns) */
+.lobby-header {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: var(--explode);
+    position: relative;
+    border: 2px solid var(--primary);
+}
+
+.lobby-header::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border: 1px solid var(--primary);
+    z-index: -1;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    position: relative;
+    /* Ensure z-index works if needed */
+    z-index: 1;
+}
+
+.user-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.user-status {
+    font-size: 0.9rem;
+    color: var(--primary);
+    margin-left: auto;
+}
+
+/* ROW 1-2, COL 0: Chat Container */
+.chat-container {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 3rem;
+    background-color: var(--secondary);
+    border: 2px solid var(--primary);
+    border-radius: 4px;
+    padding: 12px;
+    position: relative;
+    display: grid;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.chat-container::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border: 1px solid var(--primary);
+    z-index: -1;
+    border-radius: 4px;
+}
+
+.chat-container h2 {
+    font-size: 1rem;
+    color: var(--primary);
+    margin: 0;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.chat-message {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px;
+    border: 1px solid var(--primary);
+    border-radius: 4px;
+    background-color: var(--secondary);
+    max-width: 90%;
+}
+
+.chat-message.self {
+    align-self: flex-end;
+    background-color: #f0f0f0;
+}
+
+.chat-message.other {
+    align-self: flex-start;
+}
+
+.chat-sender {
+    font-weight: bold;
+    font-size: 0.85rem;
+    color: var(--primary);
+}
+
+.chat-text {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.chat-input-group {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    align-content: stretch;
+    gap: 4px;
+    border: 2px solid var(--primary);
+    border-radius: 4px;
+    padding: 4px;
+    background-color: var(--secondary);
+    align-items: stretch;
+}
+
+.chat-input {
+    flex: 1;
+    border: none;
+    padding: 8px;
+    font-size: 0.9rem;
+    background-color: var(--secondary);
+    color: var(--primary);
+    outline: none;
+}
+
+.chat-input::placeholder {
+    color: #999;
+}
+
+.btn-send {
+    flex: 2;
+    border: 1px solid var(--primary);
+    cursor: pointer;
+    font-weight: bold;
+    max-width: 4rem;
+    height: 100%;
+    align-self: stretch;
+}
+
+/* ROW 1-2, COL 2: Games Container */
+.games-container {
+    grid-column: 2;
+    grid-row: 2;
+    background-color: var(--secondary);
+    border: 2px solid var(--primary);
+    border-radius: 6px;
+    padding: 12px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.games-container::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border: 1px solid var(--primary);
+    z-index: -1;
+    border-radius: 6px;
+}
+
+.games-container h2 {
+    font-size: 1rem;
+    color: var(--primary);
+    margin: 0;
+}
+
+.games-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.game-card-neo {
+    background-color: var(--secondary);
+    border: 2px solid var(--primary);
+    border-radius: 4px;
+    padding: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.game-card-neo::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    border: 1px solid var(--primary);
+    z-index: -1;
+    border-radius: 4px;
+}
+
+.game-card-neo:hover {
+    box-shadow: 4px 4px 0px var(--primary);
+}
+
+.game-card-title {
+    font-weight: bold;
+    font-size: 0.95rem;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.game-card-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding: 4px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.game-card-row:last-child {
+    border-bottom: none;
+}
+
+.game-prop-name {
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.game-prop-value {
+    color: #333;
+}
+
+/* ROW 3, COL 0: Actions (only in col 0) */
+.lobby-actions {
+    grid-column: 1;
+    grid-row: 3;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background-color: var(--secondary);
+    border: 2px solid var(--primary);
+    border-radius: 6px;
+    position: relative;
+}
+
+.lobby-actions::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border: 1px solid var(--primary);
+    z-index: -1;
+    border-radius: 6px;
+}
+
+.lobby-actions button {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    max-width: 150px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border: 2px solid var(--primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: var(--secondary);
+    color: var(--primary);
+}
+
+.lobby-actions .btn-primary {
+    background-color: var(--accent);
+    color: white;
+    white-space: nowrap;
+}
+
+.lobby-actions .btn-primary:hover {
+    box-shadow: 4px 4px 0px var(--primary);
+}
+
+.lobby-actions .btn-secondary {
+    background-color: #4A90E2;
+    color: white;
+}
+
+.lobby-actions .btn-secondary:hover {
+    box-shadow: 4px 4px 0px var(--primary);
+}
+
+.lobby-actions .btn-logout {
+    background-color: #999;
+    color: white;
+}
+
+.lobby-actions .btn-logout:hover {
+    background-color: #666;
+    box-shadow: 4px 4px 0px var(--primary);
+}

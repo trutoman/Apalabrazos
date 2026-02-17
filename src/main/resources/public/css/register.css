@@ -1,0 +1,13 @@
+/* REGISTER VIEW - Centrado en pantalla */
+#view-register {
+    display: flex;
+    /* Enforce flex container behaviour if not inherited correctly or overridden */
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+#view-register .login-card {
+    flex-shrink: 0;
+}
