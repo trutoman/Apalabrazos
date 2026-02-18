@@ -28,14 +28,17 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             // Extract token from query parameter
             String token = ctx.queryParam("token");
             log.debug("[CONNECT] Token recibido: {} (primeros 20 chars)",
-                token != null ? token.substring(0, Math.min(20, token.length())) : "null");
+                    token != null ? token.substring(0, Math.min(20, token.length())) : "null");
 
-            // Validate token
+            // Validar token
             if (token == null || token.trim().isEmpty()) {
                 log.warn("[CONNECT] ❌ Conexión rechazada: No token provided");
                 ctx.closeSession(4001, "Authentication required");
                 return;
             }
+
+            // Set idle timeout to 30 minutes (default is often 30s)
+            ctx.session.setIdleTimeout(java.time.Duration.ofMinutes(30));
 
             DecodedJWT jwt = jwtService.verifyToken(token);
             if (jwt == null) {
@@ -51,7 +54,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
             if (tokenUsername == null || !tokenUsername.equalsIgnoreCase(username)) {
                 log.warn("[CONNECT] ❌ Conexión rechazada: Username mismatch (URL: {}, Token: {})",
-                    username, tokenUsername);
+                        username, tokenUsername);
                 ctx.closeSession(4003, "User mismatch");
                 return;
             }
@@ -95,7 +98,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             }
 
             log.info("[CLOSE] 🔌 Cierre de conexión para sesión: {}", sessionId);
-            log.debug("[CLOSE] Código de cierre: {}, Razón: {}", ctx.status(), ctx.reason());
+            log.info("[CLOSE] Código de cierre: {}, Razón: {}", ctx.status(), ctx.reason());
 
             super.onClientDisconnect(sessionId);
             log.info("[CLOSE] ✓ Desconexión procesada correctamente");
@@ -110,8 +113,8 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             String sessionInfo = sessionId != null ? sessionId.toString() : "unknown";
 
             log.error("[ERROR] ❌ Error WebSocket en sesión {}: {}",
-                sessionInfo, ctx.error() != null ? ctx.error().getMessage() : "unknown error",
-                ctx.error());
+                    sessionInfo, ctx.error() != null ? ctx.error().getMessage() : "unknown error",
+                    ctx.error());
         } catch (Exception e) {
             log.error("[ERROR] ❌ Error procesando error WebSocket: {}", e.getMessage(), e);
         }

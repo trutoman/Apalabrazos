@@ -54,6 +54,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get the singleton instance of GameSessionManager
+     * 
      * @return The singleton instance
      */
     public static GameSessionManager getInstance() {
@@ -96,7 +97,8 @@ public class GameSessionManager implements EventListener {
 
         // Publish event to notify lobby that session was created
         if (sessionId != null) {
-            GameSessionCreatedEvent sessionCreatedEvent = new GameSessionCreatedEvent(tempRoomCode, sessionId, gameService);
+            GameSessionCreatedEvent sessionCreatedEvent = new GameSessionCreatedEvent(tempRoomCode, sessionId,
+                    gameService);
             eventBus.publish(sessionCreatedEvent);
         }
     }
@@ -173,7 +175,8 @@ public class GameSessionManager implements EventListener {
                 log.error("No se pudo agregar el jugador {} a la sala {}", playerId, roomId);
             }
             // Aquí podríamos añadir la instancia del jugador si existe lógica para ello
-            // service.onEvent(event); // reenviar al GameService si debe manejar la creación de la instancia
+            // service.onEvent(event); // reenviar al GameService si debe manejar la
+            // creación de la instancia
         } else {
             log.error("Room with ID {} not found", roomId);
         }
@@ -181,6 +184,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Add a new active game session to the registry
+     * 
      * @param gameService The GameService instance to add
      * @return The session ID of the added service
      */
@@ -196,6 +200,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Remove a game session from the active registry by GameService instance
+     * 
      * @param gameService The GameService instance to remove
      */
     public void removeSession(GameService gameService) {
@@ -209,6 +214,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Remove a game session by its session ID
+     * 
      * @param sessionId The unique session ID
      */
     public void removeSessionById(String sessionId) {
@@ -219,6 +225,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get all active game sessions
+     * 
      * @return List of active GameService instances
      */
     public List<GameService> getActiveSessions() {
@@ -227,6 +234,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get the number of active sessions
+     * 
      * @return Number of active game sessions
      */
     public int getActiveSessionCount() {
@@ -235,6 +243,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get a specific session by its ID
+     * 
      * @param sessionId The unique session ID
      * @return The GameService for this session, or null if not found
      */
@@ -244,6 +253,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Check if a session exists
+     * 
      * @param gameService The GameService to check
      * @return true if the session is active
      */
@@ -264,6 +274,7 @@ public class GameSessionManager implements EventListener {
     /**
      * Register a new player connection.
      * This is called when a physical connection (WebSocket) is established.
+     * 
      * @param player The Player object representing the connected user
      * @return true if registered successfully
      */
@@ -274,13 +285,13 @@ public class GameSessionManager implements EventListener {
                 return false;
             }
 
-            log.debug("[REGISTER] 🔐 Registrando jugador: {} con SessionID: {}",
-                player.getName(), player.getSessionId());
+            log.info("[REGISTER] 🔐 Registrando jugador: {} con SessionID: {}",
+                    player.getName(), player.getSessionId());
 
             activeConnections.put(player.getSessionId(), player);
 
             log.info("[REGISTER] ✅ Jugador registrado exitosamente: {} (SessionID: {}). Conexiones activas: {}",
-                     player.getName(), player.getSessionId(), activeConnections.size());
+                    player.getName(), player.getSessionId(), activeConnections.size());
             log.debug("[REGISTER] Estado del jugador: {}", player.getState());
 
             return true;
@@ -293,6 +304,7 @@ public class GameSessionManager implements EventListener {
     /**
      * Unregister a player connection.
      * Called when a connection is closed or times out.
+     * 
      * @param sessionId The session identifier
      * @return The removed Player, or null if not found
      */
@@ -305,8 +317,9 @@ public class GameSessionManager implements EventListener {
             if (player != null) {
                 log.debug("[UNREGISTER] 📤 Desconectando jugador: {}", player.getName());
                 player.disconnect();
-                log.info("[UNREGISTER] ✅ Jugador desregistrado exitosamente: {} (SessionID: {}). Conexiones restantes: {}",
-                         player.getName(), sessionId, activeConnections.size());
+                log.info(
+                        "[UNREGISTER] ✅ Jugador desregistrado exitosamente: {} (SessionID: {}). Conexiones restantes: {}",
+                        player.getName(), sessionId, activeConnections.size());
                 log.debug("[UNREGISTER] Estado final del jugador: {}", player.getState());
             } else {
                 log.warn("[UNREGISTER] ⚠️ Intento de desregistrar SessionID no encontrada: {}", sessionId);
@@ -321,6 +334,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get a player by their session ID
+     * 
      * @param sessionId The session identifier
      * @return The Player object, or null if not found
      */
@@ -341,6 +355,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get all connected players
+     * 
      * @return List of all active players
      */
     public List<Player> getAllConnectedPlayers() {
@@ -356,6 +371,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get the count of active connections
+     * 
      * @return Number of connected players
      */
     public int getActiveConnectionCount() {
@@ -366,6 +382,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Check if a session is active
+     * 
      * @param sessionId The session identifier
      * @return true if the session exists
      */
@@ -375,6 +392,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Broadcast a message to all connected players
+     * 
      * @param message The message to broadcast
      */
     public void broadcastToAll(Object message) {
@@ -383,8 +401,9 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Send a message to a specific player
+     * 
      * @param sessionId The session identifier
-     * @param message The message to send
+     * @param message   The message to send
      * @return true if message was sent
      */
     public boolean sendToPlayer(UUID sessionId, Object message) {

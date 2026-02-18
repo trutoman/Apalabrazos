@@ -24,6 +24,14 @@ export const SocketClient = {
                 this.socket.onopen = () => {
                     clearTimeout(connectionTimeout);
                     console.log("✅ Connected to Apalabrazos server");
+
+                    // Start heartbeat (ping) every 20 seconds to prevent idle timeout
+                    this.pingInterval = setInterval(() => {
+                        if (this.socket.readyState === WebSocket.OPEN) {
+                            this.send("PING", {});
+                        }
+                    }, 20000); // 20 seconds
+
                     resolve();
                 };
 
@@ -45,11 +53,14 @@ export const SocketClient = {
                 };
 
                 this.socket.onclose = (event) => {
-                    console.warn("⚠️ Connection closed", {
-                        code: event.code,
-                        reason: event.reason,
-                        wasClean: event.wasClean
-                    });
+                    if (this.pingInterval) {
+                        clearInterval(this.pingInterval);
+                    }
+                    console.warn("⚠️ Connection closed",
+                        "Code:", event.code,
+                        "Reason:", event.reason,
+                        "WasClean:", event.wasClean
+                    );
                     // Here you could implement reconnection logic
                 };
 
