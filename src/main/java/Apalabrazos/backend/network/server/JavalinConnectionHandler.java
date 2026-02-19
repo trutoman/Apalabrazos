@@ -82,6 +82,39 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             String message = ctx.message();
             log.debug("[MESSAGE] 📨 Mensaje recibido de sesión {}: {}", sessionId, message);
 
+            // Intentar parsear como JSON para detectar tipo CHAT
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(message);
+
+                if (node.has("type") && "CHAT".equalsIgnoreCase(node.get("type").asText())) {
+                    String username = "Unknown";
+                    // Intentar obtener usuario desde el Player manager si es posible, o desde el
+                    // contexto si lo guardamos (no lo guardamos en ctx aún, pero podemos intentar
+                    // recuperarlo)
+                    // Por ahora, el ConnectionHandler base tiene acceso al Player via
+                    // sessionManager
+                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    if (player != null) {
+                        username = player.getName();
+                    }
+
+                    String text = "";
+                    if (node.has("payload")) {
+                        com.fasterxml.jackson.databind.JsonNode payload = node.get("payload");
+                        if (payload.isObject() && payload.has("text")) {
+                            text = payload.get("text").asText();
+                        } else if (payload.isTextual()) {
+                            text = payload.asText();
+                        }
+                    }
+
+                    log.info("[CHAT] Received from user: {} (Session: {}): {}", username, sessionId, text);
+                }
+            } catch (Exception e) {
+                // No es JSON o falló el parseo, ignorar para este propósito específico
+            }
+
             super.onClientMessage(sessionId, message);
             log.debug("[MESSAGE] ✓ Mensaje procesado correctamente");
         } catch (Exception e) {

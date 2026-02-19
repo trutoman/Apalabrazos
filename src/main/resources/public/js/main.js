@@ -1,5 +1,6 @@
 // js/main.js
 import { LoginUI } from './ui/login.js';
+import { LobbyUI } from './ui/lobby.js';
 import { SocketClient } from './network/socket-client.js';
 import { UIManager } from './ui/ui-manager.js';
 import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.js';
@@ -87,10 +88,43 @@ LoginUI.init(
             console.log("✅ Authentication successful, entering lobby...");
             UIManager.switchView('view-lobby');
 
+            // Initialize Lobby UI with message sending logic
+            LobbyUI.init((message) => {
+                console.log("Sending message:", message);
+                // SocketClient.sendMessage({ type: 'CHAT', content: message });
+                // Using a simpler approach for now as sendMessage implementation might vary
+                try {
+                    // Try to send if method exists, otherwise just log
+                    if (SocketClient.sendMessage) {
+                        SocketClient.sendMessage({ type: 'chat', payload: message });
+                    } else if (SocketClient.send) {
+                        SocketClient.send(JSON.stringify({ type: 'chat', payload: message }));
+                    } else {
+                        console.warn("SocketClient.sendMessage not available");
+                    }
+                    // Optimistically add message to UI
+                    LobbyUI.addMessage("Tú", message, true);
+                } catch (e) {
+                    console.error("Error sending message:", e);
+                }
+            });
+
             // 6. Listen for server messages
             SocketClient.onMessage((msg) => {
                 console.log("Message received:", msg);
-                // Here you can handle other game events
+                // Handle incoming chat messages
+                try {
+                    const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
+                    if (data.type === 'CHAT') {
+                        const sender = data.sender || "Unknown";
+                        const text = data.payload ? data.payload.text : "";
+                        if (text) {
+                            LobbyUI.addMessage(sender, text, sender === username);
+                        }
+                    }
+                } catch (e) {
+                    // Ignore parsing errors for non-JSON messages
+                }
             });
 
         } catch (error) {

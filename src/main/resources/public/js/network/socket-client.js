@@ -81,6 +81,15 @@ export const SocketClient = {
         }
     },
 
+    // Sends a raw object to the server
+    sendMessage(messageObj) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(messageObj));
+        } else {
+            console.error("Cannot send: Socket not connected");
+        }
+    },
+
     // Allow other modules (Lobby, Match) to subscribe to messages
     onMessage(callback) {
         this.listeners.add(callback);
