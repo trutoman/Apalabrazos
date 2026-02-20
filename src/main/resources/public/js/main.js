@@ -94,7 +94,7 @@ LoginUI.init(
                 // SocketClient.sendMessage({ type: 'CHAT', content: message });
                 // Using a simpler approach for now as sendMessage implementation might vary
                 try {
-                    // Try to send if method exists, otherwise just log
+                    // Send message via WebSocket - the UI will update when the server echoes it back
                     if (SocketClient.sendMessage) {
                         SocketClient.sendMessage({ type: 'chat', payload: message });
                     } else if (SocketClient.send) {
@@ -102,8 +102,6 @@ LoginUI.init(
                     } else {
                         console.warn("SocketClient.sendMessage not available");
                     }
-                    // Optimistically add message to UI
-                    LobbyUI.addMessage("Tú", message, true);
                 } catch (e) {
                     console.error("Error sending message:", e);
                 }
@@ -112,14 +110,15 @@ LoginUI.init(
             // 6. Listen for server messages
             SocketClient.onMessage((msg) => {
                 console.log("Message received:", msg);
-                // Handle incoming chat messages
                 try {
                     const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
-                    if (data.type === 'CHAT') {
-                        const sender = data.sender || "Unknown";
-                        const text = data.payload ? data.payload.text : "";
-                        if (text) {
-                            LobbyUI.addMessage(sender, text, sender === username);
+
+                    if (data.type === 'chat_message') {
+                        const { text, username_originator } = data.payload || {};
+                        if (text && username_originator) {
+                            // Align right if the message belongs to this user, left otherwise
+                            const isOwn = username_originator === username;
+                            LobbyUI.addMessage(username_originator, text, isOwn);
                         }
                     }
                 } catch (e) {

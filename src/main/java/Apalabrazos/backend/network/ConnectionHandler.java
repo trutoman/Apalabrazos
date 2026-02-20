@@ -1,5 +1,6 @@
 package Apalabrazos.backend.network;
 
+import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.Player;
 import Apalabrazos.backend.service.GameSessionManager;
 import org.slf4j.Logger;
@@ -17,7 +18,8 @@ import java.util.UUID;
  * 3. Vincular la conexión física con la lógica de juego
  * 4. Manejar desconexiones y reconexiones
  *
- * NOTA: Esta es una clase base/interfaz. La implementación real dependería del framework
+ * NOTA: Esta es una clase base/interfaz. La implementación real dependería del
+ * framework
  * (Spring WebSocket, java.websocket.WebSocketEndpoint, Netty, etc.)
  */
 public abstract class ConnectionHandler {
@@ -30,7 +32,7 @@ public abstract class ConnectionHandler {
      * Se invoca cuando un cliente se conecta.
      * Esta es la única entrada a new Player()
      *
-     * @param session La sesión WebSocket (tipo depende del framework)
+     * @param session  La sesión WebSocket (tipo depende del framework)
      * @param username El nombre de usuario (viene del cliente)
      */
     public void onClientConnect(Object session, String username) {
@@ -43,8 +45,8 @@ public abstract class ConnectionHandler {
 
             // Intento de guardar el ID en la propia sesión si es soportado (caso Javalin)
             if (session instanceof io.javalin.websocket.WsContext) {
-                 ((io.javalin.websocket.WsContext) session).attribute("session-uuid", sessionId);
-                 log.debug("[CLIENT-CONNECT] SessionID guardado en WsContext");
+                ((io.javalin.websocket.WsContext) session).attribute("session-uuid", sessionId);
+                log.debug("[CLIENT-CONNECT] SessionID guardado en WsContext");
             } else {
                 log.warn("[CLIENT-CONNECT] Sesión no es WsContext, tipo: {}", session.getClass().getName());
             }
@@ -62,10 +64,12 @@ public abstract class ConnectionHandler {
 
             if (registered) {
                 log.info("[CLIENT-CONNECT] ✓ Cliente conectado exitosamente: {} (SessionID: {})", username, sessionId);
+                // Auto-join the global lobby room
+                LobbyRoom.getInstance().join(sessionId);
                 log.debug("[CLIENT-CONNECT] Enviando mensaje de bienvenida");
                 String welcomeMessage = "{\"type\":\"system\",\"message\":\"¡Bienvenido "
-                    + username
-                    + "! Conexión establecida.\"}";
+                        + username
+                        + "! Conexión establecida.\"}";
                 player.sendMessage(welcomeMessage);
                 log.debug("[CLIENT-CONNECT] Mensaje de bienvenida enviado");
             } else {
@@ -82,7 +86,7 @@ public abstract class ConnectionHandler {
     /**
      * Se invoca cuando un cliente envía un mensaje.
      *
-     * @param sessionId El ID de sesión del cliente
+     * @param sessionId      El ID de sesión del cliente
      * @param messageContent El contenido del mensaje (JSON o texto)
      */
     public void onClientMessage(UUID sessionId, String messageContent) {
@@ -116,6 +120,9 @@ public abstract class ConnectionHandler {
             log.info("[CLIENT-DISCONNECT] 🔌 Procesando desconexión para sesión: {}", sessionId);
             Player player = sessionManager.unregisterConnection(sessionId);
 
+            // Always leave the lobby, regardless of whether the player was found
+            LobbyRoom.getInstance().leave(sessionId);
+
             if (player != null) {
                 log.info("[CLIENT-DISCONNECT] ✓ Cliente desconectado exitosamente: {} (SessionID: {})",
                         player.getName(), sessionId);
@@ -125,14 +132,15 @@ public abstract class ConnectionHandler {
             }
 
         } catch (Exception e) {
-            log.error("[CLIENT-DISCONNECT] ❌ Error procesando desconexión para sesión {}: {}", sessionId, e.getMessage(), e);
+            log.error("[CLIENT-DISCONNECT] ❌ Error procesando desconexión para sesión {}: {}", sessionId,
+                    e.getMessage(), e);
         }
     }
 
     /**
      * Se invoca cuando un cliente se reconecta después de una desconexión temporal.
      *
-     * @param sessionId El ID original de sesión
+     * @param sessionId  El ID original de sesión
      * @param newSession La nueva sesión WebSocket
      */
     protected void onClientReconnect(UUID sessionId, Object newSession) {
@@ -145,8 +153,7 @@ public abstract class ConnectionHandler {
             }
 
             // Reemplazar el MessageSender con la nueva conexión
-            WebSocketMessageSender newSender =
-                new WebSocketMessageSender(newSession, sessionId.toString());
+            WebSocketMessageSender newSender = new WebSocketMessageSender(newSession, sessionId.toString());
 
             // Actualizar el jugador (esto requeriría un setter en Player)
             // player.setMessageSender(newSender);
@@ -164,6 +171,7 @@ public abstract class ConnectionHandler {
 
     /**
      * Broadcast a todos los clientes conectados.
+     * 
      * @param message El mensaje a enviar
      */
     public void broadcastToAll(Object message) {
@@ -172,8 +180,9 @@ public abstract class ConnectionHandler {
 
     /**
      * Enviar mensaje a un cliente específico.
+     * 
      * @param sessionId El ID de sesión
-     * @param message El mensaje a enviar
+     * @param message   El mensaje a enviar
      */
     public boolean sendToClient(UUID sessionId, Object message) {
         return sessionManager.sendToPlayer(sessionId, message);
