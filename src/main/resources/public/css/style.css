@@ -7,9 +7,12 @@
 
 :root {
   --primary: #000000;
-  --secondary: #FFFFFF;
-  --accent: #FF5E5B;
-  --explode: #FFD100;
+  --secondary: #F0F0F0;
+  --explode: #FF00F4;
+  --accent: #FADF09;
+  --third: #00F0FF;
+  --green: #A2FF00;
+  --dead: #888888;
   --shadow: 8px 8px 0px var(--primary);
 }
 
@@ -98,10 +101,6 @@ input {
   transition: all 0.3s;
 }
 
-input:focus {
-  box-shadow: 4px 4px 0px var(--primary);
-}
-
 .input-error {
   border-color: red !important;
 }
@@ -146,7 +145,7 @@ input:focus {
 button {
   width: 100%;
   background-color: var(--accent);
-  color: var(--secondary);
+  color: var(--primary);
   border: 2px solid var(--primary);
   font-size: 16px;
   font-weight: bold;
