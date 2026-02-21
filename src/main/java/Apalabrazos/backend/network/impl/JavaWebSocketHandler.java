@@ -7,7 +7,8 @@ import org.slf4j.LoggerFactory;
 import java.util.UUID;
 
 /**
- * Implementación de ConnectionHandler para Java WebSocket API (@javax.websocket)
+ * Implementación de ConnectionHandler para Java WebSocket API
+ * (@javax.websocket)
  *
  * Esta sería la implementación real para uso con Java EE/Jakarta EE.
  * Para usarla, necesitarías añadir javax.websocket al pom.xml:
@@ -24,7 +25,7 @@ import java.util.UUID;
  * {@code
  * @ServerEndpoint("/ws/game/{username}")
  * public class GameWebSocketEndpoint extends JavaWebSocketHandler {
- *     // Automáticamente usa los métodos de ConnectionHandler
+ * // Automáticamente usa los métodos de ConnectionHandler
  * }
  * }
  */
@@ -35,19 +36,19 @@ public class JavaWebSocketHandler extends ConnectionHandler {
     /**
      * Este método se invocaría con la anotación @OnOpen
      *
-     * @param session La sesión javax.websocket.Session
+     * @param session  La sesión javax.websocket.Session
      * @param username Parámetro del path {username}
      */
     public void onOpen(Object session, String username) {
         log.info("→ WebSocket OnOpen: {}", username);
-        onClientConnect(session, username);
+        onClientConnect(session, username, null); // No JWT auth in legacy handler
     }
 
     /**
      * Este método se invocaría con la anotación @OnMessage
      *
      * @param messageContent El contenido del mensaje
-     * @param sessionId El ID de sesión del cliente
+     * @param sessionId      El ID de sesión del cliente
      */
     public void onMessage(String messageContent, UUID sessionId) {
         log.debug("→ WebSocket OnMessage: {}", messageContent);

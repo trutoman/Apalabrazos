@@ -60,8 +60,9 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                 return;
             }
 
-            log.info("[CONNECT] ✅ Conexión autenticada para usuario: {}", username);
-            onClientConnect(ctx, username);
+            String cosmosUserId = jwtService.extractUserId(jwt);
+            log.info("[CONNECT] ✅ Conexión autenticada para usuario: {} (CosmosUserId: {})", username, cosmosUserId);
+            onClientConnect(ctx, username, cosmosUserId);
         } catch (Exception e) {
             log.error("[CONNECT] ❌ Error en autenticación de conexión: {}", e.getMessage(), e);
             try {
@@ -155,11 +156,5 @@ public class JavalinConnectionHandler extends ConnectionHandler {
         } catch (Exception e) {
             log.error("[ERROR] ❌ Error procesando error WebSocket: {}", e.getMessage(), e);
         }
-    }
-
-    // Sobrescribimos onClientConnect para asegurar compatibilidad
-    @Override
-    public void onClientConnect(Object session, String username) {
-        super.onClientConnect(session, username);
     }
 }

@@ -53,4 +53,11 @@ public class JwtService {
         }
         return jwt.getClaim("username").asString();
     }
+
+    public String extractUserId(DecodedJWT jwt) {
+        if (jwt == null) {
+            return null;
+        }
+        return jwt.getClaim("userId").asString();
+    }
 }

@@ -32,12 +32,14 @@ public abstract class ConnectionHandler {
      * Se invoca cuando un cliente se conecta.
      * Esta es la única entrada a new Player()
      *
-     * @param session  La sesión WebSocket (tipo depende del framework)
-     * @param username El nombre de usuario (viene del cliente)
+     * @param session      La sesión WebSocket (tipo depende del framework)
+     * @param username     El nombre de usuario (viene del cliente)
+     * @param cosmosUserId El ID del usuario en Cosmos DB (viene del JWT)
      */
-    public void onClientConnect(Object session, String username) {
+    public void onClientConnect(Object session, String username, String cosmosUserId) {
         try {
-            log.info("[CLIENT-CONNECT] Iniciando proceso de conexión para: {}", username);
+            log.info("[CLIENT-CONNECT] Iniciando proceso de conexión para: {} (CosmosUserId: {})", username,
+                    cosmosUserId);
 
             // 1. Nivel 1: Crear abstracción de la conexión física
             UUID sessionId = UUID.randomUUID();
@@ -54,9 +56,9 @@ public abstract class ConnectionHandler {
             log.debug("[CLIENT-CONNECT] Creando WebSocketMessageSender para cliente: {}", sessionId);
             WebSocketMessageSender messageSender = new WebSocketMessageSender(session, sessionId.toString());
 
-            // 2. Nivel 2: Crear el Player (el ancla)
-            log.debug("[CLIENT-CONNECT] Creando Player para usuario: {}", username);
-            Player player = new Player(sessionId, username, messageSender);
+            // 2. Nivel 2: Crear el Player (el ancla) — linked to Cosmos DB user
+            log.debug("[CLIENT-CONNECT] Creando Player para usuario: {} (CosmosUserId: {})", username, cosmosUserId);
+            Player player = new Player(sessionId, username, cosmosUserId, messageSender);
 
             // 3. Registrar en GameSessionManager
             log.debug("[CLIENT-CONNECT] Registrando conexión en GameSessionManager");
@@ -171,7 +173,7 @@ public abstract class ConnectionHandler {
 
     /**
      * Broadcast a todos los clientes conectados.
-     * 
+     *
      * @param message El mensaje a enviar
      */
     public void broadcastToAll(Object message) {
@@ -180,7 +182,7 @@ public abstract class ConnectionHandler {
 
     /**
      * Enviar mensaje a un cliente específico.
-     * 
+     *
      * @param sessionId El ID de sesión
      * @param message   El mensaje a enviar
      */

@@ -10,7 +10,8 @@ import java.util.UUID;
 
 /**
  * Represents a player in the system - the "anchor" of the architecture.
- * This class lives for the entire user session, from connection to disconnection.
+ * This class lives for the entire user session, from connection to
+ * disconnection.
  * It bridges the physical world (network) with the logical world (game rules).
  *
  * Combines three facets:
@@ -21,17 +22,18 @@ import java.util.UUID;
 public class Player {
 
     // ===== Identity =====
-    private final UUID sessionId;           // Unique session identifier
+    private final UUID sessionId; // Unique session identifier
     private String name;
-    private String imageResource;           // Can be a local path or a URL
-    private String playerID;                // Human-readable ID: nombre-xxxx
+    private String imageResource; // Can be a local path or a URL
+    private String playerID; // Human-readable ID: nombre-xxxx
+    private String cosmosUserId; // Cosmos DB document ID (links to persistent User)
 
     // ===== State =====
-    private PlayerState state;              // Current logical state
-    private UUID currentMatchId;            // null if not in a match
+    private PlayerState state; // Current logical state
+    private UUID currentMatchId; // null if not in a match
 
     // ===== Channel (Network Abstraction) =====
-    private final MessageSender sender;     // Communication channel
+    private final MessageSender sender; // Communication channel
 
     // ===== Game Data =====
     private final List<GameRecord> history = new ArrayList<>();
@@ -52,6 +54,7 @@ public class Player {
 
     /**
      * Constructor with name (for backward compatibility)
+     * 
      * @param name Player name
      */
     public Player(String name) {
@@ -66,7 +69,8 @@ public class Player {
 
     /**
      * Constructor with name and image resource (for backward compatibility)
-     * @param name Player name
+     * 
+     * @param name          Player name
      * @param imageResource Image path or URL
      */
     public Player(String name, String imageResource) {
@@ -81,13 +85,16 @@ public class Player {
 
     /**
      * Full constructor for connected player (PRIMARY CONSTRUCTOR FOR SERVER)
-     * @param sessionId Unique session identifier
-     * @param name Player name
-     * @param sender Communication channel to the client
+     * 
+     * @param sessionId    Unique session identifier
+     * @param name         Player name
+     * @param cosmosUserId Cosmos DB user ID (links to persistent User record)
+     * @param sender       Communication channel to the client
      */
-    public Player(UUID sessionId, String name, MessageSender sender) {
+    public Player(UUID sessionId, String name, String cosmosUserId, MessageSender sender) {
         this.sessionId = sessionId;
         this.name = name;
+        this.cosmosUserId = cosmosUserId;
         this.sender = sender;
         this.imageResource = "resources/images/default-profile.png";
         this.playerID = generatePlayerID(name);
@@ -97,6 +104,7 @@ public class Player {
 
     /**
      * Get player name
+     * 
      * @return name
      */
     public String getName() {
@@ -105,6 +113,7 @@ public class Player {
 
     /**
      * Set player name
+     * 
      * @param name new name
      */
     public void setName(String name) {
@@ -113,6 +122,7 @@ public class Player {
 
     /**
      * Get image resource (local path or URL)
+     * 
      * @return image resource string
      */
     public String getImageResource() {
@@ -121,6 +131,7 @@ public class Player {
 
     /**
      * Set image resource
+     * 
      * @param imageResource path or URL
      */
     public void setImageResource(String imageResource) {
@@ -129,6 +140,7 @@ public class Player {
 
     /**
      * Get immutable game history
+     * 
      * @return list of GameResult
      */
     public List<GameRecord> getHistory() {
@@ -137,6 +149,7 @@ public class Player {
 
     /**
      * Add a game result to history
+     * 
      * @param result game result to add
      */
     public void addGameResult(GameRecord result) {
@@ -154,6 +167,7 @@ public class Player {
 
     /**
      * Obtener el ID único del jugador (nombre-xxxx)
+     * 
      * @return ID único del jugador
      */
     public String getPlayerID() {
@@ -161,7 +175,19 @@ public class Player {
     }
 
     /**
-     * Establecer el ID único del jugador (usado cuando se necesita mantener consistencia)
+     * Get the Cosmos DB user ID that links this Player to the persistent User
+     * record.
+     * 
+     * @return Cosmos DB document ID, or null if not linked
+     */
+    public String getCosmosUserId() {
+        return cosmosUserId;
+    }
+
+    /**
+     * Establecer el ID único del jugador (usado cuando se necesita mantener
+     * consistencia)
+     * 
      * @param playerID ID del jugador
      */
 
@@ -169,6 +195,7 @@ public class Player {
 
     /**
      * Get the unique session identifier
+     * 
      * @return Session UUID
      */
     public UUID getSessionId() {
@@ -177,6 +204,7 @@ public class Player {
 
     /**
      * Get the current player state
+     * 
      * @return Current PlayerState
      */
     public PlayerState getState() {
@@ -185,6 +213,7 @@ public class Player {
 
     /**
      * Set the player state
+     * 
      * @param state New state
      */
     public void setState(PlayerState state) {
@@ -193,6 +222,7 @@ public class Player {
 
     /**
      * Get the current match ID (if in a match)
+     * 
      * @return Match UUID or null
      */
     public UUID getCurrentMatchId() {
@@ -201,6 +231,7 @@ public class Player {
 
     /**
      * Set the current match ID
+     * 
      * @param currentMatchId Match UUID
      */
     public void setCurrentMatchId(UUID currentMatchId) {
@@ -209,6 +240,7 @@ public class Player {
 
     /**
      * Check if player is currently in a match
+     * 
      * @return true if in a match
      */
     public boolean isInMatch() {
@@ -219,6 +251,7 @@ public class Player {
      * Send a message to the client through the communication channel.
      * This is the key method for the game logic to communicate with the client.
      * Only sends if the player is not disconnected and has a valid sender.
+     * 
      * @param message The message to send
      */
     public void sendMessage(Object message) {
@@ -229,6 +262,7 @@ public class Player {
 
     /**
      * Check if the player has an active connection
+     * 
      * @return true if connected
      */
     public boolean isConnected() {
@@ -247,6 +281,7 @@ public class Player {
 
     /**
      * Get the message sender (for advanced use cases)
+     * 
      * @return The MessageSender instance
      */
     public MessageSender getSender() {
@@ -258,7 +293,9 @@ public class Player {
     }
 
     /**
-     * Generar un ID único para el jugador: nombre-xxxx (4 caracteres alfanuméricos al azar)
+     * Generar un ID único para el jugador: nombre-xxxx (4 caracteres alfanuméricos
+     * al azar)
+     * 
      * @param playerName nombre del jugador
      * @return ID único en formato nombre-xxxx
      */
@@ -270,6 +307,7 @@ public class Player {
 
     /**
      * Generar una cadena aleatoria de caracteres alfanuméricos
+     * 
      * @param length longitud de la cadena
      * @return cadena aleatoria
      */
