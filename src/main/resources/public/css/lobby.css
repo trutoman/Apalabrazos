@@ -8,9 +8,8 @@
 /* ==================== LOBBY GRID LAYOUT ==================== */
 
 .lobby-grid-container {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    grid-template-rows: 2.5rem 1fr auto;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
     height: 100%;
     width: 100%;
@@ -22,8 +21,7 @@
 
 /* ROW 0: Header (spans both columns) */
 .lobby-header {
-    grid-column: 1 / -1;
-    grid-row: 1;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     padding: 8px 16px;
@@ -31,6 +29,34 @@
     position: relative;
     border: 2px solid var(--primary);
     box-shadow: 4px 4px 0px var(--primary);
+}
+
+/* Two-column body */
+.lobby-columns {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.lobby-col-left {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 0 0 calc(33.33% - 6px);
+    min-height: 0;
+    overflow: hidden;
+}
+
+.lobby-col-right {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .lobby-header::before {
@@ -75,20 +101,19 @@
 
 /* ROW 1-2, COL 0: Chat Container */
 .chat-container {
-    grid-column: 1;
-    grid-row: 2;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 2rem auto 3rem;
     background-color: var(--secondary);
     border: 2px solid var(--primary);
     border-radius: 4px;
     padding: 12px;
     position: relative;
     display: grid;
-    flex-direction: column;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 2rem 1fr 3rem;
     gap: 8px;
     overflow: hidden;
     box-shadow: 4px 4px 0px var(--primary);
+    flex: 1;
+    min-height: 0;
 }
 
 .chat-container::before {
@@ -200,8 +225,6 @@
 
 /* ROW 1-2, COL 2: Games Container */
 .games-container {
-    grid-column: 2;
-    grid-row: 2;
     background-color: var(--secondary);
     border: 2px solid var(--primary);
     border-radius: 6px;
@@ -212,6 +235,8 @@
     gap: 8px;
     overflow: hidden;
     box-shadow: 4px 4px 0px var(--primary);
+    flex: 1;
+    min-height: 0;
 }
 
 .games-container::before {
@@ -285,9 +310,7 @@
 
 /* ROW 3, COL 0: Actions (only in col 0) */
 .lobby-actions {
-    grid-column: 1;
-    grid-row: 3;
-    align-self: start;
+    flex-shrink: 0;
     display: flex;
     gap: 8px;
     align-items: center;
@@ -353,8 +376,7 @@
 /* ==================== CREATE GAME CONFIG CARD ==================== */
 
 .create-game-config-card {
-    grid-column: 2;
-    grid-row: 3;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -508,42 +530,30 @@
 @media (max-width: 400px),
 (orientation: portrait) {
     .lobby-grid-container {
-        display: flex;
+        overflow-y: auto;
+    }
+
+    .lobby-columns {
         flex-direction: column;
         overflow-y: auto;
-        height: 100%;
-        gap: 12px;
+        overflow-x: hidden;
     }
 
-    /* Header: fixed small height */
-    .lobby-header {
-        grid-column: unset;
-        grid-row: unset;
-        flex-shrink: 0;
+    .lobby-col-left,
+    .lobby-col-right {
+        flex: none;
+        width: 100%;
+        min-height: 0;
+        overflow: visible;
     }
 
-    /* Chat: fixed middle chunk */
     .chat-container {
-        grid-column: unset;
-        grid-row: unset;
         flex: 0 0 300px;
         min-height: 200px;
-        overflow: hidden;
     }
 
-    /* Games list: grows to fill remaining space */
     .games-container {
-        grid-column: unset;
-        grid-row: unset;
-        flex: 1 1 auto;
+        flex: 0 0 auto;
         min-height: 200px;
-        overflow: hidden;
-    }
-
-    /* Actions: fixed small height at the bottom */
-    .lobby-actions {
-        grid-column: unset;
-        grid-row: unset;
-        flex-shrink: 0;
     }
 }

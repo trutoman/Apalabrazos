@@ -22,7 +22,7 @@ function decodeJwtPayload(token) {
         return null;
     }
 }
-UIManager.switchView('view-lobby');
+//UIManager.switchView('view-lobby');
 
 // Create Game config card toggle — wired at page load so it always works
 const _btnCreate = document.getElementById('btn-create-game');
