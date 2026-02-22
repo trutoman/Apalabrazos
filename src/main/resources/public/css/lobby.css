@@ -242,8 +242,6 @@
 }
 
 .game-card-neo {
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 2rem 1fr 1fr;
     background-color: var(--secondary);
     border: 2px solid var(--primary);
     padding: 12px;
@@ -349,4 +347,49 @@
 .lobby-actions .btn-logout {
     background-color: var(--dead);
     color: var(--primary);
+}
+
+/* ==================== RESPONSIVE: VERTICAL / PORTRAIT MODE ==================== */
+/* Activates when viewport is portrait (width ≤ height) or very narrow (< 400px) */
+@media (max-width: 400px),
+(orientation: portrait) {
+    .lobby-grid-container {
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        height: 100%;
+        gap: 12px;
+    }
+
+    /* Header: fixed small height */
+    .lobby-header {
+        grid-column: unset;
+        grid-row: unset;
+        flex-shrink: 0;
+    }
+
+    /* Chat: fixed middle chunk */
+    .chat-container {
+        grid-column: unset;
+        grid-row: unset;
+        flex: 0 0 300px;
+        min-height: 200px;
+        overflow: hidden;
+    }
+
+    /* Games list: grows to fill remaining space */
+    .games-container {
+        grid-column: unset;
+        grid-row: unset;
+        flex: 1 1 auto;
+        min-height: 200px;
+        overflow: hidden;
+    }
+
+    /* Actions: fixed small height at the bottom */
+    .lobby-actions {
+        grid-column: unset;
+        grid-row: unset;
+        flex-shrink: 0;
+    }
 }
