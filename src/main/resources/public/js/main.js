@@ -24,6 +24,17 @@ function decodeJwtPayload(token) {
 }
 UIManager.switchView('view-lobby');
 
+// Create Game config card toggle — wired at page load so it always works
+const _btnCreate = document.getElementById('btn-create-game');
+const _createCard = document.getElementById('create-game-config-card');
+const _btnCloseCreate = document.getElementById('btn-close-create-game');
+if (_btnCreate && _createCard) {
+    _btnCreate.addEventListener('click', () => { _createCard.classList.remove('hidden'); });
+}
+if (_btnCloseCreate && _createCard) {
+    _btnCloseCreate.addEventListener('click', () => { _createCard.classList.add('hidden'); });
+}
+
 // 1. Initialize Login interface
 LoginUI.init(
     // onLoginAttempt callback
@@ -106,6 +117,8 @@ LoginUI.init(
                     console.error("Error sending message:", e);
                 }
             });
+
+
 
             // 6. Listen for server messages
             SocketClient.onMessage((msg) => {
