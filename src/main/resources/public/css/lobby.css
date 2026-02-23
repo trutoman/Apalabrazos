@@ -10,10 +10,10 @@
 .lobby-grid-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
     height: 100%;
     width: 100%;
-    padding: 12px;
+    padding: 20px 28px 28px 20px;
     background-color: var(--secondary);
     overflow: hidden;
     box-sizing: border-box;
@@ -35,28 +35,28 @@
 .lobby-columns {
     display: flex;
     flex-direction: row;
-    gap: 12px;
+    gap: 20px;
     flex: 1;
-    overflow: hidden;
+    overflow: visible;
     min-height: 0;
 }
 
 .lobby-col-left {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    flex: 0 0 calc(33.33% - 6px);
+    gap: 20px;
+    flex: 0 0 calc(33.33% - 10px);
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .lobby-col-right {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .lobby-header::before {
@@ -97,6 +97,28 @@
     background-color: var(--green);
     border: 2px solid var(--primary);
     padding: 2px 10px;
+}
+
+.btn-settings {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    background-color: var(--secondary);
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 4px 0px var(--primary);
+    transform: translate(-4px, -4px);
+    transition: all 0.15s;
+}
+
+.btn-settings:hover {
+    box-shadow: none;
+    transform: translate(0, 0);
 }
 
 /* ROW 1-2, COL 0: Chat Container */
@@ -327,9 +349,8 @@
     font-family: 'Archivo', sans-serif;
     font-weight: 500;
     font-size: 0.75rem;
-    color: #333;
+    color: var(--primary);
     border: 2px solid var(--primary);
-    background-color: var(--secondary);
     padding: 3px 7px;
     box-shadow: 2px 2px 0px var(--primary);
     transform: translate(-2px, -2px);
@@ -594,6 +615,7 @@
         width: 100%;
         min-height: 0;
         overflow: visible;
+
     }
 
     .chat-container {

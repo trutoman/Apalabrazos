@@ -4,6 +4,42 @@ import { LobbyUI } from './ui/lobby.js';
 import { SocketClient } from './network/socket-client.js';
 import { UIManager } from './ui/ui-manager.js';
 import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.js';
+import { GAME_OPTIONS } from './config/game-options.js';
+
+// Assign a random accent colour to every card field-value badge
+const CARD_COLORS = ['--explode', '--third', '--green', '--orange'];
+function randomCardColors() {
+    document.querySelectorAll('.game-card-field-value').forEach(el => {
+        const pick = CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)];
+        el.style.backgroundColor = `var(${pick})`;
+    });
+}
+
+// Populate create-game selects from the central config
+function populateSelect(id, options) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '';
+    options.forEach(({ value, label, default: isDefault }) => {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = label;
+        if (isDefault) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function populateGameSelects() {
+    populateSelect('cfg-players', GAME_OPTIONS.players);
+    populateSelect('cfg-game-type', GAME_OPTIONS.gameTypes);
+    populateSelect('cfg-time', GAME_OPTIONS.times);
+    populateSelect('cfg-difficulty', GAME_OPTIONS.difficulties);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    randomCardColors();
+    populateGameSelects();
+});
 
 function decodeJwtPayload(token) {
     try {
