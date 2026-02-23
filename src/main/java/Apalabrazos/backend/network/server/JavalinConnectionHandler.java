@@ -84,40 +84,74 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             String message = ctx.message();
             log.debug("[MESSAGE] 📨 Mensaje recibido de sesión {}: {}", sessionId, message);
 
-            // Parse JSON to detect message type
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(message);
+                String type = node.has("type") ? node.get("type").asText() : "";
 
-                if (node.has("type") && "chat".equalsIgnoreCase(node.get("type").asText())) {
-                    // Get originator username from the Player registry
+                // ── CHAT ────────────────────────────────────────────────────
+                if ("chat".equalsIgnoreCase(type)) {
                     String username = "Unknown";
                     Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
-                    if (player != null) {
+                    if (player != null)
                         username = player.getName();
-                    }
 
-                    // Extract text from payload
+                    // Frontend sends { type, data: payload } via SocketClient.send()
+                    // but chat uses { type, payload } – accept both keys
+                    com.fasterxml.jackson.databind.JsonNode dataNode = node.has("data") ? node.get("data")
+                            : node.get("payload");
+
                     String text = "";
-                    if (node.has("payload")) {
-                        com.fasterxml.jackson.databind.JsonNode payload = node.get("payload");
-                        if (payload.isObject() && payload.has("text")) {
-                            text = payload.get("text").asText();
-                        } else if (payload.isTextual()) {
-                            text = payload.asText();
+                    if (dataNode != null) {
+                        if (dataNode.isObject() && dataNode.has("text")) {
+                            text = dataNode.get("text").asText();
+                        } else if (dataNode.isTextual()) {
+                            text = dataNode.asText();
                         }
                     }
 
                     if (!text.isEmpty()) {
                         log.info("[CHAT] Message from '{}' (session {}): {}", username, sessionId, text);
-                        // Broadcast to all lobby members
                         LobbyRoom.getInstance().broadcastChat(username, text, sessionManager);
                     } else {
                         log.warn("[CHAT] Empty text received from '{}', ignoring", username);
                     }
+
+                    // ── GAME CREATION REQUEST ────────────────────────────────────
+                } else if ("GameCreationRequest".equalsIgnoreCase(type)) {
+                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    String username = player != null ? player.getName() : "Unknown";
+
+                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
+                    if (data == null) {
+                        log.warn("[GAME-CREATE] ⚠️ GameCreationRequest sin campo 'data' de '{}'", username);
+                    } else {
+                        String gameName = data.path("name").asText("?");
+                        int players = data.path("players").asInt(0);
+                        String gameType = data.path("gameType").asText("?");
+                        double time = data.path("time").asDouble(0);
+                        String difficulty = data.path("difficulty").asText("?");
+                        String createdBy = data.path("createdBy").asText(username);
+                        long requestedAt = data.path("requestedAt").asLong(0);
+
+                        log.info("[GAME-CREATE] 🎮 Solicitud de creación de partida recibida de '{}' (sesión {})",
+                                username, sessionId);
+                        log.info("[GAME-CREATE]   name={}, players={}, type={}, time={}min, difficulty={}",
+                                gameName, players, gameType, time, difficulty);
+                        log.info("[GAME-CREATE]   createdBy={}, requestedAt={}", createdBy, requestedAt);
+
+                        // TODO: validar en backend y crear la sesión de juego
+                        // gameSessionManager.createGame(player, gameName, players, gameType, time,
+                        // difficulty);
+                    }
+
+                    // ── UNKNOWN ──────────────────────────────────────────────────
+                } else if (!type.isEmpty() && !"PING".equalsIgnoreCase(type)) {
+                    log.warn("[MESSAGE] ⚠️ Tipo de mensaje desconocido: '{}' de sesión {}", type, sessionId);
                 }
+
             } catch (Exception e) {
-                // Not JSON or parse failure – ignore for chat purposes
+                log.warn("[MESSAGE] ⚠️ No se pudo parsear el mensaje como JSON: {}", e.getMessage());
             }
 
             super.onClientMessage(sessionId, message);

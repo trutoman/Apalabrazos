@@ -5,6 +5,10 @@ import { SocketClient } from './network/socket-client.js';
 import { UIManager } from './ui/ui-manager.js';
 import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.js';
 import { GAME_OPTIONS } from './config/game-options.js';
+import { validate_game_creation } from './validation/game-validation.js';
+
+// Module-level session info — populated after a successful login
+let currentUsername = null;
 
 // Assign a random accent colour to every card field-value badge
 const CARD_COLORS = ['--explode', '--third', '--green', '--orange'];
@@ -39,7 +43,61 @@ function populateGameSelects() {
 document.addEventListener('DOMContentLoaded', () => {
     randomCardColors();
     populateGameSelects();
+
+    // --- Create Game button validation ---
+    const btnConfirm = document.getElementById('btn-confirm-create');
+    if (btnConfirm) {
+        btnConfirm.addEventListener('click', () => {
+            console.log('[CREATE] btn-confirm-create clicked ✅');
+            const result = validate_game_creation();
+            if (!result.valid) {
+                console.warn('[CREATE] Validation failed:', result.errors);
+                showCreateGameErrors(result.errors);
+                return;
+            }
+            clearCreateGameErrors();
+
+            // Build and send GameCreationRequest
+            const nameInput = document.getElementById('cfg-game-name');
+            const payload = {
+                name: nameInput?.value?.trim() ?? '',
+                players: parseInt(document.getElementById('cfg-players')?.value, 10),
+                gameType: document.getElementById('cfg-game-type')?.value,
+                time: parseFloat(document.getElementById('cfg-time')?.value),
+                difficulty: document.getElementById('cfg-difficulty')?.value,
+                createdBy: currentUsername,
+                requestedAt: Math.floor(Date.now() / 1000),
+            };
+
+            console.log('[CREATE] Sending GameCreationRequest:', payload);
+            SocketClient.send('GameCreationRequest', payload);
+        });
+    } else {
+        console.error('[CREATE] ❌ btn-confirm-create NOT FOUND in DOM');
+    }
 });
+
+/** Renders validation errors as a fixed toast above everything. */
+function showCreateGameErrors(errors) {
+    let box = document.getElementById('create-game-errors');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'create-game-errors';
+        box.className = 'create-game-errors';
+        // Append to body so it's never clipped by parent overflow
+        document.body.appendChild(box);
+    }
+    box.innerHTML = errors.map(e => `<span>⚠️ ${e}</span>`).join('');
+    box.style.display = 'flex';
+    // Auto-hide after 4 seconds
+    clearTimeout(box._hideTimer);
+    box._hideTimer = setTimeout(() => { box.style.display = 'none'; }, 4000);
+}
+
+function clearCreateGameErrors() {
+    const box = document.getElementById('create-game-errors');
+    if (box) box.style.display = 'none';
+}
 
 function decodeJwtPayload(token) {
     try {
@@ -58,7 +116,7 @@ function decodeJwtPayload(token) {
         return null;
     }
 }
-UIManager.switchView('view-lobby');
+//UIManager.switchView('view-lobby');
 
 // Create Game config card toggle — wired at page load so it always works
 const _btnCreate = document.getElementById('btn-create-game');
@@ -118,6 +176,7 @@ LoginUI.init(
                 LoginUI.showError("Error: Token missing username");
                 return;
             }
+            currentUsername = username; // store for later use (e.g. game creation)
 
             // 4. Connect to WebSocket with token
             const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(username)}`;
