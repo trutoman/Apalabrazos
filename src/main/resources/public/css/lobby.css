@@ -271,10 +271,12 @@
     border: 2px solid var(--primary);
     padding: 12px;
     position: relative;
-    cursor: pointer;
     transition: all 0.15s;
     box-shadow: 4px 4px 0px var(--primary);
     transform: translate(-4px, -4px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .game-card-neo:hover {
@@ -282,30 +284,77 @@
     transform: translate(0, 0);
 }
 
-.game-card-title {
-    font-weight: bold;
-    font-size: 1.2rem;
-    color: var(--primary);
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--primary);
+/* Inner grid – mirrors .create-game-fields-grid */
+.game-card-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
 }
 
-.game-card-row {
+/* Name row spans all 3 columns – mirrors .cfg-title-field */
+.game-card-name-field {
+    grid-column: 1 / -1;
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 6px;
+}
+
+.game-card-name-text {
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--primary);
+}
+
+/* Each field cell – mirrors .create-game-field */
+.game-card-field {
     display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
-    padding: 4px 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
 }
 
-
-.game-prop-name {
-    font-weight: bold;
+.game-card-field-label {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 500;
+    font-size: 0.7rem;
     color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
-.game-prop-value {
+.game-card-field-value {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 500;
+    font-size: 0.75rem;
     color: #333;
+    border: 2px solid var(--primary);
+    background-color: var(--secondary);
+    padding: 3px 7px;
+    box-shadow: 2px 2px 0px var(--primary);
+    transform: translate(-2px, -2px);
+}
+
+/* Join button – mirrors .btn-confirm-create */
+.btn-join-game {
+    padding: 7px 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: 'Archivo', sans-serif;
+    background-color: var(--accent);
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    cursor: pointer;
+    box-shadow: 4px 4px 0px var(--primary);
+    transform: translate(-4px, -4px);
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-join-game:hover {
+    box-shadow: none;
+    transform: translate(0, 0);
 }
 
 /* ROW 3, COL 0: Actions (only in col 0) */
@@ -410,7 +459,7 @@
     flex-shrink: 0;
     width: 32px;
     height: 32px;
-    background: none;
+    background-color: var(--dead);
     border: 2px solid var(--primary);
     color: var(--primary);
     font-size: 0.85rem;
