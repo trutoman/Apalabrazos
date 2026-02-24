@@ -1,4 +1,4 @@
-package UE_Proyecto_Ingenieria.Apalabrazos.backend.events;
+package Apalabrazos.backend.events;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ public class AsyncEventBusTest {
 
         // publish() debe retornar en < 100ms (no esperó el listener)
         assertTrue(publishTime < 100,
-                  "publish() tardó " + publishTime + "ms, debería ser < 100ms");
+                "publish() tardó " + publishTime + "ms, debería ser < 100ms");
 
         // Pero el listener debe haberse ejecutado eventualmente
         future.join(); // Esperar a que termine
@@ -95,7 +95,7 @@ public class AsyncEventBusTest {
 
         // publishAndWait() debe tardar >= 500ms (esperó al listener)
         assertTrue(totalTime >= 500,
-                  "publishAndWait() tardó " + totalTime + "ms, debería ser >= 500ms");
+                "publishAndWait() tardó " + totalTime + "ms, debería ser >= 500ms");
 
         // Y el evento debe haber sido procesado
         assertEquals(1, eventsReceived.size());
@@ -134,8 +134,8 @@ public class AsyncEventBusTest {
         // Si ejecuta paralelo: ~100ms (todos al mismo tiempo)
         // Tolerancia: < 200ms indica paralelismo
         assertTrue(totalTime < 200,
-                  "Listeners ejecutaron secuencial (" + totalTime + "ms), " +
-                  "deberían ser paralelo (< 200ms)");
+                "Listeners ejecutaron secuencial (" + totalTime + "ms), " +
+                        "deberían ser paralelo (< 200ms)");
 
         assertEquals(numListeners, listenerCallCount.get());
     }
@@ -185,8 +185,8 @@ public class AsyncEventBusTest {
 
         // Debe ejecutarse una sola vez, no dos
         assertEquals(1, listenerCallCount.get(),
-                    "Listener se ejecutó " + listenerCallCount.get() + " veces, " +
-                    "debería ser 1 (sin duplicados)");
+                "Listener se ejecutó " + listenerCallCount.get() + " veces, " +
+                        "debería ser 1 (sin duplicados)");
     }
 
     /**

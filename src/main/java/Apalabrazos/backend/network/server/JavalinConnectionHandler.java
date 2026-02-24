@@ -132,18 +132,37 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         String gameType = data.path("gameType").asText("?");
                         double time = data.path("time").asDouble(0);
                         String difficulty = data.path("difficulty").asText("?");
-                        String createdBy = data.path("createdBy").asText(username);
+                        String createdByUserId = player != null ? player.getCosmosUserId() : "Unknown";
                         long requestedAt = data.path("requestedAt").asLong(0);
 
                         log.info("[GAME-CREATE] 🎮 Solicitud de creación de partida recibida de '{}' (sesión {})",
                                 username, sessionId);
                         log.info("[GAME-CREATE]   name={}, players={}, type={}, time={}min, difficulty={}",
                                 gameName, players, gameType, time, difficulty);
-                        log.info("[GAME-CREATE]   createdBy={}, requestedAt={}", createdBy, requestedAt);
+                        log.info("[GAME-CREATE]   creatorName={}, creatorId={}, requestedAt={}",
+                                username, createdByUserId, requestedAt);
 
-                        // TODO: validar en backend y crear la sesión de juego
-                        // gameSessionManager.createGame(player, gameName, players, gameType, time,
-                        // difficulty);
+                        // Convert frontend data to backend model
+                        int timerSeconds = (int) (time * 60);
+                        Apalabrazos.backend.model.QuestionLevel qLevel;
+                        try {
+                            qLevel = Apalabrazos.backend.model.QuestionLevel.fromValue(difficulty);
+                        } catch (Exception e) {
+                            qLevel = Apalabrazos.backend.model.QuestionLevel.MEDIUM; // Fallback
+                        }
+
+                        // Default to 27 questions for now, as frontend doesn't send it yet.
+                        Apalabrazos.backend.model.GamePlayerConfig config = new Apalabrazos.backend.model.GamePlayerConfig(
+                                player, timerSeconds, qLevel, players, 27);
+
+                        // Default GameType to HIGHER_POINTS_WINS
+                        config.setGameType(Apalabrazos.backend.model.GameType.HIGHER_POINTS_WINS);
+
+                        // Publicar el evento de creación de partida
+                        Apalabrazos.backend.events.GameCreationRequestedEvent creationEvent = new Apalabrazos.backend.events.GameCreationRequestedEvent(
+                                config, gameName);
+
+                        Apalabrazos.backend.events.GlobalAsyncEventBus.getInstance().publish(creationEvent);
                     }
 
                     // ── UNKNOWN ──────────────────────────────────────────────────

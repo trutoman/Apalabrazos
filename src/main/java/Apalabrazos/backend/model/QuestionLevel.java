@@ -5,12 +5,12 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * Nivel de dificultad de la pregunta.
- * Valores: TRIVIAL, EASY, DIFFICULT
+ * Valores: EASY, MEDIUM, HARD
  */
 public enum QuestionLevel {
-    TRIVIAL("trivial"),
     EASY("easy"),
-    DIFFICULT("difficult");
+    MEDIUM("medium"),
+    HARD("hard");
 
     private final String value;
 
@@ -20,6 +20,7 @@ public enum QuestionLevel {
 
     /**
      * Get the string value representation
+     * 
      * @return The level value
      */
     @JsonValue
@@ -29,6 +30,7 @@ public enum QuestionLevel {
 
     /**
      * Create a QuestionLevel from a string value
+     * 
      * @param value The string value to parse
      * @return The corresponding QuestionLevel
      */

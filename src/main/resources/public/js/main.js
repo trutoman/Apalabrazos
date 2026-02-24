@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameType: document.getElementById('cfg-game-type')?.value,
                 time: parseFloat(document.getElementById('cfg-time')?.value),
                 difficulty: document.getElementById('cfg-difficulty')?.value,
-                createdBy: currentUsername,
                 requestedAt: Math.floor(Date.now() / 1000),
             };
 

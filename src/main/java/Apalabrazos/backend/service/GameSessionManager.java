@@ -54,7 +54,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get the singleton instance of GameSessionManager
-     * 
+     *
      * @return The singleton instance
      */
     public static GameSessionManager getInstance() {
@@ -82,17 +82,105 @@ public class GameSessionManager implements EventListener {
     }
 
     /**
+     * Valida el nombre de la partida (igual que frontend).
+     */
+    private boolean isValidGameName(String name) {
+        if (name == null)
+            return false;
+        String trimmed = name.trim();
+        if (trimmed.length() < 3 || trimmed.length() > 20)
+            return false;
+        if (!trimmed.matches("^[a-zA-Z0-9 _-]+$"))
+            return false;
+        if (trimmed.contains("  "))
+            return false;
+        return true;
+    }
+
+    /**
+     * Valida la configuración de la partida y retorna el error (null si es válido).
+     */
+    private String validateGameConfig(Apalabrazos.backend.model.GamePlayerConfig config, String roomName) {
+        if (config == null)
+            return "Config is null";
+
+        // 1. Validar nombre de la partida (que llega como tempRoomCode normalmente)
+        if (!isValidGameName(roomName)) {
+            log.warn("Invalid game name: {}", roomName);
+            return "El nombre debe tener de 3 a 20 caracteres alfanuméricos sin espacios dobles.";
+        }
+
+        // 2. Validar número de jugadores (2 a 8)
+        if (config.getMaxPlayers() < 2 || config.getMaxPlayers() > 8) {
+            log.warn("Invalid max players: {}", config.getMaxPlayers());
+            return "El número de jugadores debe estar entre 2 y 8.";
+        }
+
+        // 3. Validar tiempo (30, 60, 120, 180, 300, 420, 600 segundos)
+        int[] validTimes = { 30, 60, 120, 180, 300, 420, 600 };
+        boolean validTime = false;
+        for (int t : validTimes) {
+            if (config.getTimerSeconds() == t) {
+                validTime = true;
+                break;
+            }
+        }
+        if (!validTime) {
+            log.warn("Invalid timer seconds: {}", config.getTimerSeconds());
+            return "Tiempo no válido.";
+        }
+
+        // 4. Validar dificultad
+        if (config.getDifficultyLevel() == null) {
+            log.warn("Difficulty level is null");
+            return "Dificultad no válida.";
+        }
+
+        // 5. Validar tipo de juego
+        if (config.getGameType() == null) {
+            log.warn("Game type is null");
+            return "Tipo de juego no válido.";
+        }
+
+        return null; // OK
+    }
+
+    /**
      * Process game creation request from lobby
      */
     private void handleGameCreationRequested(GameCreationRequestedEvent event) {
-        log.info("Game creation requested by {}", event.getConfig().getPlayer().getName());
+        String tempRoomCode = event.getTempRoomCode();
+        Player player = event.getConfig() != null ? event.getConfig().getPlayer() : null;
+
+        // Validar primero antes de instanciar y asignar recursos
+        String validationError = validateGameConfig(event.getConfig(), tempRoomCode);
+        if (validationError != null) {
+            String requester = (player != null) ? player.getName() : "unknown";
+            log.warn("Game creation rejected due to invalid config from {}: {}", requester, validationError);
+
+            // En caso de error se enviara el mensaje de type GameCreationRequestInvalid con
+            // la causa
+            if (player != null) {
+                player.sendMessage(java.util.Map.of(
+                        "type", "GameCreationRequestInvalid",
+                        "payload", java.util.Map.of("cause", validationError)));
+            }
+            return;
+        }
+
+        log.info("Game creation requested by {}", player.getName());
         GameService gameService = new GameService(event.getConfig());
         String sessionId = addSession(gameService);
-        String tempRoomCode = event.getTempRoomCode();
 
         // Guardar quién es el creador de esta sesión
-        if (sessionId != null && event.getConfig().getPlayer() != null) {
-            sessionCreators.put(sessionId, event.getConfig().getPlayer().getPlayerID());
+        if (sessionId != null) {
+            sessionCreators.put(sessionId, player.getPlayerID());
+
+            // En caso de partida creada ok se enviara un mensaje de vuelta type
+            // GameCreationRequestValid
+            player.sendMessage(java.util.Map.of(
+                    "type", "GameCreationRequestValid",
+                    "payload", java.util.Map.of("roomId", sessionId)));
         }
 
         // Publish event to notify lobby that session was created
@@ -184,7 +272,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Add a new active game session to the registry
-     * 
+     *
      * @param gameService The GameService instance to add
      * @return The session ID of the added service
      */
@@ -200,7 +288,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Remove a game session from the active registry by GameService instance
-     * 
+     *
      * @param gameService The GameService instance to remove
      */
     public void removeSession(GameService gameService) {
@@ -214,7 +302,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Remove a game session by its session ID
-     * 
+     *
      * @param sessionId The unique session ID
      */
     public void removeSessionById(String sessionId) {
@@ -225,7 +313,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get all active game sessions
-     * 
+     *
      * @return List of active GameService instances
      */
     public List<GameService> getActiveSessions() {
@@ -234,7 +322,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get the number of active sessions
-     * 
+     *
      * @return Number of active game sessions
      */
     public int getActiveSessionCount() {
@@ -243,7 +331,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get a specific session by its ID
-     * 
+     *
      * @param sessionId The unique session ID
      * @return The GameService for this session, or null if not found
      */
@@ -253,7 +341,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Check if a session exists
-     * 
+     *
      * @param gameService The GameService to check
      * @return true if the session is active
      */
@@ -274,7 +362,7 @@ public class GameSessionManager implements EventListener {
     /**
      * Register a new player connection.
      * This is called when a physical connection (WebSocket) is established.
-     * 
+     *
      * @param player The Player object representing the connected user
      * @return true if registered successfully
      */
@@ -304,7 +392,7 @@ public class GameSessionManager implements EventListener {
     /**
      * Unregister a player connection.
      * Called when a connection is closed or times out.
-     * 
+     *
      * @param sessionId The session identifier
      * @return The removed Player, or null if not found
      */
@@ -334,7 +422,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get a player by their session ID
-     * 
+     *
      * @param sessionId The session identifier
      * @return The Player object, or null if not found
      */
@@ -355,7 +443,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get all connected players
-     * 
+     *
      * @return List of all active players
      */
     public List<Player> getAllConnectedPlayers() {
@@ -371,7 +459,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Get the count of active connections
-     * 
+     *
      * @return Number of connected players
      */
     public int getActiveConnectionCount() {
@@ -382,7 +470,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Check if a session is active
-     * 
+     *
      * @param sessionId The session identifier
      * @return true if the session exists
      */
@@ -392,7 +480,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Broadcast a message to all connected players
-     * 
+     *
      * @param message The message to broadcast
      */
     public void broadcastToAll(Object message) {
@@ -401,7 +489,7 @@ public class GameSessionManager implements EventListener {
 
     /**
      * Send a message to a specific player
-     * 
+     *
      * @param sessionId The session identifier
      * @param message   The message to send
      * @return true if message was sent

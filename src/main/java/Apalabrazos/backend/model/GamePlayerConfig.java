@@ -10,17 +10,17 @@ public class GamePlayerConfig {
     private GameType gameType;
     private String roomId;
 
-
     public GamePlayerConfig() {
         this.player = new Player("Jugador1", "default_avatar.png");
         this.timerSeconds = 240;
-        this.difficultyLevel = QuestionLevel.EASY;
+        this.difficultyLevel = QuestionLevel.MEDIUM;
         this.questionNumber = 27;
         this.maxPlayers = 1;
         this.gameType = GameType.HIGHER_POINTS_WINS;
     }
 
-    public GamePlayerConfig(Player player, int timerSeconds, QuestionLevel difficultyLevel,int playersCount, int questionNumber) {
+    public GamePlayerConfig(Player player, int timerSeconds, QuestionLevel difficultyLevel, int playersCount,
+            int questionNumber) {
         this.player = player;
         this.timerSeconds = timerSeconds;
         this.difficultyLevel = difficultyLevel;
@@ -28,6 +28,7 @@ public class GamePlayerConfig {
         this.questionNumber = questionNumber;
         this.gameType = GameType.HIGHER_POINTS_WINS;
     }
+
     public Player getPlayer() {
         return player;
     }

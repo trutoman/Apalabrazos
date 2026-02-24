@@ -8,7 +8,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Represents the highest level instance of a game session.
- * Contains a map of player instances (playerID -> GameInstance) and manages the game state.
+ * Contains a map of player instances (playerID -> GameInstance) and manages the
+ * game state.
  */
 public class GameGlobal {
 
@@ -21,13 +22,13 @@ public class GameGlobal {
         IDLE,
         CONTROLLER_READY,
         START_VALIDATED,
-        INITIALIZED,           // Ambas condiciones (Controller Ready + Start Validated) se cumplieron
+        INITIALIZED, // Ambas condiciones (Controller Ready + Start Validated) se cumplieron
         PLAYING,
         PAUSED,
         POST
     }
 
-    private Map<String, GameInstance> playerInstances;  // playerID -> GameInstance
+    private Map<String, GameInstance> playerInstances; // playerID -> GameInstance
     private GameGlobalState state;
     private GameType gameType; // Tipo de juego (del modelo)
     private QuestionLevel difficulty;
@@ -43,7 +44,7 @@ public class GameGlobal {
         this.playerInstances = new HashMap<>();
         this.state = GameGlobalState.IDLE;
         this.gameType = GameType.HIGHER_POINTS_WINS;
-        this.difficulty = QuestionLevel.EASY;
+        this.difficulty = QuestionLevel.MEDIUM;
         this.maxPlayers = 1;
         this.numberOfQuestions = 10;
         this.gameDuration = 300; // 5 minutes default
@@ -52,13 +53,14 @@ public class GameGlobal {
 
     /**
      * Constructor from GamePlayerConfig
+     * 
      * @param config The player configuration containing game settings
      */
     public GameGlobal(GamePlayerConfig config) {
         this.playerInstances = new HashMap<>();
         this.state = GameGlobalState.IDLE;
         this.gameType = config.getGameType() != null ? config.getGameType() : GameType.HIGHER_POINTS_WINS;
-        this.difficulty = config.getDifficultyLevel() != null ? config.getDifficultyLevel() : QuestionLevel.EASY;
+        this.difficulty = config.getDifficultyLevel() != null ? config.getDifficultyLevel() : QuestionLevel.MEDIUM;
         this.maxPlayers = config.getMaxPlayers() > 0 ? config.getMaxPlayers() : 1;
         this.numberOfQuestions = config.getQuestionNumber() > 0 ? config.getQuestionNumber() : 10;
         this.gameDuration = config.getTimerSeconds() > 0 ? config.getTimerSeconds() : 300; // 5 minutes default
@@ -67,6 +69,7 @@ public class GameGlobal {
 
     /**
      * Add a player instance to the game
+     * 
      * @param playerId The unique player ID
      * @param instance The GameInstance for this player
      */
@@ -78,6 +81,7 @@ public class GameGlobal {
 
     /**
      * Remove a player from the game
+     * 
      * @param playerId The unique player ID to remove
      */
     public void removePlayer(String playerId) {
@@ -86,6 +90,7 @@ public class GameGlobal {
 
     /**
      * Get a specific player's game instance
+     * 
      * @param playerId The player ID
      * @return The GameInstance for this player, or null if not found
      */
@@ -95,6 +100,7 @@ public class GameGlobal {
 
     /**
      * Get all player instances
+     * 
      * @return Collection of all GameInstance objects
      */
     public Collection<GameInstance> getAllPlayerInstances() {
@@ -103,6 +109,7 @@ public class GameGlobal {
 
     /**
      * Get all player IDs
+     * 
      * @return Set of player IDs
      */
     public java.util.Set<String> getAllPlayerIds() {
@@ -111,6 +118,7 @@ public class GameGlobal {
 
     /**
      * Get the map of player instances
+     * 
      * @return Map of playerID -> GameInstance
      */
     public Map<String, GameInstance> getPlayerInstancesMap() {
@@ -119,6 +127,7 @@ public class GameGlobal {
 
     /**
      * Set the player instances map
+     * 
      * @param playerInstances Map of playerID -> GameInstance
      */
     public void setPlayerInstances(Map<String, GameInstance> playerInstances) {
@@ -127,6 +136,7 @@ public class GameGlobal {
 
     /**
      * Get the current game state
+     * 
      * @return The current GameState
      */
     public GameGlobalState getState() {
@@ -135,6 +145,7 @@ public class GameGlobal {
 
     /**
      * Set the game state
+     * 
      * @param state The new GameState
      */
     public void setState(GameGlobalState state) {
@@ -143,6 +154,7 @@ public class GameGlobal {
 
     /**
      * Get the game type
+     * 
      * @return The GameType
      */
     public GameType getGameType() {
@@ -151,6 +163,7 @@ public class GameGlobal {
 
     /**
      * Set the game type
+     * 
      * @param gameType The new GameType
      */
     public void setGameType(GameType gameType) {
@@ -159,6 +172,7 @@ public class GameGlobal {
 
     /**
      * Get the difficulty level
+     * 
      * @return The current QuestionLevel
      */
     public QuestionLevel getDifficulty() {
@@ -167,10 +181,11 @@ public class GameGlobal {
 
     /**
      * Set the difficulty level
+     * 
      * @param difficulty The new QuestionLevel
      */
     public void setDifficulty(QuestionLevel difficulty) {
-        this.difficulty = difficulty != null ? difficulty : QuestionLevel.EASY;
+        this.difficulty = difficulty != null ? difficulty : QuestionLevel.MEDIUM;
     }
 
     /**
@@ -207,6 +222,7 @@ public class GameGlobal {
 
     /**
      * Get the number of players
+     * 
      * @return The number of players in the game
      */
     public int getPlayerCount() {
@@ -223,6 +239,7 @@ public class GameGlobal {
 
     /**
      * Get the number of questions
+     * 
      * @return The number of questions in the game
      */
     public int getNumberOfQuestions() {
@@ -231,6 +248,7 @@ public class GameGlobal {
 
     /**
      * Set the number of questions
+     * 
      * @param numberOfQuestions The number of questions
      */
     public void setNumberOfQuestions(int numberOfQuestions) {
@@ -239,6 +257,7 @@ public class GameGlobal {
 
     /**
      * Get the game duration
+     * 
      * @return The game duration in seconds
      */
     public int getGameDuration() {
@@ -247,6 +266,7 @@ public class GameGlobal {
 
     /**
      * Set the game duration
+     * 
      * @param gameDuration The game duration in seconds
      */
     public void setGameDuration(int gameDuration) {
@@ -255,6 +275,7 @@ public class GameGlobal {
 
     /**
      * Check if a player is in the game
+     * 
      * @param playerId The player ID to check
      * @return true if the player is in the game
      */
@@ -264,6 +285,7 @@ public class GameGlobal {
 
     /**
      * Get remaining seconds in the game
+     * 
      * @return The remaining seconds
      */
     public int getRemainingSeconds() {
@@ -281,6 +303,7 @@ public class GameGlobal {
 
     /**
      * Check if time is up
+     * 
      * @return true if no time remaining
      */
     public boolean isTimeUp() {
@@ -297,6 +320,7 @@ public class GameGlobal {
     /**
      * Transiciona a CONTROLLER_READY si es posible
      * Retorna true si transición exitosa y se alcanzó INITIALIZED
+     * 
      * @return true si se alcanzó INITIALIZED, false en otro caso
      */
     public synchronized boolean transitionControllerReady() {
@@ -315,6 +339,7 @@ public class GameGlobal {
     /**
      * Transiciona a START_VALIDATED si es posible
      * Retorna true si transición exitosa y se alcanzó INITIALIZED
+     * 
      * @return true si se alcanzó INITIALIZED, false en otro caso
      */
     public synchronized boolean transitionStartValidated() {
@@ -332,6 +357,7 @@ public class GameGlobal {
 
     /**
      * Verifica si el juego ha sido inicializado (ambas condiciones se cumplen)
+     * 
      * @return true si el estado es INITIALIZED
      */
     public boolean isGameInitialized() {

@@ -20,7 +20,7 @@ import java.nio.file.Files;
  */
 public class QuestionJsonGenerator {
     private static final int NUM_QUESTIONS = 100;
-        private static final Path OUTPUT_PATH = Paths.get(
+    private static final Path OUTPUT_PATH = Paths.get(
             "src/main/resources/Apalabrazos/data/questions.json");
 
     public static void main(String[] args) throws IOException {
@@ -37,10 +37,9 @@ public class QuestionJsonGenerator {
                     responses,
                     correctIndex,
                     QuestionStatus.INIT,
-                    QuestionLevel.EASY,
+                    QuestionLevel.MEDIUM,
                     "a",
-                    "init"
-            );
+                    "init");
             questions.add(q);
         }
 
