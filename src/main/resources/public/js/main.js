@@ -172,14 +172,16 @@ LoginUI.init(
 
             const jwtPayload = decodeJwtPayload(token);
             const username = jwtPayload && jwtPayload.username;
-            if (!username) {
-                LoginUI.showError("Error: Token missing username");
+            const userId = jwtPayload && jwtPayload.userId;
+
+            if (!username || !userId) {
+                LoginUI.showError("Error: Token missing required user information");
                 return;
             }
             currentUsername = username; // store for later use (e.g. game creation)
 
-            // 4. Connect to WebSocket with token
-            const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(username)}`;
+            // 4. Connect to WebSocket with token using userId in the path
+            const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(userId)}`;
             console.log("Connecting to WebSocket:", serverUrl);
 
             try {

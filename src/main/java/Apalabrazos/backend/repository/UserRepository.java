@@ -62,10 +62,9 @@ public class UserRepository {
             CosmosQueryRequestOptions options = new CosmosQueryRequestOptions();
 
             CosmosPagedIterable<User> results = container.queryItems(
-                query.replace("@email", "'" + normalizedEmail + "'"),
-                options,
-                User.class
-            );
+                    query.replace("@email", "'" + normalizedEmail + "'"),
+                    options,
+                    User.class);
 
             // Get first result
             for (User user : results) {

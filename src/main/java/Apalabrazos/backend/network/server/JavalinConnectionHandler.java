@@ -49,20 +49,21 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             }
             log.debug("[CONNECT] ✓ Token validado correctamente");
 
-            String username = ctx.pathParam("username");
-            String tokenUsername = jwtService.extractUsername(jwt);
-            log.debug("[CONNECT] Username en URL: {}, Username en token: {}", username, tokenUsername);
+            String userId = ctx.pathParam("userId"); // Changed from username to userId
+            String tokenUserId = jwtService.extractUserId(jwt); // Extract userId from token
+            String tokenUsername = jwtService.extractUsername(jwt); // Still need username for logging/onClientConnect
+            log.debug("[CONNECT] UserId en URL: {}, UserId en token: {}", userId, tokenUserId);
 
-            if (tokenUsername == null || !tokenUsername.equalsIgnoreCase(username)) {
-                log.warn("[CONNECT] ❌ Conexión rechazada: Username mismatch (URL: {}, Token: {})",
-                        username, tokenUsername);
+            if (tokenUserId == null || !tokenUserId.equalsIgnoreCase(userId)) {
+                log.warn("[CONNECT] ❌ Conexión rechazada: UserId mismatch (URL: {}, Token: {})",
+                        userId, tokenUserId);
                 ctx.closeSession(4003, "User mismatch");
                 return;
             }
 
-            String cosmosUserId = jwtService.extractUserId(jwt);
-            log.info("[CONNECT] ✅ Conexión autenticada para usuario: {} (CosmosUserId: {})", username, cosmosUserId);
-            onClientConnect(ctx, username, cosmosUserId);
+            log.info("[CONNECT] ✅ Conexión autenticada para usuario: {} (CosmosUserId: {})", tokenUsername,
+                    tokenUserId);
+            onClientConnect(ctx, tokenUsername, tokenUserId); // Pass username and userId
         } catch (Exception e) {
             log.error("[CONNECT] ❌ Error en autenticación de conexión: {}", e.getMessage(), e);
             try {

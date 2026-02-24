@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  */
 public class EmbeddedWebSocketServer {
 
-        private static final Logger log = LoggerFactory
+    private static final Logger log = LoggerFactory
             .getLogger("Apalabrazos.backend.network.server.EmbeddedWebSocketServer");
 
     private final int port;
@@ -200,10 +200,10 @@ public class EmbeddedWebSocketServer {
 
             log.info("Starting Javalin WebSocket server...");
             // Register WebSocket endpoint
-            app.ws("/ws/game/{username}", ws -> {
-                log.info("[WEBSOCKET] Registering endpoint: /ws/game/{username}");
+            app.ws("/ws/game/{userId}", ws -> {
+                log.info("[WEBSOCKET] Registering endpoint: /ws/game/{userId}");
                 ws.onConnect(ctx -> {
-                    log.info("[WEBSOCKET-CONNECT] Connection received for: {}", ctx.pathParam("username"));
+                    log.info("[WEBSOCKET-CONNECT] Connection received for: {}", ctx.pathParam("userId"));
                     connectionHandler.onConnect(ctx);
                 });
                 ws.onMessage(ctx -> {
