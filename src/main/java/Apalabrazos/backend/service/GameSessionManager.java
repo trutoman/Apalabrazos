@@ -36,8 +36,15 @@ public class GameSessionManager implements EventListener {
     private final Map<UUID, Player> activeConnections;
 
     // ===== Game Session Registry =====
+    /**
+     * Registry de sesiones de juego activas.
+     * Mapea sessionId (UUID único de la partida) a su correspondiente GameService.
+     * Permite acceso rápido a la lógica de juego de cualquier sesión activa.
+     * El creador y nombre de cada partida se obtienen directamente desde GameService.
+     * Key: sessionId (identificador único de la sesión)
+     * Value: GameService (instancia de la lógica de juego)
+     */
     private final Map<String, GameService> activeSessions;
-    private final Map<String, String> sessionCreators; // roomId -> creatorPlayerId
 
     /**
      * Private constructor to prevent direct instantiation
@@ -46,7 +53,6 @@ public class GameSessionManager implements EventListener {
         this.eventBus = GlobalAsyncEventBus.getInstance();
         this.activeConnections = new ConcurrentHashMap<>();
         this.activeSessions = new ConcurrentHashMap<>();
-        this.sessionCreators = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
         log.info("GameSessionManager singleton initialized");
@@ -98,6 +104,43 @@ public class GameSessionManager implements EventListener {
     }
 
     /**
+     * Comprueba si ya existe una partida con este nombre.
+     * Recorre todas las sesiones activas y busca un nombre coincidente (case-insensitive).
+     *
+     * @param gameName El nombre de la partida a validar
+     * @return true si el nombre ya está en uso, false en caso contrario
+     */
+    private boolean isGameNameTaken(String gameName) {
+        if (gameName == null)
+            return false;
+
+        String normalizedName = gameName.trim().toLowerCase();
+        return activeSessions.values().stream()
+                .anyMatch(service -> {
+                    String serviceName = service.getGameName();
+                    return serviceName != null && serviceName.toLowerCase().equals(normalizedName);
+                });
+    }
+
+    /**
+     * Obtiene el ID del jugador creador de una sesión de juego.
+     * Recorre todas las sesiones activas para encontrar el creador.
+     *
+     * @param sessionId El ID de la sesión de juego
+     * @return El ID del creador, o null si la sesión no existe o no tiene creador asignado
+     */
+    private String getSessionCreatorId(String sessionId) {
+        if (sessionId == null)
+            return null;
+
+        GameService service = activeSessions.get(sessionId);
+        if (service != null) {
+            return service.getCreatorPlayerId();
+        }
+        return null;
+    }
+
+    /**
      * Valida la configuración de la partida y retorna el error (null si es válido).
      */
     private String validateGameConfig(Apalabrazos.backend.model.GamePlayerConfig config, String roomName) {
@@ -108,6 +151,12 @@ public class GameSessionManager implements EventListener {
         if (!isValidGameName(roomName)) {
             log.warn("Invalid game name: {}", roomName);
             return "El nombre debe tener de 3 a 20 caracteres alfanuméricos sin espacios dobles.";
+        }
+
+        // 1.5. Validar que no existe ya una partida con este nombre
+        if (isGameNameTaken(roomName)) {
+            log.warn("Game name already exists: {}", roomName);
+            return "El nombre de la partida ya está en uso. Por favor, elige otro nombre.";
         }
 
         // 2. Validar número de jugadores (2 a 8)
@@ -170,11 +219,13 @@ public class GameSessionManager implements EventListener {
 
         log.info("Game creation requested by {}", player.getName());
         GameService gameService = new GameService(event.getConfig());
+        // Asignar creador y nombre de partida antes de agregar a registro
+        gameService.setCreatorPlayerId(player.getPlayerID());
+        gameService.setGameName(tempRoomCode);
         String sessionId = addSession(gameService);
 
-        // Guardar quién es el creador de esta sesión
+        // Guardar información de la sesión
         if (sessionId != null) {
-            sessionCreators.put(sessionId, player.getPlayerID());
 
             // En caso de partida creada ok se enviara un mensaje de vuelta type
             // GameCreationRequestValid
@@ -213,7 +264,7 @@ public class GameSessionManager implements EventListener {
         log.info("Game start requested by {} for room {}", username, roomId);
 
         // Validar que el usuario sea el creador de la partida
-        String creator = sessionCreators.get(roomId);
+        String creator = getSessionCreatorId(roomId);
         if (creator == null) {
             log.error("No se encontró el creador para la sala {}", roomId);
             return;
@@ -280,7 +331,7 @@ public class GameSessionManager implements EventListener {
         if (gameService != null) {
             String sessionId = gameService.getGameSessionId();
             activeSessions.put(sessionId, gameService);
-            log.info("Session added with ID: {}. Active sessions: {}", sessionId, activeSessions.size());
+            log.info("Session added with ID: {} (name: {}). Active sessions: {}", sessionId, gameService.getGameName(), activeSessions.size());
             return sessionId;
         }
         return null;

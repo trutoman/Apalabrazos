@@ -32,6 +32,8 @@ public class GameService implements EventListener {
 
     private TimeService timeService;
     private String gameSessionId; // UUID único para la partida
+    private String creatorPlayerId; // ID del jugador que creó esta partida
+    private String gameName; // Nombre de la partida
 
     public GameService() {
         this.GlobalGameInstance = new GameGlobal();
@@ -52,6 +54,42 @@ public class GameService implements EventListener {
         // Registrarse con listeners separados (evita rebotes entre buses)
         eventBus.addListener(globalListener);
         externalBus.addListener(externalListener);
+    }
+
+    /**
+     * Set the ID of the player who created this game session
+     *
+     * @param creatorId The player ID of the creator
+     */
+    public void setCreatorPlayerId(String creatorId) {
+        this.creatorPlayerId = creatorId;
+    }
+
+    /**
+     * Get the ID of the player who created this game session
+     *
+     * @return The player ID of the creator, or null if not set
+     */
+    public String getCreatorPlayerId() {
+        return creatorPlayerId;
+    }
+
+    /**
+     * Set the name of this game session
+     *
+     * @param name The game name
+     */
+    public void setGameName(String name) {
+        this.gameName = name;
+    }
+
+    /**
+     * Get the name of this game session
+     *
+     * @return The game name, or null if not set
+     */
+    public String getGameName() {
+        return gameName;
     }
 
     /**
