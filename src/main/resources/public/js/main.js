@@ -9,6 +9,10 @@ import { validate_game_creation } from './validation/game-validation.js';
 
 // Module-level session info — populated after a successful login
 let currentUsername = null;
+let isCreateGamePending = false;
+let createGamePendingTimeout = null;
+let hasClearedMockGames = false;
+const createdGameRoomIds = new Set();
 
 // Assign a random accent colour to every card field-value badge
 const CARD_COLORS = ['--explode', '--third', '--green', '--orange'];
@@ -40,6 +44,100 @@ function populateGameSelects() {
     populateSelect('cfg-difficulty', GAME_OPTIONS.difficulties);
 }
 
+function setCreatePendingState(pending) {
+    isCreateGamePending = pending;
+    const btnConfirm = document.getElementById('btn-confirm-create');
+    if (!btnConfirm) return;
+    btnConfirm.disabled = pending;
+    btnConfirm.textContent = pending ? 'Creating...' : 'Create Game';
+}
+
+function toTitleCase(value) {
+    if (!value) return '';
+    return String(value)
+        .toLowerCase()
+        .split(/[_\s-]+/)
+        .map(chunk => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+        .join(' ');
+}
+
+function normalizeGameTypeLabel(type) {
+    if (!type) return 'Classic';
+    const raw = String(type).toUpperCase();
+    if (raw === 'HIGHER_POINTS_WINS') return 'Classic';
+    if (raw === 'NUMBER_WINS') return 'Dominio';
+    return toTitleCase(type);
+}
+
+function normalizeTimeLabel(timeValue) {
+    const n = Number(timeValue);
+    if (!Number.isFinite(n) || n <= 0) return '5 min';
+    if (n < 1) return `${Math.round(n * 60)} s`;
+    return `${n} min`;
+}
+
+function addOnlineGameCard(gameData) {
+    const gamesList = document.getElementById('games-list');
+    if (!gamesList) return;
+
+    const roomId = String(gameData?.roomId || '').trim();
+    if (!roomId || createdGameRoomIds.has(roomId) || gamesList.querySelector(`[data-room-id="${roomId}"]`)) {
+        return;
+    }
+
+    if (!hasClearedMockGames) {
+        gamesList.innerHTML = '';
+        hasClearedMockGames = true;
+    }
+
+    const currentPlayers = Number.isFinite(Number(gameData?.players)) ? Number(gameData.players) : 1;
+    const maxPlayers = Number.isFinite(Number(gameData?.maxPlayers)) ? Number(gameData.maxPlayers) : 2;
+    const name = String(gameData?.name || `Game ${roomId.slice(0, 6)}`).trim();
+    const typeLabel = normalizeGameTypeLabel(gameData?.gameType);
+    const timeLabel = normalizeTimeLabel(gameData?.time);
+    const difficultyLabel = toTitleCase(gameData?.difficulty || 'Medium');
+
+    const card = document.createElement('div');
+    card.className = 'game-card-neo';
+    card.dataset.roomId = roomId;
+
+    card.innerHTML = `
+        <div class="game-card-fields-grid">
+            <div class="game-card-name-field">
+                <span class="game-card-name-text"></span>
+            </div>
+            <div class="game-card-field">
+                <span class="game-card-field-label">Players</span>
+                <span class="game-card-field-value"></span>
+            </div>
+            <div class="game-card-field">
+                <span class="game-card-field-label">Type</span>
+                <span class="game-card-field-value"></span>
+            </div>
+            <div class="game-card-field">
+                <span class="game-card-field-label">Time</span>
+                <span class="game-card-field-value"></span>
+            </div>
+            <div class="game-card-field">
+                <span class="game-card-field-label">Difficulty</span>
+                <span class="game-card-field-value"></span>
+            </div>
+        </div>
+        <button class="btn-join-game" data-room-id="${roomId}">Join</button>
+    `;
+
+    const values = card.querySelectorAll('.game-card-field-value');
+    card.querySelector('.game-card-name-text').textContent = name;
+    values[0].textContent = `${currentPlayers}/${maxPlayers}`;
+    values[1].textContent = typeLabel;
+    values[2].textContent = timeLabel;
+    values[3].textContent = difficultyLabel;
+
+    gamesList.prepend(card);
+    createdGameRoomIds.add(roomId);
+    randomCardColors();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     randomCardColors();
     populateGameSelects();
@@ -49,6 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnConfirm) {
         btnConfirm.addEventListener('click', () => {
             console.log('[CREATE] btn-confirm-create clicked ✅');
+            if (isCreateGamePending) {
+                console.warn('[CREATE] A create request is already pending. Ignoring duplicate click.');
+                return;
+            }
+
             const result = validate_game_creation();
             if (!result.valid) {
                 console.warn('[CREATE] Validation failed:', result.errors);
@@ -70,6 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             console.log('[CREATE] Sending GameCreationRequest:', payload);
             SocketClient.send('GameCreationRequest', payload);
+
+            setCreatePendingState(true);
+            if (createGamePendingTimeout) {
+                clearTimeout(createGamePendingTimeout);
+            }
+            createGamePendingTimeout = setTimeout(() => {
+                setCreatePendingState(false);
+                console.warn('[CREATE] Timeout waiting for GameCreationRequestValid/GameCreationRequestInvalid');
+            }, 10000);
         });
     } else {
         console.error('[CREATE] ❌ btn-confirm-create NOT FOUND in DOM');
@@ -96,6 +208,38 @@ function showCreateGameErrors(errors) {
 function clearCreateGameErrors() {
     const box = document.getElementById('create-game-errors');
     if (box) box.style.display = 'none';
+}
+
+function resetCreateGameForm() {
+    const nameInput = document.getElementById('cfg-game-name');
+    if (nameInput) {
+        nameInput.value = '';
+    }
+
+    const players = document.getElementById('cfg-players');
+    const gameType = document.getElementById('cfg-game-type');
+    const time = document.getElementById('cfg-time');
+    const difficulty = document.getElementById('cfg-difficulty');
+
+    if (players && GAME_OPTIONS.players.length > 0) {
+        const defaultOption = GAME_OPTIONS.players.find(option => option.default) || GAME_OPTIONS.players[0];
+        players.value = defaultOption.value;
+    }
+
+    if (gameType && GAME_OPTIONS.gameTypes.length > 0) {
+        const defaultOption = GAME_OPTIONS.gameTypes.find(option => option.default) || GAME_OPTIONS.gameTypes[0];
+        gameType.value = defaultOption.value;
+    }
+
+    if (time && GAME_OPTIONS.times.length > 0) {
+        const defaultOption = GAME_OPTIONS.times.find(option => option.default) || GAME_OPTIONS.times[0];
+        time.value = defaultOption.value;
+    }
+
+    if (difficulty && GAME_OPTIONS.difficulties.length > 0) {
+        const defaultOption = GAME_OPTIONS.difficulties.find(option => option.default) || GAME_OPTIONS.difficulties[0];
+        difficulty.value = defaultOption.value;
+    }
 }
 
 function decodeJwtPayload(token) {
@@ -229,6 +373,33 @@ LoginUI.init(
                             const isOwn = username_originator === username;
                             LobbyUI.addMessage(username_originator, text, isOwn);
                         }
+                    } else if (data.type === 'GameCreationRequestValid') {
+                        if (createGamePendingTimeout) {
+                            clearTimeout(createGamePendingTimeout);
+                            createGamePendingTimeout = null;
+                        }
+                        setCreatePendingState(false);
+                        clearCreateGameErrors();
+                        resetCreateGameForm();
+
+                        if (_createCard) {
+                            _createCard.classList.add('hidden');
+                        }
+
+                        const payload = data?.payload || {};
+                        console.log('[CREATE] GameCreationRequestValid received:', payload);
+                        addOnlineGameCard(payload);
+                    } else if (data.type === 'GameCreationRequestInvalid') {
+                        if (createGamePendingTimeout) {
+                            clearTimeout(createGamePendingTimeout);
+                            createGamePendingTimeout = null;
+                        }
+                        setCreatePendingState(false);
+
+                        const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
+                        const errors = [cause];
+                        console.warn('[CREATE] Validation failed:', errors);
+                        showCreateGameErrors(errors);
                     }
                 } catch (e) {
                     // Ignore parsing errors for non-JSON messages

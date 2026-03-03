@@ -229,9 +229,34 @@ public class GameSessionManager implements EventListener {
 
             // En caso de partida creada ok se enviara un mensaje de vuelta type
             // GameCreationRequestValid
+            Apalabrazos.backend.model.GameGlobal createdGame = gameService.getGameInstance();
+            int maxPlayers = createdGame != null ? createdGame.getMaxPlayers() : event.getConfig().getMaxPlayers();
+            int currentPlayers = createdGame != null ? createdGame.getPlayerCount() : 0;
+            if (currentPlayers <= 0) {
+            currentPlayers = 1; // el creador cuenta como jugador conectado en lobby
+            }
+
+            int timeSeconds = createdGame != null ? createdGame.getGameDuration() : event.getConfig().getTimerSeconds();
+            int timeMinutes = Math.max(1, (int) Math.round(timeSeconds / 60.0));
+
+            String difficulty = createdGame != null && createdGame.getDifficulty() != null
+                ? createdGame.getDifficulty().name()
+                : event.getConfig().getDifficultyLevel().name();
+
+            String gameType = createdGame != null && createdGame.getGameType() != null
+                ? createdGame.getGameType().name()
+                : event.getConfig().getGameType().name();
+
             player.sendMessage(java.util.Map.of(
                     "type", "GameCreationRequestValid",
-                    "payload", java.util.Map.of("roomId", sessionId)));
+                "payload", java.util.Map.of(
+                    "roomId", sessionId,
+                    "name", gameService.getGameName(),
+                    "players", currentPlayers,
+                    "maxPlayers", maxPlayers,
+                    "gameType", gameType,
+                    "time", timeMinutes,
+                    "difficulty", difficulty)));
         }
 
         // Publish event to notify lobby that session was created

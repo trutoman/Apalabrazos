@@ -1,9 +1,9 @@
 package Apalabrazos.backend.network;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class WebSocketMessageSender implements MessageSender {
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketMessageSender.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // La sesión WebSocket de Javalin
     private final io.javalin.websocket.WsContext session;
@@ -50,8 +51,13 @@ public class WebSocketMessageSender implements MessageSender {
         }
 
         try {
-            // Convertir a String (JSON) - Por ahora toString() para probar
-            String messageStr = message instanceof String ? (String) message : message.toString();
+            // Convertir a JSON usando Jackson
+            String messageStr;
+            if (message instanceof String) {
+                messageStr = (String) message;
+            } else {
+                messageStr = objectMapper.writeValueAsString(message);
+            }
 
             log.debug("[SEND] 📤 Enviando mensaje a {}: {}", clientId, messageStr);
 
