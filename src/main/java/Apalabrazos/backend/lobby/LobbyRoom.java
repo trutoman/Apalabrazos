@@ -1,7 +1,7 @@
 package Apalabrazos.backend.lobby;
 
 import Apalabrazos.backend.model.Player;
-import Apalabrazos.backend.service.GameSessionManager;
+import Apalabrazos.backend.service.MatchesManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
@@ -63,7 +63,7 @@ public class LobbyRoom {
      * @param sessionManager     The GameSessionManager used to resolve sessions →
      *                           Players.
      */
-    public void broadcastChat(String usernameOriginator, String text, GameSessionManager sessionManager) {
+    public void broadcastChat(String usernameOriginator, String text, MatchesManager sessionManager) {
         try {
             // Build: { "type": "chat_message", "payload": { "text": "...",
             // "username_originator": "..." } }

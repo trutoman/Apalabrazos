@@ -6,7 +6,7 @@ import Apalabrazos.backend.model.Player;
 import Apalabrazos.backend.model.User;
 import Apalabrazos.backend.network.ConnectionHandler;
 import Apalabrazos.backend.repository.UserRepository;
-import Apalabrazos.backend.service.GameSessionManager;
+import Apalabrazos.backend.service.MatchesManager;
 import Apalabrazos.backend.tools.JwtService;
 import Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;

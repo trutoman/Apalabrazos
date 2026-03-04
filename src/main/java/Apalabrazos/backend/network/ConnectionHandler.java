@@ -2,7 +2,7 @@ package Apalabrazos.backend.network;
 
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.Player;
-import Apalabrazos.backend.service.GameSessionManager;
+import Apalabrazos.backend.service.MatchesManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +26,7 @@ public abstract class ConnectionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ConnectionHandler.class);
 
-    protected final GameSessionManager sessionManager = GameSessionManager.getInstance();
+    protected final MatchesManager sessionManager = MatchesManager.getInstance();
 
     /**
      * Se invoca cuando un cliente se conecta.

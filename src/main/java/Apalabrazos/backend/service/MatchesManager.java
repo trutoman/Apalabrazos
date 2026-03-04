@@ -17,17 +17,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * Handles creation, deletion, and listing of active game sessions.
  * Singleton pattern to ensure only one instance manages all sessions.
  *
- * This is the Level 2 - Session Manager:
+ * This is the Level 2 - Match Manager:
  * - Maintains active connections (Map<SessionID, Player>)
- * - Routes events to appropriate game sessions
+ * - Routes events to appropriate matches based on session IDs
  * - Handles player lifecycle (connect, disconnect, reconnect)
  */
-public class GameSessionManager implements EventListener {
+public class MatchesManager implements EventListener {
 
-    private static final Logger log = LoggerFactory.getLogger(GameSessionManager.class);
+    private static final Logger log = LoggerFactory.getLogger(MatchesManager.class);
 
     // Singleton instance
-    private static volatile GameSessionManager instance;
+    private static volatile MatchesManager instance;
 
     private final AsyncEventBus eventBus;
 
@@ -35,39 +35,39 @@ public class GameSessionManager implements EventListener {
     // Maps physical connections (sessionId) to Player objects
     private final Map<UUID, Player> activeConnections;
 
-    // ===== Game Session Registry =====
+    // ===== Match Registry =====
     /**
-     * Registry de sesiones de juego activas.
-     * Mapea sessionId (UUID único de la partida) a su correspondiente GameService.
-     * Permite acceso rápido a la lógica de juego de cualquier sesión activa.
-     * El creador y nombre de cada partida se obtienen directamente desde GameService.
-     * Key: sessionId (identificador único de la sesión)
+     * Registry de matches de juego activas.
+     * Mapea matchId (UUID único de la partida) a su correspondiente GameService.
+     * Permite acceso rápido a la lógica de juego de cualquier match activo.
+     * El creador y nombre de cada match se obtienen directamente desde GameService.
+     * Key: matchId (identificador único del match, generado por GameService)
      * Value: GameService (instancia de la lógica de juego)
      */
-    private final Map<String, GameService> activeSessions;
+    private final Map<String, GameService> activeMatches;
 
     /**
      * Private constructor to prevent direct instantiation
      */
-    private GameSessionManager() {
+    private MatchesManager() {
         this.eventBus = GlobalAsyncEventBus.getInstance();
         this.activeConnections = new ConcurrentHashMap<>();
-        this.activeSessions = new ConcurrentHashMap<>();
+        this.activeMatches = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
-        log.info("GameSessionManager singleton initialized");
+        log.info("MatchesManager singleton initialized");
     }
 
     /**
-     * Get the singleton instance of GameSessionManager
+     * Get the singleton instance of MatchesManager
      *
      * @return The singleton instance
      */
-    public static GameSessionManager getInstance() {
+    public static MatchesManager getInstance() {
         if (instance == null) {
-            synchronized (GameSessionManager.class) {
+            synchronized (MatchesManager.class) {
                 if (instance == null) {
-                    instance = new GameSessionManager();
+                    instance = new MatchesManager();
                 }
             }
         }
@@ -78,8 +78,8 @@ public class GameSessionManager implements EventListener {
     public void onEvent(GameEvent event) {
         if (event instanceof GameCreationRequestedEvent) {
             handleGameCreationRequested((GameCreationRequestedEvent) event);
-        } else if (event instanceof GetGameSessionInfoEvent) {
-            handleGetGameSessionInfo((GetGameSessionInfoEvent) event);
+        } else if (event instanceof GetMatchInfoEvent) {
+            handleGetMatchInfo((GetMatchInfoEvent) event);
         } else if (event instanceof PlayerJoinedEvent) {
             handlePlayerJoined((PlayerJoinedEvent) event);
         } else if (event instanceof GameStartedRequestEvent) {
@@ -115,7 +115,7 @@ public class GameSessionManager implements EventListener {
             return false;
 
         String normalizedName = gameName.trim().toLowerCase();
-        return activeSessions.values().stream()
+        return activeMatches.values().stream()
                 .anyMatch(service -> {
                     String serviceName = service.getGameName();
                     return serviceName != null && serviceName.toLowerCase().equals(normalizedName);
@@ -126,14 +126,14 @@ public class GameSessionManager implements EventListener {
      * Obtiene el ID del jugador creador de una sesión de juego.
      * Recorre todas las sesiones activas para encontrar el creador.
      *
-     * @param sessionId El ID de la sesión de juego
+     * @param matchId El ID de la sesión de juego
      * @return El ID del creador, o null si la sesión no existe o no tiene creador asignado
      */
-    private String getSessionCreatorId(String sessionId) {
-        if (sessionId == null)
+    private String getMatchCreatorId(String matchId) {
+        if (matchId == null)
             return null;
 
-        GameService service = activeSessions.get(sessionId);
+        GameService service = activeMatches.get(matchId);
         if (service != null) {
             return service.getCreatorPlayerId();
         }
@@ -141,22 +141,22 @@ public class GameSessionManager implements EventListener {
     }
 
     /**
-     * Valida la configuración de la partida y retorna el error (null si es válido).
+     * Valida la configuración del match y retorna el error (null si es válido).
      */
     private String validateGameConfig(Apalabrazos.backend.model.GamePlayerConfig config, String roomName) {
         if (config == null)
             return "Config is null";
 
-        // 1. Validar nombre de la partida (que llega como tempRoomCode normalmente)
+        // 1. Validar nombre del match (que llega como tempRoomCode normalmente)
         if (!isValidGameName(roomName)) {
-            log.warn("Invalid game name: {}", roomName);
+            log.warn("Invalid match name: {}", roomName);
             return "El nombre debe tener de 3 a 20 caracteres alfanuméricos sin espacios dobles.";
         }
 
-        // 1.5. Validar que no existe ya una partida con este nombre
+        // 1.5. Validar que no existe ya un match con este nombre
         if (isGameNameTaken(roomName)) {
-            log.warn("Game name already exists: {}", roomName);
-            return "El nombre de la partida ya está en uso. Por favor, elige otro nombre.";
+            log.warn("Match name already exists: {}", roomName);
+            return "El nombre del match ya está en uso. Por favor, elige otro nombre.";
         }
 
         // 2. Validar número de jugadores (2 a 8)
@@ -222,10 +222,10 @@ public class GameSessionManager implements EventListener {
         // Asignar creador y nombre de partida antes de agregar a registro
         gameService.setCreatorPlayerId(player.getPlayerID());
         gameService.setGameName(tempRoomCode);
-        String sessionId = addSession(gameService);
+        String matchIdString = addMatch(gameService);
 
-        // Guardar información de la sesión
-        if (sessionId != null) {
+        // Guardar información de la partida
+        if (matchIdString != null) {
 
             // En caso de partida creada ok se enviara un mensaje de vuelta type
             // GameCreationRequestValid
@@ -250,7 +250,7 @@ public class GameSessionManager implements EventListener {
             player.sendMessage(java.util.Map.of(
                     "type", "GameCreationRequestValid",
                 "payload", java.util.Map.of(
-                    "roomId", sessionId,
+                    "roomId", matchIdString,
                     "name", gameService.getGameName(),
                     "players", currentPlayers,
                     "maxPlayers", maxPlayers,
@@ -259,23 +259,23 @@ public class GameSessionManager implements EventListener {
                     "difficulty", difficulty)));
         }
 
-        // Publish event to notify lobby that session was created
-        if (sessionId != null) {
-            GameSessionCreatedEvent sessionCreatedEvent = new GameSessionCreatedEvent(tempRoomCode, sessionId,
-                    gameService);
+        // Publish event to notify lobby that match was created
+        if (matchIdString != null) {
+            GameMatchCreatedEvent sessionCreatedEvent =
+                new GameMatchCreatedEvent(tempRoomCode, matchIdString, gameService);
             eventBus.publish(sessionCreatedEvent);
         }
     }
 
     /**
-     * Send session information back to listeners when requested from the lobby
+     * Send match information back to listeners when requested from the lobby
      */
-    private void handleGetGameSessionInfo(GetGameSessionInfoEvent event) {
-        String roomCode = event.getRoomCode();
-        GameService service = getSessionById(roomCode);
+    private void handleGetMatchInfo(GetMatchInfoEvent event) {
+        String matchId = event.getMatchId();
+        GameService service = getMatchById(matchId);
         if (service != null) {
-            // Reuse GameSessionCreatedEvent to deliver the GameService reference
-            eventBus.publish(new GameSessionCreatedEvent(roomCode, roomCode, service));
+            // Reuse GameMatchCreatedEvent to deliver the GameService reference
+            eventBus.publish(new GameMatchCreatedEvent(matchId, matchId, service));
         }
     }
 
@@ -289,7 +289,7 @@ public class GameSessionManager implements EventListener {
         log.info("Game start requested by {} for room {}", username, roomId);
 
         // Validar que el usuario sea el creador de la partida
-        String creator = getSessionCreatorId(roomId);
+        String creator = getMatchCreatorId(roomId);
         if (creator == null) {
             log.error("No se encontró el creador para la sala {}", roomId);
             return;
@@ -301,7 +301,7 @@ public class GameSessionManager implements EventListener {
         }
 
         // Obtener el GameService y validar inicio
-        GameService service = getSessionById(roomId);
+        GameService service = getMatchById(roomId);
         if (service != null) {
             service.GameStartedValid();
             log.info("Validación exitosa. Juego iniciado por {} en sala {}", username, roomId);
@@ -322,7 +322,7 @@ public class GameSessionManager implements EventListener {
             return;
         }
         // En multijugador, cada GameInstance manejará sus propios jugadores
-        GameService service = getSessionById(roomId);
+        GameService service = getMatchById(roomId);
         if (service != null) {
             GameGlobal gameInstance = service.getGameInstance();
             boolean alreadyInRoom = gameInstance != null && gameInstance.hasPlayer(playerId);
@@ -347,31 +347,31 @@ public class GameSessionManager implements EventListener {
     }
 
     /**
-     * Add a new active game session to the registry
+     * Add a new active match to the registry
      *
      * @param gameService The GameService instance to add
-     * @return The session ID of the added service
+     * @return The match ID of the added service
      */
-    public String addSession(GameService gameService) {
+    public String addMatch(GameService gameService) {
         if (gameService != null) {
-            String sessionId = gameService.getGameSessionId();
-            activeSessions.put(sessionId, gameService);
-            log.info("Session added with ID: {} (name: {}). Active sessions: {}", sessionId, gameService.getGameName(), activeSessions.size());
-            return sessionId;
+            String matchId = gameService.getMatchId();
+            activeMatches.put(matchId, gameService);
+            log.info("Match added with ID: {} (name: {}). Active matches: {}", matchId, gameService.getGameName(), activeMatches.size());
+            return matchId;
         }
         return null;
     }
 
     /**
-     * Remove a game session from the active registry by GameService instance
+     * Remove a match from the active registry by GameService instance
      *
      * @param gameService The GameService instance to remove
      */
-    public void removeSession(GameService gameService) {
+    public void removeMatch(GameService gameService) {
         if (gameService != null) {
-            String sessionId = gameService.getGameSessionId();
-            if (activeSessions.remove(sessionId) != null) {
-                log.info("Session removed with ID: {}. Active sessions: {}", sessionId, activeSessions.size());
+            String matchId = gameService.getMatchId();
+            if (activeMatches.remove(matchId) != null) {
+                log.info("Match removed with ID: {}. Active matches: {}", matchId, activeMatches.size());
             }
         }
     }
@@ -379,58 +379,58 @@ public class GameSessionManager implements EventListener {
     /**
      * Remove a game session by its session ID
      *
-     * @param sessionId The unique session ID
+     * @param matchId The unique match ID
      */
-    public void removeSessionById(String sessionId) {
-        if (sessionId != null && activeSessions.remove(sessionId) != null) {
-            log.info("Session removed with ID: {}. Active sessions: {}", sessionId, activeSessions.size());
+    public void removeMatchById(String matchId) {
+        if (matchId != null && activeMatches.remove(matchId) != null) {
+            log.info("Match removed with ID: {}. Active matches: {}", matchId, activeMatches.size());
         }
     }
 
     /**
-     * Get all active game sessions
+     * Get all active matches
      *
      * @return List of active GameService instances
      */
-    public List<GameService> getActiveSessions() {
-        return new ArrayList<>(activeSessions.values());
+    public List<GameService> getActiveMatches() {
+        return new ArrayList<>(activeMatches.values());
     }
 
     /**
-     * Get the number of active sessions
+     * Get the number of active matches
      *
-     * @return Number of active game sessions
+     * @return Number of active matches
      */
-    public int getActiveSessionCount() {
-        return activeSessions.size();
+    public int getActiveMatchCount() {
+        return activeMatches.size();
     }
 
     /**
-     * Get a specific session by its ID
+     * Get a specific match by its ID
      *
-     * @param sessionId The unique session ID
-     * @return The GameService for this session, or null if not found
+     * @param matchId The unique match ID
+     * @return The GameService for this match, or null if not found
      */
-    public GameService getSessionById(String sessionId) {
-        return sessionId != null ? activeSessions.get(sessionId) : null;
+    public GameService getMatchById(String matchId) {
+        return matchId != null ? activeMatches.get(matchId) : null;
     }
 
     /**
-     * Check if a session exists
+     * Check if a match exists
      *
      * @param gameService The GameService to check
-     * @return true if the session is active
+     * @return true if the match is active
      */
-    public boolean isSessionActive(GameService gameService) {
-        return gameService != null && activeSessions.containsKey(gameService.getGameSessionId());
+    public boolean isMatchActive(GameService gameService) {
+        return gameService != null && activeMatches.containsKey(gameService.getMatchId());
     }
 
     /**
-     * Clear all active sessions
+     * Clear all active matches
      */
-    public void clearAllSessions() {
-        activeSessions.clear();
-        log.info("All sessions cleared");
+    public void clearAllMatches() {
+        activeMatches.clear();
+        log.info("All matches cleared");
     }
 
     // ===== Connection Management (Level 1 Bridge) =====

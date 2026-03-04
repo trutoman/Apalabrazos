@@ -31,7 +31,7 @@ public class GameService implements EventListener {
 
 
     private TimeService timeService;
-    private String gameSessionId; // UUID único para la partida
+    private String matchId; // UUID único para la partida
     private String creatorPlayerId; // ID del jugador que creó esta partida
     private String gameName; // Nombre de la partida
 
@@ -39,7 +39,7 @@ public class GameService implements EventListener {
         this.GlobalGameInstance = new GameGlobal();
         this.eventBus = GlobalEventBus.getInstance();
         this.externalBus = new EventBus();
-        this.gameSessionId = generateGameSessionId();
+        this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
         eventBus.addListener(globalListener);
         externalBus.addListener(externalListener);
@@ -50,7 +50,7 @@ public class GameService implements EventListener {
         this.GlobalGameInstance = new GameGlobal(playerConfig);
         this.eventBus = GlobalEventBus.getInstance();
         this.externalBus = new EventBus();
-        this.gameSessionId = generateGameSessionId();
+        this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
         eventBus.addListener(globalListener);
         externalBus.addListener(externalListener);
@@ -222,22 +222,22 @@ public class GameService implements EventListener {
      * Obtener el ID único de esta sesión de juego
      * @return String con 16 caracteres alfanuméricos
      */
-    public String getGameSessionId() {
-        return gameSessionId;
+    public String getMatchId() {
+        return matchId;
     }
 
     /**
      * Generar un UUID único para la partida: 16 caracteres alfanuméricos
      * @return String con 16 caracteres (mayúsculas, minúsculas y dígitos)
      */
-    private String generateGameSessionId() {
+    private String generateMatchId() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        StringBuilder sessionId = new StringBuilder();
+        StringBuilder matchId = new StringBuilder();
         Random random = new Random();
         for (int i = 0; i < 8; i++) {
-            sessionId.append(chars.charAt(random.nextInt(chars.length())));
+            matchId.append(chars.charAt(random.nextInt(chars.length())));
         }
-        return sessionId.toString();
+        return matchId.toString();
     }
 
     /**

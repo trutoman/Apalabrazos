@@ -6,15 +6,15 @@ import Apalabrazos.backend.service.GameService;
  * Event published when a new game session has been successfully created in GameSessionManager.
  * Contains the session ID and metadata about the newly created session.
  */
-public class GameSessionCreatedEvent extends GameEvent {
+public class GameMatchCreatedEvent extends GameEvent {
 
     private final String tempRoomCode;
-    private final String sessionId;
+    private final String matchId;
     private final GameService gameService;
 
-    public GameSessionCreatedEvent(String tempRoomCode, String sessionId, GameService gameService) {
+    public GameMatchCreatedEvent(String tempRoomCode, String matchId, GameService gameService) {
         this.tempRoomCode = tempRoomCode;
-        this.sessionId = sessionId;
+        this.matchId = matchId;
         this.gameService = gameService;
     }
 
@@ -22,8 +22,8 @@ public class GameSessionCreatedEvent extends GameEvent {
         return tempRoomCode;
     }
 
-    public String getSessionId() {
-        return sessionId;
+    public String getMatchId() {
+        return matchId;
     }
 
     public GameService getGameService() {
