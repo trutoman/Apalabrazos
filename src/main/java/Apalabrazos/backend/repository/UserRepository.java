@@ -9,6 +9,9 @@ import com.azure.cosmos.util.CosmosPagedIterable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class UserRepository {
     private static final Logger log = LoggerFactory.getLogger(UserRepository.class);
 
@@ -50,29 +53,10 @@ public class UserRepository {
                 return null;
             }
 
-            String normalizedEmail = email.trim().toLowerCase();
-            CosmosContainer container = CosmosDBConfig.getUserContainer();
-
-            if (container == null) {
-                log.warn("Cosmos DB container not initialized, cannot find user by email");
-                return null;
+            List<User> candidates = findByEmailCandidates(email);
+            if (!candidates.isEmpty()) {
+                return candidates.get(0);
             }
-
-            String query = "SELECT * FROM c WHERE c.email = @email";
-            CosmosQueryRequestOptions options = new CosmosQueryRequestOptions();
-
-            CosmosPagedIterable<User> results = container.queryItems(
-                    query.replace("@email", "'" + normalizedEmail + "'"),
-                    options,
-                    User.class);
-
-            // Get first result
-            for (User user : results) {
-                log.debug("User found by email: {}", normalizedEmail);
-                return user;
-            }
-
-            log.debug("No user found with email: {}", normalizedEmail);
             return null;
 
         } catch (CosmosException e) {
@@ -81,6 +65,41 @@ public class UserRepository {
         } catch (Exception e) {
             log.error("Unexpected error finding user by email {}: {}", email, e.getMessage());
             return null;
+        }
+    }
+
+    public List<User> findByEmailCandidates(String email) {
+        List<User> users = new ArrayList<>();
+        try {
+            if (email == null || email.isBlank()) {
+                return users;
+            }
+
+            String normalizedEmail = email.trim().toLowerCase();
+            CosmosContainer container = CosmosDBConfig.getUserContainer();
+
+            if (container == null) {
+                log.warn("Cosmos DB container not initialized, cannot find user by email");
+                return users;
+            }
+
+            String query = "SELECT * FROM c WHERE LOWER(c.email) = @email ORDER BY c._ts DESC";
+            CosmosQueryRequestOptions options = new CosmosQueryRequestOptions();
+
+            CosmosPagedIterable<User> results = container.queryItems(
+                    query.replace("@email", "'" + normalizedEmail + "'"),
+                    options,
+                    User.class);
+
+            for (User user : results) {
+                users.add(user);
+            }
+
+            log.debug("Users found by email {}: {}", normalizedEmail, users.size());
+            return users;
+        } catch (Exception e) {
+            log.error("Error listing users by email {}: {}", email, e.getMessage());
+            return users;
         }
     }
 

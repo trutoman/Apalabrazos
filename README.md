@@ -35,6 +35,16 @@ Ejemplo:
 - Compilar: mvn clean package
 - Ejecutar JavaFX: mvn javafx:run
 
+## Docker (backend)
+
+- Imagen: `Dockerfile` en raíz.
+- Run local con variables reales por entorno.
+- Despliegue productivo en VPS documentado en [docs/VPS_DEPLOY.md](docs/VPS_DEPLOY.md).
+
+## Documentación de la sesión de hoy
+
+- Registro de tareas: [docs/README-2026-04-02.md](docs/README-2026-04-02.md)
+
 ## Estructura del proyecto
 
 - Código Java: src/main/java

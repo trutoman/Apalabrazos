@@ -2,16 +2,12 @@ package Apalabrazos.backend.network.server;
 
 import Apalabrazos.backend.dto.LoginRequest;
 import Apalabrazos.backend.dto.RegisterRequest;
-import Apalabrazos.backend.model.Player;
 import Apalabrazos.backend.model.User;
-import Apalabrazos.backend.network.ConnectionHandler;
 import Apalabrazos.backend.repository.UserRepository;
-import Apalabrazos.backend.service.MatchesManager;
 import Apalabrazos.backend.tools.JwtService;
 import Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
-import io.javalin.websocket.WsContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +51,8 @@ public class EmbeddedWebSocketServer {
 
     /**
      * Starts the WebSocket server.
-     * Orchestrates the initialization of the Javalin application with all routes and endpoints.
+     * Orchestrates the initialization of the Javalin application with all routes
+     * and endpoints.
      */
     public void start() {
         try {
@@ -121,8 +118,8 @@ public class EmbeddedWebSocketServer {
                 log.info("[LOGIN] Request for email: {}", req.email);
 
                 // Find user by email
-                User user = userRepository.findByEmail(req.email);
-                if (user == null) {
+                java.util.List<User> candidates = userRepository.findByEmailCandidates(req.email);
+                if (candidates.isEmpty()) {
                     ctx.status(401).json(new java.util.HashMap<String, String>() {
                         {
                             put("status", "error");
@@ -133,9 +130,18 @@ public class EmbeddedWebSocketServer {
                     return;
                 }
 
-                // Verify password
-                String hashedInputPassword = PasswordHasher.hashPassword(req.pass, user.salt);
-                if (!hashedInputPassword.equals(user.password)) {
+                // Verify password against all candidates (handles historical duplicate emails)
+                User authenticatedUser = null;
+                for (User candidate : candidates) {
+                    String candidateSalt = candidate.salt == null ? "" : candidate.salt;
+                    String hashedInputPassword = PasswordHasher.hashPassword(req.pass, candidateSalt);
+                    if (hashedInputPassword.equals(candidate.password)) {
+                        authenticatedUser = candidate;
+                        break;
+                    }
+                }
+
+                if (authenticatedUser == null) {
                     ctx.status(401).json(new java.util.HashMap<String, String>() {
                         {
                             put("status", "error");
@@ -147,7 +153,7 @@ public class EmbeddedWebSocketServer {
                 }
 
                 // Login successful - generate JWT token
-                String token = jwtService.generateToken(user);
+                String token = jwtService.generateToken(authenticatedUser);
 
                 ctx.json(new java.util.HashMap<String, String>() {
                     {
@@ -155,7 +161,7 @@ public class EmbeddedWebSocketServer {
                         put("token", token);
                     }
                 });
-                log.info("Login successful for user: {}", user.username);
+                log.info("Login successful for user: {}", authenticatedUser.username);
 
             } catch (Exception e) {
                 log.error("Error processing login request: {}", e.getMessage());
@@ -193,6 +199,19 @@ public class EmbeddedWebSocketServer {
 
                 log.info("Received REGISTER request -> User: {}, Email: {}, Password: [PROTECTED]", req.username,
                         req.email);
+
+                // Prevent duplicate users with same email
+                User existing = userRepository.findByEmail(req.email);
+                if (existing != null) {
+                    ctx.status(409).json(new java.util.HashMap<String, String>() {
+                        {
+                            put("status", "error");
+                            put("message", "Email already registered");
+                        }
+                    });
+                    log.warn("Register rejected: email already exists {}", req.email);
+                    return;
+                }
 
                 // Generate salt and hash password
                 String salt = PasswordHasher.generateSalt();
@@ -234,7 +253,8 @@ public class EmbeddedWebSocketServer {
 
     /**
      * Registers the WebSocket endpoint /ws/game/{userId}.
-     * Responsibility: WebSocket endpoint registration and connection lifecycle management.
+     * Responsibility: WebSocket endpoint registration and connection lifecycle
+     * management.
      */
     private void registerWebSocketEndpoints() {
         log.info("Starting Javalin WebSocket server...");
