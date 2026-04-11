@@ -100,18 +100,29 @@ public class LobbyRoom {
      * @param sessionManager The MatchesManager used to resolve sessions -> Players.
      */
     public void broadcastMatchCreated(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        broadcastMatchEvent("LobbyMatchCreated", matchSummary, sessionManager);
+    }
+
+    /**
+     * Broadcasts an updated match summary to all players currently in the lobby.
+     */
+    public void broadcastMatchUpdated(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        broadcastMatchEvent("LobbyMatchUpdated", matchSummary, sessionManager);
+    }
+
+    private void broadcastMatchEvent(String type, Map<String, Object> matchSummary, MatchesManager sessionManager) {
         if (matchSummary == null || matchSummary.isEmpty()) {
             return;
         }
 
         try {
             ObjectNode message = mapper.createObjectNode();
-            message.put("type", "LobbyMatchCreated");
+            message.put("type", type);
             message.set("payload", mapper.valueToTree(matchSummary));
 
             String json = mapper.writeValueAsString(message);
-            log.info("[LOBBY-MATCH] Broadcasting new match '{}' to {} lobby recipients",
-                    matchSummary.getOrDefault("roomId", "unknown"), sessions.size());
+            log.info("[LOBBY-MATCH] Broadcasting event {} for match '{}' to {} lobby recipients",
+                    type, matchSummary.getOrDefault("roomId", "unknown"), sessions.size());
 
             for (UUID sessionId : sessions) {
                 Player player = sessionManager.getPlayerBySessionId(sessionId);
@@ -122,7 +133,7 @@ public class LobbyRoom {
                 }
             }
         } catch (Exception e) {
-            log.error("[LOBBY-MATCH] Error broadcasting created match: {}", e.getMessage(), e);
+            log.error("[LOBBY-MATCH] Error broadcasting match event {}: {}", type, e.getMessage(), e);
         }
     }
 

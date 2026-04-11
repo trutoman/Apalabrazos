@@ -208,6 +208,13 @@ public class MatchesManager implements EventListener {
     }
 
     /**
+     * Obtiene el resumen serializable de una partida concreta para el lobby.
+     */
+    public Map<String, Object> getMatchSummary(String matchId) {
+        return buildMatchSummary(getMatchById(matchId));
+    }
+
+    /**
      * Convierte una partida activa en el resumen que consume el lobby web.
      */
     private Map<String, Object> buildMatchSummary(GameService gameService) {
@@ -250,6 +257,70 @@ public class MatchesManager implements EventListener {
         return summary;
     }
 
+    private String findJoinedMatchIdForPlayer(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return null;
+        }
+
+        for (Map.Entry<String, GameService> entry : activeMatches.entrySet()) {
+            GameService service = entry.getValue();
+            GameGlobal gameInstance = service != null ? service.getGameInstance() : null;
+            if (gameInstance != null && gameInstance.hasPlayer(playerId)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Punto único de entrada para unir un jugador a una partida usando el flujo
+     * estándar basado en `PlayerJoinedEvent`.
+     * Esta misma función debe ser reutilizada tanto por el creador al crear la
+     * partida como por el resto de jugadores al pulsar Join.
+     */
+    public boolean joinPlayerToMatch(Player player, String matchId) {
+        if (player == null || matchId == null || matchId.isBlank()) {
+            log.warn("joinPlayerToMatch: player o matchId inválidos (player={}, matchId={})",
+                    player != null ? player.getPlayerID() : "null", matchId);
+            return false;
+        }
+
+        GameService service = getMatchById(matchId);
+        if (service == null) {
+            log.error("joinPlayerToMatch: Room with ID {} not found", matchId);
+            return false;
+        }
+
+        String currentMatchId = findJoinedMatchIdForPlayer(player.getPlayerID());
+        if (currentMatchId != null) {
+            if (currentMatchId.equals(matchId)) {
+                log.info("joinPlayerToMatch: player {} is already in room {}", player.getPlayerID(), matchId);
+                return true;
+            }
+
+            log.warn("joinPlayerToMatch: player {} is already in room {} and cannot join {}",
+                    player.getPlayerID(), currentMatchId, matchId);
+            return false;
+        }
+
+        PlayerJoinedEvent joinedEvent = new PlayerJoinedEvent(
+                player.getPlayerID(),
+                matchId,
+                player.getName());
+
+        eventBus.publishAndWait(joinedEvent);
+
+        GameGlobal gameInstance = service.getGameInstance();
+        boolean joined = gameInstance != null && gameInstance.hasPlayer(player.getPlayerID());
+        if (joined) {
+            log.info("Player {} joined match {} through PlayerJoinedEvent flow", player.getPlayerID(), matchId);
+        } else {
+            log.warn("Player {} could not be joined to match {} through PlayerJoinedEvent flow",
+                    player.getPlayerID(), matchId);
+        }
+        return joined;
+    }
+
     /**
      * Process game creation request from lobby
      */
@@ -279,6 +350,7 @@ public class MatchesManager implements EventListener {
         gameService.setCreatorPlayerId(player.getPlayerID());
         gameService.setGameName(tempRoomCode);
         String matchIdString = addMatch(gameService);
+        joinPlayerToMatch(player, matchIdString);
 
         // Guardar información de la partida
         if (matchIdString != null) {
@@ -392,9 +464,11 @@ public class MatchesManager implements EventListener {
 
             log.info("Player {} joined room {}", playerId, roomId);
             // Agregar jugador a la partida
-            boolean added = service.addPlayerToGame(playerId);
+            boolean added = service.addPlayerToGame(playerId, event.getPlayerName());
             if (!added) {
                 log.error("No se pudo agregar el jugador {} a la sala {}", playerId, roomId);
+            } else {
+                LobbyRoom.getInstance().broadcastMatchUpdated(buildMatchSummary(service), this);
             }
             // Aquí podríamos añadir la instancia del jugador si existe lógica para ello
             // service.onEvent(event); // reenviar al GameService si debe manejar la
