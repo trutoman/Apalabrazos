@@ -272,6 +272,76 @@ public class MatchesManager implements EventListener {
         return null;
     }
 
+    private Map<String, Object> buildMatchRemovedSummary(String matchId, GameService gameService) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("roomId", matchId);
+        if (gameService != null && gameService.getGameName() != null && !gameService.getGameName().isBlank()) {
+            payload.put("name", gameService.getGameName());
+        }
+        return payload;
+    }
+
+    private void recalculateAllMatchesPlayersState() {
+        List<Map.Entry<String, GameService>> snapshot = new ArrayList<>(activeMatches.entrySet());
+        List<Map<String, Object>> removedMatches = new ArrayList<>();
+
+        for (Map.Entry<String, GameService> entry : snapshot) {
+            String matchId = entry.getKey();
+            GameService service = entry.getValue();
+            GameGlobal gameInstance = service != null ? service.getGameInstance() : null;
+            int players = gameInstance != null ? gameInstance.getPlayerCount() : 0;
+
+            if (players <= 0 && matchId != null && activeMatches.remove(matchId) != null) {
+                removedMatches.add(buildMatchRemovedSummary(matchId, service));
+                log.info("Match {} removed from lobby after player state recalculation", matchId);
+            }
+        }
+
+        for (Map<String, Object> removedMatch : removedMatches) {
+            LobbyRoom.getInstance().broadcastMatchRemoved(removedMatch, this);
+        }
+    }
+
+    /**
+     * Removes a player from the currently joined match (if any) and synchronizes lobby state.
+     *
+     * @return The match ID that was left, or null when the player was not in any match.
+     */
+    public String leavePlayerFromCurrentMatch(Player player) {
+        if (player == null || player.getPlayerID() == null || player.getPlayerID().isBlank()) {
+            return null;
+        }
+
+        String playerId = player.getPlayerID();
+        String currentMatchId = findJoinedMatchIdForPlayer(playerId);
+        if (currentMatchId == null) {
+            return null;
+        }
+
+        GameService service = getMatchById(currentMatchId);
+        if (service == null) {
+            log.warn("leavePlayerFromCurrentMatch: match {} not found for player {}", currentMatchId, playerId);
+            return null;
+        }
+
+        GameGlobal gameInstance = service.getGameInstance();
+        if (gameInstance == null || !gameInstance.hasPlayer(playerId)) {
+            log.warn("leavePlayerFromCurrentMatch: player {} is not in match {}", playerId, currentMatchId);
+            return null;
+        }
+
+        gameInstance.removePlayer(playerId);
+        log.info("Player {} left match {}", playerId, currentMatchId);
+
+        recalculateAllMatchesPlayersState();
+
+        if (activeMatches.containsKey(currentMatchId)) {
+            LobbyRoom.getInstance().broadcastMatchUpdated(buildMatchSummary(service), this);
+        }
+
+        return currentMatchId;
+    }
+
     /**
      * Punto único de entrada para unir un jugador a una partida usando el flujo
      * estándar basado en `PlayerJoinedEvent`.
@@ -328,6 +398,22 @@ public class MatchesManager implements EventListener {
         String tempRoomCode = event.getTempRoomCode();
         Player player = event.getConfig() != null ? event.getConfig().getPlayer() : null;
 
+        if (player == null) {
+            log.warn("Game creation rejected: requester player is null");
+            return;
+        }
+
+        String currentMatchId = findJoinedMatchIdForPlayer(player.getPlayerID());
+        if (currentMatchId != null) {
+            log.warn("Game creation rejected for {}: already joined in match {}", player.getName(), currentMatchId);
+            player.sendMessage(java.util.Map.of(
+                    "type", "GameCreationRequestInvalid",
+                    "payload", java.util.Map.of(
+                            "cause", "Ya estás dentro de una partida. Debes salir antes de crear otra.",
+                            "roomId", currentMatchId)));
+            return;
+        }
+
         // Validar primero antes de instanciar y asignar recursos
         String validationError = validateGameConfig(event.getConfig(), tempRoomCode);
         if (validationError != null) {
@@ -350,7 +436,17 @@ public class MatchesManager implements EventListener {
         gameService.setCreatorPlayerId(player.getPlayerID());
         gameService.setGameName(tempRoomCode);
         String matchIdString = addMatch(gameService);
-        joinPlayerToMatch(player, matchIdString);
+        boolean creatorJoined = joinPlayerToMatch(player, matchIdString);
+
+        if (!creatorJoined) {
+            if (matchIdString != null) {
+                removeMatchById(matchIdString);
+            }
+            player.sendMessage(java.util.Map.of(
+                    "type", "GameCreationRequestInvalid",
+                    "payload", java.util.Map.of("cause", "No se pudo unir al creador a la partida creada.")));
+            return;
+        }
 
         // Guardar información de la partida
         if (matchIdString != null) {
@@ -611,6 +707,11 @@ public class MatchesManager implements EventListener {
             Player player = activeConnections.remove(sessionId);
 
             if (player != null) {
+                String leftMatchId = leavePlayerFromCurrentMatch(player);
+                if (leftMatchId != null) {
+                    log.info("[UNREGISTER] Player {} removed from match {} during disconnect",
+                            player.getPlayerID(), leftMatchId);
+                }
                 log.debug("[UNREGISTER] 📤 Desconectando jugador: {}", player.getName());
                 player.disconnect();
                 log.info(

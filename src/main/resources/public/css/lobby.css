@@ -449,6 +449,17 @@
     white-space: nowrap;
 }
 
+.lobby-actions .btn-primary:disabled {
+    background-color: #c4c4c4;
+    color: #5f5f5f;
+    border-color: #5f5f5f;
+    box-shadow: 4px 4px 0px #5f5f5f;
+    cursor: not-allowed;
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: grayscale(0.35);
+}
+
 .lobby-actions .btn-secondary {
     background-color: var(--secondary);
     color: var(--primary);
@@ -607,6 +618,23 @@
 
 .btn-confirm-create:hover {
     box-shadow: none;
+    transform: translate(0, 0);
+}
+
+.btn-confirm-create:disabled {
+    background-color: #bcbcbc;
+    color: #555;
+    border-color: #555;
+    box-shadow: 4px 4px 0px #555;
+    cursor: not-allowed;
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: grayscale(0.4);
+}
+
+.btn-confirm-create:disabled:hover,
+.lobby-actions .btn-primary:disabled:hover {
+    box-shadow: 4px 4px 0px #555;
     transform: translate(0, 0);
 }
 

@@ -201,6 +201,32 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         }
                     }
 
+                    // ── LEAVE MATCH REQUEST ──────────────────────────────────────
+                } else if ("LeaveMatchRequest".equalsIgnoreCase(type)) {
+                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    String username = player != null ? player.getName() : "Unknown";
+
+                    if (player == null) {
+                        log.warn("[GAME-LEAVE] ⚠️ LeaveMatchRequest received but player was not found for session {}", sessionId);
+                        return;
+                    }
+
+                    log.info("[GAME-LEAVE] 🚪 Solicitud de salida recibida de '{}'", username);
+                    String leftRoomId = sessionManager.leavePlayerFromCurrentMatch(player);
+
+                    if (leftRoomId != null && !leftRoomId.isBlank()) {
+                        player.sendMessage(java.util.Map.of(
+                                "type", "LeaveMatchRequestValid",
+                                "payload", java.util.Map.of(
+                                        "roomId", leftRoomId,
+                                        "left", true)));
+                    } else {
+                        player.sendMessage(java.util.Map.of(
+                                "type", "LeaveMatchRequestInvalid",
+                                "payload", java.util.Map.of(
+                                        "cause", "No estás unido a ninguna partida.")));
+                    }
+
                     // ── UNKNOWN ──────────────────────────────────────────────────
                 } else if (!type.isEmpty() && !"PING".equalsIgnoreCase(type)) {
                     log.warn("[MESSAGE] ⚠️ Tipo de mensaje desconocido: '{}' de sesión {}", type, sessionId);

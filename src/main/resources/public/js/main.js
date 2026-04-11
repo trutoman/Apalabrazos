@@ -16,6 +16,7 @@ let hasRegisteredSocketMessageHandler = false;
 let currentJoinedRoomId = null;
 const createdGameRoomIds = new Set();
 const pendingJoinRoomIds = new Set();
+const pendingLeaveRoomIds = new Set();
 
 // Assign a random accent colour to every card field-value badge
 const CARD_COLORS = ['--explode', '--third', '--green', '--orange'];
@@ -49,10 +50,28 @@ function populateGameSelects() {
 
 function setCreatePendingState(pending) {
     isCreateGamePending = pending;
+    syncCreateGameControlsState();
+}
+
+function syncCreateGameControlsState() {
     const btnConfirm = document.getElementById('btn-confirm-create');
-    if (!btnConfirm) return;
-    btnConfirm.disabled = pending;
-    btnConfirm.textContent = pending ? 'Creating...' : 'Create Game';
+    const btnCreate = document.getElementById('btn-create-game');
+    const createCard = document.getElementById('create-game-config-card');
+
+    const joinedAnyMatch = Boolean(currentJoinedRoomId);
+
+    if (btnConfirm) {
+        btnConfirm.disabled = isCreateGamePending || joinedAnyMatch;
+        btnConfirm.textContent = isCreateGamePending ? 'Creating...' : 'Create Game';
+    }
+
+    if (btnCreate) {
+        btnCreate.disabled = joinedAnyMatch;
+    }
+
+    if (joinedAnyMatch && createCard) {
+        createCard.classList.add('hidden');
+    }
 }
 
 function toTitleCase(value) {
@@ -84,14 +103,15 @@ function applyJoinButtonState(button) {
 
     const roomId = String(button.dataset.roomId || '').trim();
     const pending = pendingJoinRoomIds.has(roomId);
+    const leaving = pendingLeaveRoomIds.has(roomId);
     const joined = Boolean(currentJoinedRoomId) && currentJoinedRoomId === roomId;
     const blocked = Boolean(currentJoinedRoomId) && currentJoinedRoomId !== roomId;
 
-    button.disabled = pending || blocked;
+    button.disabled = pending || blocked || leaving;
     button.classList.toggle('is-joined', joined);
-    button.classList.toggle('is-pending', pending);
+    button.classList.toggle('is-pending', pending || leaving);
     button.classList.toggle('is-blocked', blocked);
-    button.textContent = pending ? 'JOINING...' : joined ? 'LEAVE' : blocked ? 'IN GAME' : 'Join';
+    button.textContent = leaving ? 'LEAVING...' : pending ? 'JOINING...' : joined ? 'LEAVE' : blocked ? 'IN GAME' : 'Join';
 }
 
 function syncJoinButtonState(roomId) {
@@ -102,16 +122,42 @@ function syncJoinButtonState(roomId) {
 
 function syncAllJoinButtonsState() {
     document.querySelectorAll('.btn-join-game').forEach(button => applyJoinButtonState(button));
+    syncCreateGameControlsState();
+}
+
+function removeOnlineGameCard(roomId) {
+    const normalizedRoomId = String(roomId || '').trim();
+    if (!normalizedRoomId) return;
+
+    const card = document.querySelector(`.game-card-neo[data-room-id="${normalizedRoomId}"]`);
+    if (card) {
+        card.remove();
+    }
+
+    createdGameRoomIds.delete(normalizedRoomId);
+    pendingJoinRoomIds.delete(normalizedRoomId);
+    pendingLeaveRoomIds.delete(normalizedRoomId);
+
+    if (currentJoinedRoomId === normalizedRoomId) {
+        currentJoinedRoomId = null;
+    }
+
+    syncAllJoinButtonsState();
 }
 
 function updateOnlineGameCard(gameData) {
     const roomId = String(gameData?.roomId || '').trim();
     if (!roomId) return;
 
+    const currentPlayers = Number.isFinite(Number(gameData?.players)) ? Number(gameData.players) : 1;
+    if (currentPlayers <= 0) {
+        removeOnlineGameCard(roomId);
+        return;
+    }
+
     const card = document.querySelector(`.game-card-neo[data-room-id="${roomId}"]`);
     if (!card) return;
 
-    const currentPlayers = Number.isFinite(Number(gameData?.players)) ? Number(gameData.players) : 1;
     const maxPlayers = Number.isFinite(Number(gameData?.maxPlayers)) ? Number(gameData.maxPlayers) : 2;
     const name = String(gameData?.name || `Game ${roomId.slice(0, 6)}`).trim();
     const typeLabel = normalizeGameTypeLabel(gameData?.gameType);
@@ -159,6 +205,11 @@ function addOnlineGameCard(gameData) {
     }
 
     const currentPlayers = Number.isFinite(Number(gameData?.players)) ? Number(gameData.players) : 1;
+    if (currentPlayers <= 0) {
+        removeOnlineGameCard(roomId);
+        return;
+    }
+
     const maxPlayers = Number.isFinite(Number(gameData?.maxPlayers)) ? Number(gameData.maxPlayers) : 2;
     const name = String(gameData?.name || `Game ${roomId.slice(0, 6)}`).trim();
     const typeLabel = normalizeGameTypeLabel(gameData?.gameType);
@@ -213,6 +264,9 @@ function renderLobbyMatchesSnapshot(matches) {
 
     gamesList.innerHTML = '';
     createdGameRoomIds.clear();
+    pendingJoinRoomIds.clear();
+    pendingLeaveRoomIds.clear();
+    currentJoinedRoomId = null;
     hasClearedMockGames = true;
 
     if (!Array.isArray(matches) || matches.length === 0) {
@@ -246,6 +300,10 @@ function registerSocketMessageHandlers() {
                 const payload = data?.payload || {};
                 console.log('[LOBBY] Match updated:', payload);
                 addOnlineGameCard(payload);
+            } else if (data.type === 'LobbyMatchRemoved') {
+                const roomId = String(data?.payload?.roomId || '').trim();
+                console.log('[LOBBY] Match removed:', roomId);
+                removeOnlineGameCard(roomId);
             } else if (data.type === 'chat_message') {
                 const { text, username_originator } = data.payload || {};
                 if (text && username_originator) {
@@ -293,6 +351,21 @@ function registerSocketMessageHandlers() {
                 const cause = data?.payload?.cause || 'No se ha podido unir a la partida.';
                 console.warn('[JOIN] Join failed:', cause);
                 showCreateGameErrors([cause]);
+            } else if (data.type === 'LeaveMatchRequestValid') {
+                const roomId = String(data?.payload?.roomId || '').trim();
+                pendingLeaveRoomIds.clear();
+                pendingJoinRoomIds.clear();
+                if (!roomId || currentJoinedRoomId === roomId) {
+                    currentJoinedRoomId = null;
+                }
+                console.log('[LEAVE] LeaveMatchRequestValid received:', data?.payload || {});
+                syncAllJoinButtonsState();
+            } else if (data.type === 'LeaveMatchRequestInvalid') {
+                pendingLeaveRoomIds.clear();
+                const cause = data?.payload?.cause || 'No se ha podido salir de la partida.';
+                console.warn('[LEAVE] Leave failed:', cause);
+                showCreateGameErrors([cause]);
+                syncAllJoinButtonsState();
             } else if (data.type === 'GameCreationRequestInvalid') {
                 if (createGamePendingTimeout) {
                     clearTimeout(createGamePendingTimeout);
@@ -314,6 +387,7 @@ function registerSocketMessageHandlers() {
 document.addEventListener('DOMContentLoaded', () => {
     randomCardColors();
     populateGameSelects();
+    syncCreateGameControlsState();
 
     // --- Create Game button validation ---
     const btnConfirm = document.getElementById('btn-confirm-create');
@@ -322,6 +396,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('[CREATE] btn-confirm-create clicked ✅');
             if (isCreateGamePending) {
                 console.warn('[CREATE] A create request is already pending. Ignoring duplicate click.');
+                return;
+            }
+
+            if (currentJoinedRoomId) {
+                showCreateGameErrors(['Ya estás dentro de una partida. Debes salir antes de crear otra.']);
+                syncCreateGameControlsState();
                 return;
             }
 
@@ -372,8 +452,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (currentJoinedRoomId === roomId) {
-            console.info(`[LEAVE] Leave requested for room ${roomId}, but leave is not implemented yet.`);
-            showCreateGameErrors(['La acción LEAVE se implementará más adelante.']);
+            if (pendingLeaveRoomIds.has(roomId)) {
+                return;
+            }
+
+            pendingLeaveRoomIds.add(roomId);
+            pendingJoinRoomIds.delete(roomId);
+            syncJoinButtonState(roomId);
+
+            console.log('[LEAVE] Sending LeaveMatchRequest for room:', roomId);
+            SocketClient.send('LeaveMatchRequest', {
+                roomId,
+                requestedAt: Math.floor(Date.now() / 1000),
+            });
             return;
         }
 
@@ -476,7 +567,14 @@ const _btnCreate = document.getElementById('btn-create-game');
 const _createCard = document.getElementById('create-game-config-card');
 const _btnCloseCreate = document.getElementById('btn-close-create-game');
 if (_btnCreate && _createCard) {
-    _btnCreate.addEventListener('click', () => { _createCard.classList.remove('hidden'); });
+    _btnCreate.addEventListener('click', () => {
+        if (currentJoinedRoomId) {
+            showCreateGameErrors(['No puedes crear otra partida mientras estés unido a una.']);
+            syncCreateGameControlsState();
+            return;
+        }
+        _createCard.classList.remove('hidden');
+    });
 }
 if (_btnCloseCreate && _createCard) {
     _btnCloseCreate.addEventListener('click', () => { _createCard.classList.add('hidden'); });

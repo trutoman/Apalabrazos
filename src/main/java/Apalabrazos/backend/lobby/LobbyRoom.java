@@ -110,6 +110,13 @@ public class LobbyRoom {
         broadcastMatchEvent("LobbyMatchUpdated", matchSummary, sessionManager);
     }
 
+    /**
+     * Broadcasts that a match was removed from the lobby.
+     */
+    public void broadcastMatchRemoved(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        broadcastMatchEvent("LobbyMatchRemoved", matchSummary, sessionManager);
+    }
+
     private void broadcastMatchEvent(String type, Map<String, Object> matchSummary, MatchesManager sessionManager) {
         if (matchSummary == null || matchSummary.isEmpty()) {
             return;
