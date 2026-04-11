@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,6 +90,39 @@ public class LobbyRoom {
             }
         } catch (Exception e) {
             log.error("[LOBBY-CHAT] Error broadcasting chat message: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Broadcasts a newly created match to all players currently in the lobby.
+     *
+     * @param matchSummary   Serialized summary of the created match.
+     * @param sessionManager The MatchesManager used to resolve sessions -> Players.
+     */
+    public void broadcastMatchCreated(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        if (matchSummary == null || matchSummary.isEmpty()) {
+            return;
+        }
+
+        try {
+            ObjectNode message = mapper.createObjectNode();
+            message.put("type", "LobbyMatchCreated");
+            message.set("payload", mapper.valueToTree(matchSummary));
+
+            String json = mapper.writeValueAsString(message);
+            log.info("[LOBBY-MATCH] Broadcasting new match '{}' to {} lobby recipients",
+                    matchSummary.getOrDefault("roomId", "unknown"), sessions.size());
+
+            for (UUID sessionId : sessions) {
+                Player player = sessionManager.getPlayerBySessionId(sessionId);
+                if (player != null && player.isConnected()) {
+                    player.sendMessage(json);
+                } else {
+                    log.warn("[LOBBY-MATCH] Session {} not found or disconnected, skipping", sessionId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[LOBBY-MATCH] Error broadcasting created match: {}", e.getMessage(), e);
         }
     }
 

@@ -60,5 +60,5 @@ Cuando se crea una nueva partida, todos los clientes que ya están en el lobby l
 
 ## Estado
 - ✅ Plan documentado
-- ✅ Punto 1 iniciado
-- ⏳ Punto 2 pendiente
+- ✅ Punto 1 implementado
+- ✅ Punto 2 implementado (broadcast de nuevas partidas en tiempo real)

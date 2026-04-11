@@ -1,6 +1,7 @@
 package Apalabrazos.backend.service;
 
 import Apalabrazos.backend.events.*;
+import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.Player;
 import org.slf4j.Logger;
@@ -312,6 +313,8 @@ public class MatchesManager implements EventListener {
                     "gameType", gameType,
                     "time", timeMinutes,
                     "difficulty", difficulty)));
+
+            LobbyRoom.getInstance().broadcastMatchCreated(buildMatchSummary(gameService), this);
         }
 
         // Publish event to notify lobby that match was created

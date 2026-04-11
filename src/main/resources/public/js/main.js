@@ -169,6 +169,10 @@ function registerSocketMessageHandlers() {
                 const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
                 console.log(`[LOBBY] Snapshot received with ${matches.length} matches`);
                 renderLobbyMatchesSnapshot(matches);
+            } else if (data.type === 'LobbyMatchCreated') {
+                const payload = data?.payload || {};
+                console.log('[LOBBY] Real-time match broadcast received:', payload);
+                addOnlineGameCard(payload);
             } else if (data.type === 'chat_message') {
                 const { text, username_originator } = data.payload || {};
                 if (text && username_originator) {
