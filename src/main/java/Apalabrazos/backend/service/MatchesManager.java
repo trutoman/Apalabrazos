@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -192,6 +193,60 @@ public class MatchesManager implements EventListener {
         }
 
         return null; // OK
+    }
+
+    /**
+     * Construye un snapshot serializable de las partidas activas para el lobby.
+     */
+    public List<Map<String, Object>> getActiveMatchesSummary() {
+        List<Map<String, Object>> snapshot = new ArrayList<>();
+        for (GameService gameService : activeMatches.values()) {
+            snapshot.add(buildMatchSummary(gameService));
+        }
+        return snapshot;
+    }
+
+    /**
+     * Convierte una partida activa en el resumen que consume el lobby web.
+     */
+    private Map<String, Object> buildMatchSummary(GameService gameService) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        if (gameService == null) {
+            return summary;
+        }
+
+        GameGlobal createdGame = gameService.getGameInstance();
+        int maxPlayers = createdGame != null ? createdGame.getMaxPlayers() : 2;
+        int currentPlayers = createdGame != null ? createdGame.getPlayerCount() : 0;
+        if (currentPlayers <= 0 && gameService.getCreatorPlayerId() != null) {
+            currentPlayers = 1;
+        }
+
+        int timeSeconds = createdGame != null ? createdGame.getGameDuration() : 300;
+        int timeMinutes = Math.max(1, (int) Math.round(timeSeconds / 60.0));
+
+        String difficulty = createdGame != null && createdGame.getDifficulty() != null
+                ? createdGame.getDifficulty().name()
+                : "MEDIUM";
+
+        String gameType = createdGame != null && createdGame.getGameType() != null
+                ? createdGame.getGameType().name()
+                : "HIGHER_POINTS_WINS";
+
+        String matchId = gameService.getMatchId();
+        String gameName = gameService.getGameName();
+        if (gameName == null || gameName.isBlank()) {
+            gameName = matchId != null ? "Game " + matchId : "Game";
+        }
+
+        summary.put("roomId", matchId);
+        summary.put("name", gameName);
+        summary.put("players", currentPlayers);
+        summary.put("maxPlayers", maxPlayers);
+        summary.put("gameType", gameType);
+        summary.put("time", timeMinutes);
+        summary.put("difficulty", difficulty);
+        return summary;
     }
 
     /**

@@ -12,6 +12,7 @@ let currentUsername = null;
 let isCreateGamePending = false;
 let createGamePendingTimeout = null;
 let hasClearedMockGames = false;
+let hasRegisteredSocketMessageHandler = false;
 const createdGameRoomIds = new Set();
 
 // Assign a random accent colour to every card field-value badge
@@ -136,6 +137,76 @@ function addOnlineGameCard(gameData) {
     gamesList.prepend(card);
     createdGameRoomIds.add(roomId);
     randomCardColors();
+}
+
+function renderLobbyMatchesSnapshot(matches) {
+    const gamesList = document.getElementById('games-list');
+    if (!gamesList) return;
+
+    gamesList.innerHTML = '';
+    createdGameRoomIds.clear();
+    hasClearedMockGames = true;
+
+    if (!Array.isArray(matches) || matches.length === 0) {
+        return;
+    }
+
+    matches.forEach(match => addOnlineGameCard(match));
+}
+
+function registerSocketMessageHandlers() {
+    if (hasRegisteredSocketMessageHandler) {
+        return;
+    }
+
+    hasRegisteredSocketMessageHandler = true;
+    SocketClient.onMessage((msg) => {
+        console.log('Message received:', msg);
+        try {
+            const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
+
+            if (data.type === 'LobbyMatchesSnapshot') {
+                const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
+                console.log(`[LOBBY] Snapshot received with ${matches.length} matches`);
+                renderLobbyMatchesSnapshot(matches);
+            } else if (data.type === 'chat_message') {
+                const { text, username_originator } = data.payload || {};
+                if (text && username_originator) {
+                    const isOwn = username_originator === currentUsername;
+                    LobbyUI.addMessage(username_originator, text, isOwn);
+                }
+            } else if (data.type === 'GameCreationRequestValid') {
+                if (createGamePendingTimeout) {
+                    clearTimeout(createGamePendingTimeout);
+                    createGamePendingTimeout = null;
+                }
+                setCreatePendingState(false);
+                clearCreateGameErrors();
+                resetCreateGameForm();
+
+                if (_createCard) {
+                    _createCard.classList.add('hidden');
+                }
+
+                const payload = data?.payload || {};
+                console.log('[CREATE] GameCreationRequestValid received:', payload);
+                addOnlineGameCard(payload);
+            } else if (data.type === 'GameCreationRequestInvalid') {
+                if (createGamePendingTimeout) {
+                    clearTimeout(createGamePendingTimeout);
+                    createGamePendingTimeout = null;
+                }
+                setCreatePendingState(false);
+
+                const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
+                const errors = [cause];
+                console.warn('[CREATE] Validation failed:', errors);
+                showCreateGameErrors(errors);
+            }
+        } catch (e) {
+            // Ignore parsing errors for non-JSON messages
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -322,6 +393,7 @@ LoginUI.init(
                 return;
             }
             currentUsername = username; // store for later use (e.g. game creation)
+            registerSocketMessageHandlers();
 
             // 4. Connect to WebSocket with token using userId in the path
             const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(userId)}`;
@@ -360,51 +432,7 @@ LoginUI.init(
 
 
 
-            // 6. Listen for server messages
-            SocketClient.onMessage((msg) => {
-                console.log("Message received:", msg);
-                try {
-                    const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
-
-                    if (data.type === 'chat_message') {
-                        const { text, username_originator } = data.payload || {};
-                        if (text && username_originator) {
-                            // Align right if the message belongs to this user, left otherwise
-                            const isOwn = username_originator === username;
-                            LobbyUI.addMessage(username_originator, text, isOwn);
-                        }
-                    } else if (data.type === 'GameCreationRequestValid') {
-                        if (createGamePendingTimeout) {
-                            clearTimeout(createGamePendingTimeout);
-                            createGamePendingTimeout = null;
-                        }
-                        setCreatePendingState(false);
-                        clearCreateGameErrors();
-                        resetCreateGameForm();
-
-                        if (_createCard) {
-                            _createCard.classList.add('hidden');
-                        }
-
-                        const payload = data?.payload || {};
-                        console.log('[CREATE] GameCreationRequestValid received:', payload);
-                        addOnlineGameCard(payload);
-                    } else if (data.type === 'GameCreationRequestInvalid') {
-                        if (createGamePendingTimeout) {
-                            clearTimeout(createGamePendingTimeout);
-                            createGamePendingTimeout = null;
-                        }
-                        setCreatePendingState(false);
-
-                        const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
-                        const errors = [cause];
-                        console.warn('[CREATE] Validation failed:', errors);
-                        showCreateGameErrors(errors);
-                    }
-                } catch (e) {
-                    // Ignore parsing errors for non-JSON messages
-                }
-            });
+            // 6. Server messages are handled by the global socket listener registered before connect.
 
         } catch (error) {
             console.error("Login error:", error);
