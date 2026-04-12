@@ -814,19 +814,27 @@ public class MatchesManager implements EventListener {
         List<String> names = new ArrayList<>();
         GameGlobal game = service.getGameInstance();
         if (game == null) {
+            log.warn("[PLAYER-NAMES] GameGlobal is null for service");
             return names;
         }
 
-        for (String playerId : game.getAllPlayerIds()) {
+        java.util.Set<String> playerIds = game.getAllPlayerIds();
+        log.debug("[PLAYER-NAMES] Building snapshot for {} players: {}", playerIds.size(), playerIds);
+
+        for (String playerId : playerIds) {
             String resolvedName = getPlayerNameByPlayerId(playerId);
             if (resolvedName == null || resolvedName.isBlank()) {
                 resolvedName = extractNameFromPlayerId(playerId);
+                log.debug("[PLAYER-NAMES] Fallback for {}: extracted as '{}'", playerId, resolvedName);
+            } else {
+                log.debug("[PLAYER-NAMES] Resolved {} to '{}'", playerId, resolvedName);
             }
             if (resolvedName != null && !resolvedName.isBlank()) {
                 names.add(resolvedName);
             }
         }
 
+        log.info("[PLAYER-NAMES] Final snapshot: {} players with names: {}", names.size(), names);
         return names;
     }
 
