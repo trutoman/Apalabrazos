@@ -301,7 +301,7 @@ function addOnlineGameCard(gameData) {
                 <span class="game-card-field-label">Players</span>
                 <div class="game-card-players-container">
                     <span class="game-card-field-value"></span>
-                    <span class="game-card-players-list-trigger" data-room-id="${roomId}" title="Click to view players">Players list</span>
+                    <span class="game-card-players-list-trigger" data-room-id="${roomId}" title="Click to view players">Players list ▼</span>
                 </div>
             </div>
             <div class="game-card-field">
