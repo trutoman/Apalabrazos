@@ -249,6 +249,14 @@ public class GameService implements EventListener {
      * @return true si el jugador fue agregado; false si ya existía o no hay capacidad
      */
     public boolean addPlayerToGame(String playerId) {
+        return addPlayerToGame(playerId, null);
+    }
+
+    /**
+     * Agregar un jugador a la partida asociada a este servicio usando, si existe,
+     * el nombre explícito recibido en el flujo de join.
+     */
+    public boolean addPlayerToGame(String playerId, String explicitPlayerName) {
         if (playerId == null || playerId.isEmpty()) {
             log.warn("addPlayerToGame: playerId inválido");
             return false;
@@ -270,8 +278,9 @@ public class GameService implements EventListener {
             return false;
         }
 
-        // Extraer el nombre del jugador del playerId (formato: nombre-xxxx)
-        String playerName = playerId.contains("-") ? playerId.substring(0, playerId.lastIndexOf("-")) : playerId;
+        String playerName = (explicitPlayerName != null && !explicitPlayerName.isBlank())
+                ? explicitPlayerName.trim()
+                : (playerId.contains("-") ? playerId.substring(0, playerId.lastIndexOf("-")) : playerId);
 
         // Crear Player y asignarle manualmente el playerId recibido para mantener consistencia
         Player player = new Player(playerName, playerName);
@@ -338,7 +347,7 @@ public class GameService implements EventListener {
     private void onGlobalEvent(GameEvent event) {
         if (event instanceof PlayerJoinedEvent) {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
-            addPlayerToGame(join.getPlayerID());
+            addPlayerToGame(join.getPlayerID(), join.getPlayerName());
         } else if (event instanceof TimerTickEvent) {
             handleTimerTick((TimerTickEvent) event);
         } else if (event instanceof GameControllerReady) {

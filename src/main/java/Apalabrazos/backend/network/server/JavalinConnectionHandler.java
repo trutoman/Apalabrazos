@@ -6,7 +6,6 @@ import Apalabrazos.backend.tools.JwtService;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import io.javalin.websocket.WsCloseContext;
 import io.javalin.websocket.WsConnectContext;
-import io.javalin.websocket.WsContext;
 import io.javalin.websocket.WsErrorContext;
 import io.javalin.websocket.WsMessageContext;
 import org.slf4j.Logger;
@@ -163,6 +162,69 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                                 config, gameName);
 
                         Apalabrazos.backend.events.GlobalAsyncEventBus.getInstance().publish(creationEvent);
+                    }
+
+                    // ── JOIN MATCH REQUEST ───────────────────────────────────────
+                } else if ("JoinMatchRequest".equalsIgnoreCase(type)) {
+                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    String username = player != null ? player.getName() : "Unknown";
+
+                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
+                    String roomId = data != null ? data.path("roomId").asText("").trim() : "";
+
+                    if (player == null) {
+                        log.warn("[GAME-JOIN] ⚠️ JoinMatchRequest received but player was not found for session {}", sessionId);
+                    } else if (roomId.isEmpty()) {
+                        log.warn("[GAME-JOIN] ⚠️ JoinMatchRequest sin roomId de '{}'", username);
+                        player.sendMessage(java.util.Map.of(
+                                "type", "JoinMatchRequestInvalid",
+                                "payload", java.util.Map.of(
+                                        "roomId", roomId,
+                                        "cause", "No se ha indicado una sala válida.")));
+                    } else {
+                        log.info("[GAME-JOIN] 🚪 Solicitud de unión recibida de '{}' para la sala {}", username, roomId);
+                        boolean joined = sessionManager.joinPlayerToMatch(player, roomId);
+
+                        if (joined) {
+                            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>(sessionManager.getMatchSummary(roomId));
+                            payload.put("roomId", roomId);
+                            payload.put("joined", true);
+                            player.sendMessage(java.util.Map.of(
+                                    "type", "JoinMatchRequestValid",
+                                    "payload", payload));
+                        } else {
+                            player.sendMessage(java.util.Map.of(
+                                    "type", "JoinMatchRequestInvalid",
+                                    "payload", java.util.Map.of(
+                                            "roomId", roomId,
+                                            "cause", "No se ha podido unir a la partida. Puede estar llena o no existir.")));
+                        }
+                    }
+
+                    // ── LEAVE MATCH REQUEST ──────────────────────────────────────
+                } else if ("LeaveMatchRequest".equalsIgnoreCase(type)) {
+                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    String username = player != null ? player.getName() : "Unknown";
+
+                    if (player == null) {
+                        log.warn("[GAME-LEAVE] ⚠️ LeaveMatchRequest received but player was not found for session {}", sessionId);
+                        return;
+                    }
+
+                    log.info("[GAME-LEAVE] 🚪 Solicitud de salida recibida de '{}'", username);
+                    String leftRoomId = sessionManager.leavePlayerFromCurrentMatch(player);
+
+                    if (leftRoomId != null && !leftRoomId.isBlank()) {
+                        player.sendMessage(java.util.Map.of(
+                                "type", "LeaveMatchRequestValid",
+                                "payload", java.util.Map.of(
+                                        "roomId", leftRoomId,
+                                        "left", true)));
+                    } else {
+                        player.sendMessage(java.util.Map.of(
+                                "type", "LeaveMatchRequestInvalid",
+                                "payload", java.util.Map.of(
+                                        "cause", "No estás unido a ninguna partida.")));
                     }
 
                     // ── UNKNOWN ──────────────────────────────────────────────────

@@ -378,6 +378,21 @@
     transform: translate(0, 0);
 }
 
+.btn-join-game.is-joined {
+    background-color: var(--orange);
+}
+
+.btn-join-game.is-pending {
+    opacity: 0.8;
+    cursor: wait;
+}
+
+.btn-join-game.is-blocked {
+    background-color: var(--third);
+    opacity: 0.75;
+    cursor: not-allowed;
+}
+
 /* ROW 3, COL 0: Actions (only in col 0) */
 .lobby-actions {
     flex-shrink: 0;
@@ -408,8 +423,9 @@
 .lobby-actions button {
     position: relative;
     z-index: 1;
-    flex: 1;
-    max-width: 150px;
+    flex: 1 1 50%;
+    max-width: none;
+    width: 100%;
     padding: 10px 16px;
     font-size: 1rem;
     font-weight: bold;
@@ -431,6 +447,17 @@
     background-color: var(--accent);
     color: var(--primary);
     white-space: nowrap;
+}
+
+.lobby-actions .btn-primary:disabled {
+    background-color: #c4c4c4;
+    color: #5f5f5f;
+    border-color: #5f5f5f;
+    box-shadow: 4px 4px 0px #5f5f5f;
+    cursor: not-allowed;
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: grayscale(0.35);
 }
 
 .lobby-actions .btn-secondary {
@@ -594,6 +621,23 @@
     transform: translate(0, 0);
 }
 
+.btn-confirm-create:disabled {
+    background-color: #bcbcbc;
+    color: #555;
+    border-color: #555;
+    box-shadow: 4px 4px 0px #555;
+    cursor: not-allowed;
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: grayscale(0.4);
+}
+
+.btn-confirm-create:disabled:hover,
+.lobby-actions .btn-primary:disabled:hover {
+    box-shadow: 4px 4px 0px #555;
+    transform: translate(0, 0);
+}
+
 /* Validation error toast — fixed so it's always on screen */
 .create-game-errors {
     display: none;
@@ -649,4 +693,115 @@
         flex: 0 0 auto;
         min-height: 200px;
     }
+}
+
+/* ==================== GAME CARD PLAYERS LIST ==================== */
+
+.game-card-players-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.game-card-field-value {
+    flex-shrink: 0;
+}
+
+.game-card-players-list-trigger {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    padding: 3px 7px;
+    box-shadow: 2px 2px 0px var(--primary);
+    transform: translate(-2px, -2px);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+}
+
+/* ==================== PLAYERS MODAL ==================== */
+
+.players-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: 'Archivo', sans-serif;
+}
+
+.players-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+}
+
+.players-modal-content {
+    position: relative;
+    z-index: 10000;
+    background-color: var(--accent);
+    border: 3px solid var(--primary);
+    box-shadow: 8px 8px 0px var(--primary);
+    max-width: 300px;
+    width: 90%;
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.players-modal-header {
+    background-color: var(--primary);
+    color: var(--accent);
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--primary);
+}
+
+.players-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.players-modal-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.players-modal-item {
+    padding: 8px 10px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.players-modal-item:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.players-modal-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--primary);
+    font-style: italic;
+    margin: 0;
+}
 }

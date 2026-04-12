@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,6 +90,57 @@ public class LobbyRoom {
             }
         } catch (Exception e) {
             log.error("[LOBBY-CHAT] Error broadcasting chat message: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Broadcasts a newly created match to all players currently in the lobby.
+     *
+     * @param matchSummary   Serialized summary of the created match.
+     * @param sessionManager The MatchesManager used to resolve sessions -> Players.
+     */
+    public void broadcastMatchCreated(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        broadcastMatchEvent("LobbyMatchCreated", matchSummary, sessionManager);
+    }
+
+    /**
+     * Broadcasts an updated match summary to all players currently in the lobby.
+     */
+    public void broadcastMatchUpdated(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        broadcastMatchEvent("LobbyMatchUpdated", matchSummary, sessionManager);
+    }
+
+    /**
+     * Broadcasts that a match was removed from the lobby.
+     */
+    public void broadcastMatchRemoved(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        broadcastMatchEvent("LobbyMatchRemoved", matchSummary, sessionManager);
+    }
+
+    private void broadcastMatchEvent(String type, Map<String, Object> matchSummary, MatchesManager sessionManager) {
+        if (matchSummary == null || matchSummary.isEmpty()) {
+            return;
+        }
+
+        try {
+            ObjectNode message = mapper.createObjectNode();
+            message.put("type", type);
+            message.set("payload", mapper.valueToTree(matchSummary));
+
+            String json = mapper.writeValueAsString(message);
+            log.info("[LOBBY-MATCH] Broadcasting event {} for match '{}' to {} lobby recipients",
+                    type, matchSummary.getOrDefault("roomId", "unknown"), sessions.size());
+
+            for (UUID sessionId : sessions) {
+                Player player = sessionManager.getPlayerBySessionId(sessionId);
+                if (player != null && player.isConnected()) {
+                    player.sendMessage(json);
+                } else {
+                    log.warn("[LOBBY-MATCH] Session {} not found or disconnected, skipping", sessionId);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[LOBBY-MATCH] Error broadcasting match event {}: {}", type, e.getMessage(), e);
         }
     }
 

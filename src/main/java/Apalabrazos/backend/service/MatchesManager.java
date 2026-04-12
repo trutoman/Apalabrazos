@@ -1,12 +1,14 @@
 package Apalabrazos.backend.service;
 
 import Apalabrazos.backend.events.*;
+import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -46,6 +48,10 @@ public class MatchesManager implements EventListener {
      */
     private final Map<String, GameService> activeMatches;
 
+    // ===== Match Player Names Registry =====
+    // Stores the current list of player names for each active match.
+    private final Map<String, List<String>> matchPlayerNames;
+
     /**
      * Private constructor to prevent direct instantiation
      */
@@ -53,6 +59,7 @@ public class MatchesManager implements EventListener {
         this.eventBus = GlobalAsyncEventBus.getInstance();
         this.activeConnections = new ConcurrentHashMap<>();
         this.activeMatches = new ConcurrentHashMap<>();
+        this.matchPlayerNames = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
         log.info("MatchesManager singleton initialized");
@@ -195,11 +202,227 @@ public class MatchesManager implements EventListener {
     }
 
     /**
+     * Construye un snapshot serializable de las partidas activas para el lobby.
+     */
+    public List<Map<String, Object>> getActiveMatchesSummary() {
+        List<Map<String, Object>> snapshot = new ArrayList<>();
+        for (GameService gameService : activeMatches.values()) {
+            snapshot.add(buildMatchSummary(gameService));
+        }
+        return snapshot;
+    }
+
+    /**
+     * Obtiene el resumen serializable de una partida concreta para el lobby.
+     */
+    public Map<String, Object> getMatchSummary(String matchId) {
+        return buildMatchSummary(getMatchById(matchId));
+    }
+
+    /**
+     * Convierte una partida activa en el resumen que consume el lobby web.
+     */
+    private Map<String, Object> buildMatchSummary(GameService gameService) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        if (gameService == null) {
+            return summary;
+        }
+
+        GameGlobal createdGame = gameService.getGameInstance();
+        int maxPlayers = createdGame != null ? createdGame.getMaxPlayers() : 2;
+        int currentPlayers = createdGame != null ? createdGame.getPlayerCount() : 0;
+        if (currentPlayers <= 0 && gameService.getCreatorPlayerId() != null) {
+            currentPlayers = 1;
+        }
+
+        int timeSeconds = createdGame != null ? createdGame.getGameDuration() : 300;
+        int timeMinutes = Math.max(1, (int) Math.round(timeSeconds / 60.0));
+
+        String difficulty = createdGame != null && createdGame.getDifficulty() != null
+                ? createdGame.getDifficulty().name()
+                : "MEDIUM";
+
+        String gameType = createdGame != null && createdGame.getGameType() != null
+                ? createdGame.getGameType().name()
+                : "HIGHER_POINTS_WINS";
+
+        String matchId = gameService.getMatchId();
+        String gameName = gameService.getGameName();
+        if (gameName == null || gameName.isBlank()) {
+            gameName = matchId != null ? "Game " + matchId : "Game";
+        }
+
+        summary.put("roomId", matchId);
+        summary.put("name", gameName);
+        summary.put("players", currentPlayers);
+        summary.put("maxPlayers", maxPlayers);
+        summary.put("playerNames", getMatchPlayerNames(matchId));
+        summary.put("gameType", gameType);
+        summary.put("time", timeMinutes);
+        summary.put("difficulty", difficulty);
+        return summary;
+    }
+
+    private String findJoinedMatchIdForPlayer(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return null;
+        }
+
+        for (Map.Entry<String, GameService> entry : activeMatches.entrySet()) {
+            GameService service = entry.getValue();
+            GameGlobal gameInstance = service != null ? service.getGameInstance() : null;
+            if (gameInstance != null && gameInstance.hasPlayer(playerId)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private Map<String, Object> buildMatchRemovedSummary(String matchId, GameService gameService) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("roomId", matchId);
+        if (gameService != null && gameService.getGameName() != null && !gameService.getGameName().isBlank()) {
+            payload.put("name", gameService.getGameName());
+        }
+        return payload;
+    }
+
+    private void recalculateAllMatchesPlayersState() {
+        List<Map.Entry<String, GameService>> snapshot = new ArrayList<>(activeMatches.entrySet());
+        List<Map<String, Object>> removedMatches = new ArrayList<>();
+
+        for (Map.Entry<String, GameService> entry : snapshot) {
+            String matchId = entry.getKey();
+            GameService service = entry.getValue();
+            GameGlobal gameInstance = service != null ? service.getGameInstance() : null;
+            int players = gameInstance != null ? gameInstance.getPlayerCount() : 0;
+
+            refreshMatchPlayerNames(matchId, service);
+
+            if (players <= 0 && matchId != null && activeMatches.remove(matchId) != null) {
+                matchPlayerNames.remove(matchId);
+                removedMatches.add(buildMatchRemovedSummary(matchId, service));
+                log.info("Match {} removed from lobby after player state recalculation", matchId);
+            }
+        }
+
+        for (Map<String, Object> removedMatch : removedMatches) {
+            LobbyRoom.getInstance().broadcastMatchRemoved(removedMatch, this);
+        }
+    }
+
+    /**
+     * Removes a player from the currently joined match (if any) and synchronizes lobby state.
+     *
+     * @return The match ID that was left, or null when the player was not in any match.
+     */
+    public String leavePlayerFromCurrentMatch(Player player) {
+        if (player == null || player.getPlayerID() == null || player.getPlayerID().isBlank()) {
+            return null;
+        }
+
+        String playerId = player.getPlayerID();
+        String currentMatchId = findJoinedMatchIdForPlayer(playerId);
+        if (currentMatchId == null) {
+            return null;
+        }
+
+        GameService service = getMatchById(currentMatchId);
+        if (service == null) {
+            log.warn("leavePlayerFromCurrentMatch: match {} not found for player {}", currentMatchId, playerId);
+            return null;
+        }
+
+        GameGlobal gameInstance = service.getGameInstance();
+        if (gameInstance == null || !gameInstance.hasPlayer(playerId)) {
+            log.warn("leavePlayerFromCurrentMatch: player {} is not in match {}", playerId, currentMatchId);
+            return null;
+        }
+
+        gameInstance.removePlayer(playerId);
+        refreshMatchPlayerNames(currentMatchId, service);
+        log.info("Player {} left match {}", playerId, currentMatchId);
+
+        recalculateAllMatchesPlayersState();
+
+        if (activeMatches.containsKey(currentMatchId)) {
+            LobbyRoom.getInstance().broadcastMatchUpdated(buildMatchSummary(service), this);
+        }
+
+        return currentMatchId;
+    }
+
+    /**
+     * Punto único de entrada para unir un jugador a una partida usando el flujo
+     * estándar basado en `PlayerJoinedEvent`.
+     * Esta misma función debe ser reutilizada tanto por el creador al crear la
+     * partida como por el resto de jugadores al pulsar Join.
+     */
+    public boolean joinPlayerToMatch(Player player, String matchId) {
+        if (player == null || matchId == null || matchId.isBlank()) {
+            log.warn("joinPlayerToMatch: player o matchId inválidos (player={}, matchId={})",
+                    player != null ? player.getPlayerID() : "null", matchId);
+            return false;
+        }
+
+        GameService service = getMatchById(matchId);
+        if (service == null) {
+            log.error("joinPlayerToMatch: Room with ID {} not found", matchId);
+            return false;
+        }
+
+        String currentMatchId = findJoinedMatchIdForPlayer(player.getPlayerID());
+        if (currentMatchId != null) {
+            if (currentMatchId.equals(matchId)) {
+                log.info("joinPlayerToMatch: player {} is already in room {}", player.getPlayerID(), matchId);
+                return true;
+            }
+
+            log.warn("joinPlayerToMatch: player {} is already in room {} and cannot join {}",
+                    player.getPlayerID(), currentMatchId, matchId);
+            return false;
+        }
+
+        PlayerJoinedEvent joinedEvent = new PlayerJoinedEvent(
+                player.getPlayerID(),
+                matchId,
+                player.getName());
+
+        eventBus.publishAndWait(joinedEvent);
+
+        GameGlobal gameInstance = service.getGameInstance();
+        boolean joined = gameInstance != null && gameInstance.hasPlayer(player.getPlayerID());
+        if (joined) {
+            log.info("Player {} joined match {} through PlayerJoinedEvent flow", player.getPlayerID(), matchId);
+        } else {
+            log.warn("Player {} could not be joined to match {} through PlayerJoinedEvent flow",
+                    player.getPlayerID(), matchId);
+        }
+        return joined;
+    }
+
+    /**
      * Process game creation request from lobby
      */
     private void handleGameCreationRequested(GameCreationRequestedEvent event) {
         String tempRoomCode = event.getTempRoomCode();
         Player player = event.getConfig() != null ? event.getConfig().getPlayer() : null;
+
+        if (player == null) {
+            log.warn("Game creation rejected: requester player is null");
+            return;
+        }
+
+        String currentMatchId = findJoinedMatchIdForPlayer(player.getPlayerID());
+        if (currentMatchId != null) {
+            log.warn("Game creation rejected for {}: already joined in match {}", player.getName(), currentMatchId);
+            player.sendMessage(java.util.Map.of(
+                    "type", "GameCreationRequestInvalid",
+                    "payload", java.util.Map.of(
+                            "cause", "Ya estás dentro de una partida. Debes salir antes de crear otra.",
+                            "roomId", currentMatchId)));
+            return;
+        }
 
         // Validar primero antes de instanciar y asignar recursos
         String validationError = validateGameConfig(event.getConfig(), tempRoomCode);
@@ -223,6 +446,17 @@ public class MatchesManager implements EventListener {
         gameService.setCreatorPlayerId(player.getPlayerID());
         gameService.setGameName(tempRoomCode);
         String matchIdString = addMatch(gameService);
+        boolean creatorJoined = joinPlayerToMatch(player, matchIdString);
+
+        if (!creatorJoined) {
+            if (matchIdString != null) {
+                removeMatchById(matchIdString);
+            }
+            player.sendMessage(java.util.Map.of(
+                    "type", "GameCreationRequestInvalid",
+                    "payload", java.util.Map.of("cause", "No se pudo unir al creador a la partida creada.")));
+            return;
+        }
 
         // Guardar información de la partida
         if (matchIdString != null) {
@@ -257,6 +491,8 @@ public class MatchesManager implements EventListener {
                     "gameType", gameType,
                     "time", timeMinutes,
                     "difficulty", difficulty)));
+
+            LobbyRoom.getInstance().broadcastMatchCreated(buildMatchSummary(gameService), this);
         }
 
         // Publish event to notify lobby that match was created
@@ -328,15 +564,19 @@ public class MatchesManager implements EventListener {
             boolean alreadyInRoom = gameInstance != null && gameInstance.hasPlayer(playerId);
 
             if (alreadyInRoom) {
+                refreshMatchPlayerNames(roomId, service);
                 log.info("Player {} already in room {}", playerId, roomId);
                 return;
             }
 
             log.info("Player {} joined room {}", playerId, roomId);
             // Agregar jugador a la partida
-            boolean added = service.addPlayerToGame(playerId);
+            boolean added = service.addPlayerToGame(playerId, event.getPlayerName());
             if (!added) {
                 log.error("No se pudo agregar el jugador {} a la sala {}", playerId, roomId);
+            } else {
+                refreshMatchPlayerNames(roomId, service);
+                LobbyRoom.getInstance().broadcastMatchUpdated(buildMatchSummary(service), this);
             }
             // Aquí podríamos añadir la instancia del jugador si existe lógica para ello
             // service.onEvent(event); // reenviar al GameService si debe manejar la
@@ -356,6 +596,7 @@ public class MatchesManager implements EventListener {
         if (gameService != null) {
             String matchId = gameService.getMatchId();
             activeMatches.put(matchId, gameService);
+            refreshMatchPlayerNames(matchId, gameService);
             log.info("Match added with ID: {} (name: {}). Active matches: {}", matchId, gameService.getGameName(), activeMatches.size());
             return matchId;
         }
@@ -371,6 +612,7 @@ public class MatchesManager implements EventListener {
         if (gameService != null) {
             String matchId = gameService.getMatchId();
             if (activeMatches.remove(matchId) != null) {
+                matchPlayerNames.remove(matchId);
                 log.info("Match removed with ID: {}. Active matches: {}", matchId, activeMatches.size());
             }
         }
@@ -383,6 +625,7 @@ public class MatchesManager implements EventListener {
      */
     public void removeMatchById(String matchId) {
         if (matchId != null && activeMatches.remove(matchId) != null) {
+            matchPlayerNames.remove(matchId);
             log.info("Match removed with ID: {}. Active matches: {}", matchId, activeMatches.size());
         }
     }
@@ -430,6 +673,7 @@ public class MatchesManager implements EventListener {
      */
     public void clearAllMatches() {
         activeMatches.clear();
+        matchPlayerNames.clear();
         log.info("All matches cleared");
     }
 
@@ -479,6 +723,11 @@ public class MatchesManager implements EventListener {
             Player player = activeConnections.remove(sessionId);
 
             if (player != null) {
+                String leftMatchId = leavePlayerFromCurrentMatch(player);
+                if (leftMatchId != null) {
+                    log.info("[UNREGISTER] Player {} removed from match {} during disconnect",
+                            player.getPlayerID(), leftMatchId);
+                }
                 log.debug("[UNREGISTER] 📤 Desconectando jugador: {}", player.getName());
                 player.disconnect();
                 log.info(
@@ -515,6 +764,90 @@ public class MatchesManager implements EventListener {
             log.error("[GET-PLAYER] ❌ Error obteniendo jugador para SessionID {}: {}", sessionId, e.getMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * Resolve a player's display name from their logical player ID.
+     *
+     * @param playerId The logical player ID (e.g. nombre-xxxx)
+     * @return The player's name if found in active connections, otherwise null
+     */
+    public String getPlayerNameByPlayerId(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return null;
+        }
+
+        for (Player player : activeConnections.values()) {
+            if (player != null && playerId.equals(player.getPlayerID())) {
+                return player.getName();
+            }
+        }
+
+        log.debug("[GET-PLAYER-NAME] No active player found for playerId: {}", playerId);
+        return null;
+    }
+
+    /**
+     * Returns the player names currently stored for a match.
+     *
+     * @param matchId The match ID
+     * @return Copy of player names list, or empty list when not found
+     */
+    public List<String> getMatchPlayerNames(String matchId) {
+        if (matchId == null || matchId.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        List<String> stored = matchPlayerNames.get(matchId);
+        return stored != null ? new ArrayList<>(stored) : new ArrayList<>();
+    }
+
+    private void refreshMatchPlayerNames(String matchId, GameService service) {
+        if (matchId == null || matchId.isBlank() || service == null) {
+            return;
+        }
+
+        matchPlayerNames.put(matchId, buildPlayerNamesSnapshot(service));
+    }
+
+    private List<String> buildPlayerNamesSnapshot(GameService service) {
+        List<String> names = new ArrayList<>();
+        GameGlobal game = service.getGameInstance();
+        if (game == null) {
+            log.warn("[PLAYER-NAMES] GameGlobal is null for service");
+            return names;
+        }
+
+        java.util.Set<String> playerIds = game.getAllPlayerIds();
+        log.debug("[PLAYER-NAMES] Building snapshot for {} players: {}", playerIds.size(), playerIds);
+
+        for (String playerId : playerIds) {
+            String resolvedName = getPlayerNameByPlayerId(playerId);
+            if (resolvedName == null || resolvedName.isBlank()) {
+                resolvedName = extractNameFromPlayerId(playerId);
+                log.debug("[PLAYER-NAMES] Fallback for {}: extracted as '{}'", playerId, resolvedName);
+            } else {
+                log.debug("[PLAYER-NAMES] Resolved {} to '{}'", playerId, resolvedName);
+            }
+            if (resolvedName != null && !resolvedName.isBlank()) {
+                names.add(resolvedName);
+            }
+        }
+
+        log.info("[PLAYER-NAMES] Final snapshot: {} players with names: {}", names.size(), names);
+        return names;
+    }
+
+    private String extractNameFromPlayerId(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return null;
+        }
+
+        int separator = playerId.lastIndexOf('-');
+        if (separator <= 0) {
+            return playerId;
+        }
+        return playerId.substring(0, separator);
     }
 
     /**

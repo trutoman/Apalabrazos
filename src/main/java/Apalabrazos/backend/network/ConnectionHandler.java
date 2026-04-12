@@ -73,7 +73,8 @@ public abstract class ConnectionHandler {
                         + username
                         + "! Conexión establecida.\"}";
                 player.sendMessage(welcomeMessage);
-                log.debug("[CLIENT-CONNECT] Mensaje de bienvenida enviado");
+                sendLobbyMatchesSnapshot(player);
+                log.debug("[CLIENT-CONNECT] Mensaje de bienvenida y snapshot del lobby enviados");
             } else {
                 log.error("[CLIENT-CONNECT] ❌ No se pudo registrar el jugador: {} en GameSessionManager", username);
                 messageSender.close();
@@ -168,6 +169,31 @@ public abstract class ConnectionHandler {
 
         } catch (Exception e) {
             log.error("Error procesando reconexión: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Envía al cliente recién autenticado el snapshot actual de partidas activas del lobby.
+     */
+    private void sendLobbyMatchesSnapshot(Player player) {
+        if (player == null) {
+            return;
+        }
+
+        try {
+            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("matches", sessionManager.getActiveMatchesSummary());
+
+            java.util.Map<String, Object> message = new java.util.LinkedHashMap<>();
+            message.put("type", "LobbyMatchesSnapshot");
+            message.put("payload", payload);
+
+            player.sendMessage(message);
+            log.info("[CLIENT-CONNECT] 🧩 Snapshot del lobby enviado a {} con {} partidas activas",
+                    player.getName(), sessionManager.getActiveMatchCount());
+        } catch (Exception e) {
+            log.error("[CLIENT-CONNECT] ❌ Error enviando snapshot del lobby a {}: {}",
+                    player.getName(), e.getMessage(), e);
         }
     }
 
