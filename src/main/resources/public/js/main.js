@@ -21,7 +21,7 @@ const pendingLeaveRoomIds = new Set();
 // Assign a random accent colour to every card field-value badge
 const CARD_COLORS = ['--explode', '--third', '--green', '--orange'];
 function randomCardColors() {
-    document.querySelectorAll('.game-card-field-value').forEach(el => {
+    document.querySelectorAll('.game-card-field-value, .game-card-players-list-trigger').forEach(el => {
         const pick = CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)];
         el.style.backgroundColor = `var(${pick})`;
     });
@@ -97,6 +97,73 @@ function normalizeTimeLabel(timeValue) {
     if (n < 1) return `${Math.round(n * 60)} s`;
     return `${n} min`;
 }
+
+function attachPlayerListClickHandler(card) {
+    const trigger = card.querySelector('.game-card-players-list-trigger');
+    if (!trigger) return;
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const playerNames = JSON.parse(card.dataset.playerNames || '[]');
+        const roomId = card.dataset.roomId;
+        showPlayersModal(playerNames, roomId);
+    });
+}
+
+function showPlayersModal(playerNames, roomId) {
+    let modal = document.getElementById('players-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'players-modal';
+        modal.className = 'players-modal';
+        modal.innerHTML = `
+            <div class="players-modal-overlay"></div>
+            <div class="players-modal-content">
+                <div class="players-modal-header">
+                    <h3>Players in Game</h3>
+                </div>
+                <div class="players-modal-list"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const overlay = modal.querySelector('.players-modal-overlay');
+        overlay.addEventListener('click', closePlayersModal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closePlayersModal();
+        });
+    }
+
+    const listContainer = modal.querySelector('.players-modal-list');
+    listContainer.innerHTML = '';
+
+    if (!playerNames || playerNames.length === 0) {
+        listContainer.innerHTML = '<p class="players-modal-empty">No players connected</p>';
+    } else {
+        playerNames.forEach(name => {
+            const item = document.createElement('div');
+            item.className = 'players-modal-item';
+            item.textContent = name;
+            listContainer.appendChild(item);
+        });
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closePlayersModal() {
+    const modal = document.getElementById('players-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closePlayersModal();
+    }
+});
 
 function applyJoinButtonState(button) {
     if (!button) return;
@@ -176,7 +243,12 @@ function updateOnlineGameCard(gameData) {
         values[3].textContent = difficultyLabel;
     }
 
+    // Update playerNames in data attribute
+    const playerNames = Array.isArray(gameData?.playerNames) ? gameData.playerNames : [];
+    card.dataset.playerNames = JSON.stringify(playerNames);
+
     syncJoinButtonState(roomId);
+    attachPlayerListClickHandler(card);
     randomCardColors();
 }
 
@@ -227,7 +299,10 @@ function addOnlineGameCard(gameData) {
             </div>
             <div class="game-card-field">
                 <span class="game-card-field-label">Players</span>
-                <span class="game-card-field-value"></span>
+                <div class="game-card-players-container">
+                    <span class="game-card-field-value"></span>
+                    <span class="game-card-players-list-trigger" data-room-id="${roomId}" title="Click to view players">Players list</span>
+                </div>
             </div>
             <div class="game-card-field">
                 <span class="game-card-field-label">Type</span>
@@ -252,9 +327,14 @@ function addOnlineGameCard(gameData) {
     values[2].textContent = timeLabel;
     values[3].textContent = difficultyLabel;
 
+    // Store playerNames in data attribute for modal access
+    const playerNames = Array.isArray(gameData?.playerNames) ? gameData.playerNames : [];
+    card.dataset.playerNames = JSON.stringify(playerNames);
+
     gamesList.prepend(card);
     createdGameRoomIds.add(roomId);
     syncJoinButtonState(roomId);
+    attachPlayerListClickHandler(card);
     randomCardColors();
 }
 
