@@ -52,6 +52,13 @@
             <artifactId>java-jwt</artifactId>
             <version>4.4.0</version>
         </dependency>
+
+        <!-- OpenAI Java SDK para generación de preguntas con IA -->
+        <dependency>
+            <groupId>com.openai</groupId>
+            <artifactId>openai-java-client</artifactId>
+            <version>0.18.0</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

@@ -30,6 +30,19 @@ JWT_AUDIENCE=apalabrazos-client
 SEED_QUESTIONS_ON_START=false
 QUESTIONS_SEED_FILE=classpath:/Apalabrazos/data/questions2.json
 JAVA_OPTS=-Xms256m -Xmx512m
+
+# AI Question Generator (opcional - genera preguntas con IA periódicamente)
+AI_GENERATOR_ENABLED=false
+AI_API_KEY=TU_OPENROUTER_API_KEY
+AI_API_URL=https://openrouter.ai/api/v1/chat/completions
+AI_MODEL=openai/gpt-4o-mini
+AI_QUESTIONS_PER_LETTER=3
+AI_GENERATOR_HOUR=8
+AI_GENERATOR_MINUTE=0
+AI_GENERATOR_TIMEZONE=Europe/Madrid
+AI_GENERATOR_OUTPUT_DIR=src/main/resources/Apalabrazos/data
+AI_GENERATOR_FILENAME=questions2.json
+AI_GENERATOR_RUN_ON_START=false
 ```
 
 ## 3) Arranque
@@ -50,6 +63,8 @@ docker compose -f docker-compose.prod.yml up -d
 docker ps
 curl -I http://localhost:8080/
 docker logs --tail 100 apalabrazos-backend
+# Verificar que el generador de preguntas usa OpenRouter
+docker logs apalabrazos-backend | grep -i "openrouter"
 ```
 
 ## Notas de seguridad
