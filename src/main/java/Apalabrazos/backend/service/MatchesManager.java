@@ -48,6 +48,10 @@ public class MatchesManager implements EventListener {
      */
     private final Map<String, GameService> activeMatches;
 
+    // ===== Match Player Names Registry =====
+    // Stores the current list of player names for each active match.
+    private final Map<String, List<String>> matchPlayerNames;
+
     /**
      * Private constructor to prevent direct instantiation
      */
@@ -55,6 +59,7 @@ public class MatchesManager implements EventListener {
         this.eventBus = GlobalAsyncEventBus.getInstance();
         this.activeConnections = new ConcurrentHashMap<>();
         this.activeMatches = new ConcurrentHashMap<>();
+        this.matchPlayerNames = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
         log.info("MatchesManager singleton initialized");
@@ -251,6 +256,7 @@ public class MatchesManager implements EventListener {
         summary.put("name", gameName);
         summary.put("players", currentPlayers);
         summary.put("maxPlayers", maxPlayers);
+        summary.put("playerNames", getMatchPlayerNames(matchId));
         summary.put("gameType", gameType);
         summary.put("time", timeMinutes);
         summary.put("difficulty", difficulty);
@@ -291,7 +297,10 @@ public class MatchesManager implements EventListener {
             GameGlobal gameInstance = service != null ? service.getGameInstance() : null;
             int players = gameInstance != null ? gameInstance.getPlayerCount() : 0;
 
+            refreshMatchPlayerNames(matchId, service);
+
             if (players <= 0 && matchId != null && activeMatches.remove(matchId) != null) {
+                matchPlayerNames.remove(matchId);
                 removedMatches.add(buildMatchRemovedSummary(matchId, service));
                 log.info("Match {} removed from lobby after player state recalculation", matchId);
             }
@@ -331,6 +340,7 @@ public class MatchesManager implements EventListener {
         }
 
         gameInstance.removePlayer(playerId);
+        refreshMatchPlayerNames(currentMatchId, service);
         log.info("Player {} left match {}", playerId, currentMatchId);
 
         recalculateAllMatchesPlayersState();
@@ -554,6 +564,7 @@ public class MatchesManager implements EventListener {
             boolean alreadyInRoom = gameInstance != null && gameInstance.hasPlayer(playerId);
 
             if (alreadyInRoom) {
+                refreshMatchPlayerNames(roomId, service);
                 log.info("Player {} already in room {}", playerId, roomId);
                 return;
             }
@@ -564,6 +575,7 @@ public class MatchesManager implements EventListener {
             if (!added) {
                 log.error("No se pudo agregar el jugador {} a la sala {}", playerId, roomId);
             } else {
+                refreshMatchPlayerNames(roomId, service);
                 LobbyRoom.getInstance().broadcastMatchUpdated(buildMatchSummary(service), this);
             }
             // Aquí podríamos añadir la instancia del jugador si existe lógica para ello
@@ -584,6 +596,7 @@ public class MatchesManager implements EventListener {
         if (gameService != null) {
             String matchId = gameService.getMatchId();
             activeMatches.put(matchId, gameService);
+            refreshMatchPlayerNames(matchId, gameService);
             log.info("Match added with ID: {} (name: {}). Active matches: {}", matchId, gameService.getGameName(), activeMatches.size());
             return matchId;
         }
@@ -599,6 +612,7 @@ public class MatchesManager implements EventListener {
         if (gameService != null) {
             String matchId = gameService.getMatchId();
             if (activeMatches.remove(matchId) != null) {
+                matchPlayerNames.remove(matchId);
                 log.info("Match removed with ID: {}. Active matches: {}", matchId, activeMatches.size());
             }
         }
@@ -611,6 +625,7 @@ public class MatchesManager implements EventListener {
      */
     public void removeMatchById(String matchId) {
         if (matchId != null && activeMatches.remove(matchId) != null) {
+            matchPlayerNames.remove(matchId);
             log.info("Match removed with ID: {}. Active matches: {}", matchId, activeMatches.size());
         }
     }
@@ -658,6 +673,7 @@ public class MatchesManager implements EventListener {
      */
     public void clearAllMatches() {
         activeMatches.clear();
+        matchPlayerNames.clear();
         log.info("All matches cleared");
     }
 
@@ -748,6 +764,82 @@ public class MatchesManager implements EventListener {
             log.error("[GET-PLAYER] ❌ Error obteniendo jugador para SessionID {}: {}", sessionId, e.getMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * Resolve a player's display name from their logical player ID.
+     *
+     * @param playerId The logical player ID (e.g. nombre-xxxx)
+     * @return The player's name if found in active connections, otherwise null
+     */
+    public String getPlayerNameByPlayerId(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return null;
+        }
+
+        for (Player player : activeConnections.values()) {
+            if (player != null && playerId.equals(player.getPlayerID())) {
+                return player.getName();
+            }
+        }
+
+        log.debug("[GET-PLAYER-NAME] No active player found for playerId: {}", playerId);
+        return null;
+    }
+
+    /**
+     * Returns the player names currently stored for a match.
+     *
+     * @param matchId The match ID
+     * @return Copy of player names list, or empty list when not found
+     */
+    public List<String> getMatchPlayerNames(String matchId) {
+        if (matchId == null || matchId.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        List<String> stored = matchPlayerNames.get(matchId);
+        return stored != null ? new ArrayList<>(stored) : new ArrayList<>();
+    }
+
+    private void refreshMatchPlayerNames(String matchId, GameService service) {
+        if (matchId == null || matchId.isBlank() || service == null) {
+            return;
+        }
+
+        matchPlayerNames.put(matchId, buildPlayerNamesSnapshot(service));
+    }
+
+    private List<String> buildPlayerNamesSnapshot(GameService service) {
+        List<String> names = new ArrayList<>();
+        GameGlobal game = service.getGameInstance();
+        if (game == null) {
+            return names;
+        }
+
+        for (String playerId : game.getAllPlayerIds()) {
+            String resolvedName = getPlayerNameByPlayerId(playerId);
+            if (resolvedName == null || resolvedName.isBlank()) {
+                resolvedName = extractNameFromPlayerId(playerId);
+            }
+            if (resolvedName != null && !resolvedName.isBlank()) {
+                names.add(resolvedName);
+            }
+        }
+
+        return names;
+    }
+
+    private String extractNameFromPlayerId(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return null;
+        }
+
+        int separator = playerId.lastIndexOf('-');
+        if (separator <= 0) {
+            return playerId;
+        }
+        return playerId.substring(0, separator);
     }
 
     /**
