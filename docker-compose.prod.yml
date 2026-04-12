@@ -1,0 +1,18 @@
+services:
+  backend:
+    image: ghcr.io/${GHCR_OWNER}/apalabrazos:latest
+    container_name: apalabrazos-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: apalabrazos-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json:ro
+    command: --interval 60 --cleanup apalabrazos-backend

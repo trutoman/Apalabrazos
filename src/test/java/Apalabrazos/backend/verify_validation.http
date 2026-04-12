@@ -1,0 +1,51 @@
+@baseUrl = http://localhost:8080/api
+
+### 1. Testing Invalid Username (too short)
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "username": "ad",
+    "email": "test@example.com",
+    "password": "Password1"
+}
+
+### 2. Testing Invalid Email (bad format)
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "username": "user",
+    "email": "invalid",
+    "password": "Password1"
+}
+
+### 3. Testing Invalid Password (too short)
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "username": "user",
+    "email": "test@example.com",
+    "password": "Pass1"
+}
+
+### 4. Testing Invalid Password (no number)
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "username": "user",
+    "email": "test@example.com",
+    "password": "Password"
+}
+
+### 5. Testing Valid Request
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+    "username": "user",
+    "email": "test@example.com",
+    "password": "Password1"
+}

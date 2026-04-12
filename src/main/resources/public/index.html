@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apalabrazos - Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/register.css">
+    <link rel="stylesheet" href="css/lobby.css">
+</head>
+
+<body>
+
+    <section id="view-login" class="game-view">
+        <div class="login-card">
+            <h1>LOGIN</h1>
+            <form id="auth-form">
+                <div class="input-group">
+                    <label for="email">EMAIL</label>
+                    <input type="email" id="email" placeholder="your@email.com">
+                </div>
+
+                <div class="input-group">
+                    <label for="password">PASSWORD</label>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn-primary">Entrar</button>
+
+                    <div class="divider">o</div>
+
+                    <div class="social-login">
+                        <div class="social-btn">G</div>
+                        <div class="social-btn">F</div>
+                        <div class="social-btn">X</div>
+                    </div>
+
+                    <div class="footer">
+                        ¿No tienes cuenta? <a href="#" id="link-to-register">Regístrate</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section id="view-register" class="game-view hidden">
+        <div class="login-card">
+            <h1>REGISTRO</h1>
+            <form id="register-form">
+                <div class="input-group">
+                    <label for="reg-email">EMAIL</label>
+                    <input type="email" id="reg-email" placeholder="tu@email.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-username">USUARIO</label>
+                    <input type="text" id="reg-username" placeholder="Nombre de usuario" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-password">CONTRASEÑA</label>
+                    <input type="password" id="reg-password" placeholder="••••••••" required>
+                    <span class="tooltip">Minimum 8 characters, letters and numbers.</span>
+                </div>
+
+                <div class="input-group">
+                    <label for="reg-confirm-password">CONFIRMAR CONTRASEÑA</label>
+                    <input type="password" id="reg-confirm-password" placeholder="••••••••" required>
+                    <span class="tooltip">Minimum 8 characters, letters and numbers.</span>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn-primary">Registrarse</button>
+
+                    <div class="footer">
+                        ¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia Sesión</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section id="view-lobby" class="game-view hidden">
+        <div class="lobby-grid-container">
+
+            <!-- HEADER: full width -->
+            <div class="lobby-header">
+                <div class="user-info">
+                    <span class="user-name" id="lobby-username">Alvaro</span>
+                    <span class="user-status" id="lobby-status">Conectado</span>
+                    <button class="btn-settings" id="btn-settings" title="Settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M15.31 21.03C15.21 21.71 14.59 22.25 13.85 22.25H10.15C9.40999 22.25 8.78999 21.71 8.69999 20.98L8.42999 19.09C8.15999 18.95 7.89999 18.8 7.63999 18.63L5.83999 19.35C5.13999 19.61 4.36999 19.32 4.02999 18.7L2.19999 15.53C1.84999 14.87 1.99999 14.09 2.55999 13.65L4.08999 12.46C4.07999 12.31 4.06999 12.16 4.06999 12C4.06999 11.85 4.07999 11.69 4.08999 11.54L2.56999 10.35C1.97999 9.9 1.82999 9.09 2.19999 8.47L4.04999 5.28C4.38999 4.66 5.15999 4.38 5.83999 4.65L7.64999 5.38C7.90999 5.21 8.16999 5.06 8.42999 4.92L8.69999 3.01C8.78999 2.31 9.40999 1.76 10.14 1.76H13.84C14.58 1.76 15.2 2.3 15.29 3.03L15.56 4.92C15.83 5.06 16.09 5.21 16.35 5.38L18.15 4.66C18.86 4.4 19.63 4.69 19.97 5.31L21.81 8.49C22.17 9.15 22.01 9.93 21.45 10.37L19.93 11.56C19.94 11.71 19.95 11.86 19.95 12.02C19.95 12.18 19.94 12.33 19.93 12.48L21.45 13.67C22.01 14.12 22.17 14.9 21.82 15.53L19.96 18.75C19.62 19.37 18.85 19.65 18.16 19.38L16.36 18.66C16.1 18.83 15.84 18.98 15.58 19.12L15.31 21.03ZM10.62 20.25H13.38L13.75 17.7L14.28 17.48C14.72 17.3 15.16 17.04 15.62 16.7L16.07 16.36L18.45 17.32L19.83 14.92L17.8 13.34L17.87 12.78L17.8731 12.7531C17.902 12.5027 17.93 12.2607 17.93 12C17.93 11.73 17.9 11.47 17.87 11.22L17.8 10.66L19.83 9.08L18.44 6.68L16.05 7.64L15.6 7.29C15.18 6.97 14.73 6.71 14.27 6.52L13.75 6.3L13.38 3.75H10.62L10.25 6.3L9.71999 6.51C9.27999 6.7 8.83999 6.95 8.37999 7.3L7.92999 7.63L5.54999 6.68L4.15999 9.07L6.18999 10.65L6.11999 11.21C6.08999 11.47 6.05999 11.74 6.05999 12C6.05999 12.26 6.07999 12.53 6.11999 12.78L6.18999 13.34L4.15999 14.92L5.53999 17.32L7.92999 16.36L8.37999 16.71C8.80999 17.04 9.23999 17.29 9.70999 17.48L10.24 17.7L10.62 20.25ZM15.5 12C15.5 13.933 13.933 15.5 12 15.5C10.067 15.5 8.49999 13.933 8.49999 12C8.49999 10.067 10.067 8.5 12 8.5C13.933 8.5 15.5 10.067 15.5 12Z"
+                                fill="black" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- BODY: two independent columns -->
+            <div class="lobby-columns">
+
+                <!-- LEFT COLUMN: chat + actions -->
+                <div class="lobby-col-left">
+                    <div class="chat-container">
+                        <h2>Chat</h2>
+                        <div class="chat-messages" id="chat-messages"></div>
+                        <div class="chat-input-group">
+                            <input type="text" id="lobby-chat-input" class="chat-input"
+                                placeholder="Write a message..." />
+                            <button id="lobby-chat-send" class="btn-send">></button>
+                        </div>
+                    </div>
+
+                    <div class="lobby-actions">
+                        <button class="btn-primary" id="btn-create-game">Create</button>
+                        <button class="btn-logout" id="btn-logout">Logout</button>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: games list + create-game card -->
+                <div class="lobby-col-right">
+                    <div class="games-container">
+                        <h2>Online Games</h2>
+                        <div class="games-list" id="games-list"></div>
+                    </div>
+
+                    <!-- Create Game Config Card - hidden until Create is clicked -->
+                    <div class="create-game-config-card hidden" id="create-game-config-card">
+                        <div class="create-game-fields-grid">
+                            <div class="create-game-field cfg-title-field">
+                                <input type="text" id="cfg-game-name" placeholder="Game name..." maxlength="30" />
+                                <button class="create-game-config-close" id="btn-close-create-game">✕</button>
+                            </div>
+
+                            <div class="create-game-field">
+                                <label for="cfg-players">Players</label>
+                                <select id="cfg-players"></select>
+                            </div>
+
+                            <div class="create-game-field">
+                                <label for="cfg-game-type">Type</label>
+                                <select id="cfg-game-type"></select>
+                            </div>
+
+                            <div class="create-game-field">
+                                <label for="cfg-time">Time</label>
+                                <select id="cfg-time"></select>
+                            </div>
+
+                            <div class="create-game-field">
+                                <label for="cfg-difficulty">Difficulty</label>
+                                <select id="cfg-difficulty"></select>
+                            </div>
+                        </div>
+
+                        <button class="btn-confirm-create" id="btn-confirm-create">Create Game</button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div><!-- /lobby-columns -->
+        </div><!-- /lobby-grid-container -->
+        <script type="module" src="js/main.js" defer></script>
+</body>
+
+</html>
