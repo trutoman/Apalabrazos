@@ -1,0 +1,220 @@
+{
+  "questionList" : [ {
+    "questionText" : "¿Cuál es la capital de Noruega?",
+    "questionResponsesList" : [ "Oslo", "Oviedo", "Oporto", "Orán" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "n",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué baile tradicional español lleva la letra 'Ñ' en su nombre?",
+    "questionResponsesList" : [ "Pericón", "Pala", "Pasadoble", "Polka" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "ñ",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué océano baña las costas de California?",
+    "questionResponsesList" : [ "Pacífico", "Paraná", "Pilcomayo", "Plata" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "o",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué país tiene forma de bota?",
+    "questionResponsesList" : [ "Portugal", "País Vasco", "Principado", "Palencia" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "p",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué queso italiano se elabora con leche de búfala?",
+    "questionResponsesList" : [ "Quark", "Quinoa", "Quiche", "Quimbaya" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "q",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cuál de estos ríos es el más largo del mundo?",
+    "questionResponsesList" : [ "Río Amazonas", "Río Nilo", "Río Misisipi", "Río Yangtsé" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "r",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cuál es la capital de Chile?",
+    "questionResponsesList" : [ "Santiago", "Sucre", "Salvador", "San José" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "s",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué país es famoso por el Taj Mahal?",
+    "questionResponsesList" : [ "Turquía", "Tailandia", "Túnez", "India" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "t",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué país está al norte de Estados Unidos?",
+    "questionResponsesList" : [ "Ucrania", "Uganda", "Uruguay", "Canadá" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "u",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué animal es conocido por ser un gran depredador marino?",
+    "questionResponsesList" : [ "Vaca marina", "Víbora", "Venado", "Orca" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "v",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cuál es la capital de los Estados Unidos?",
+    "questionResponsesList" : [ "Washington D.C.", "Wisconsin", "Worcester", "Westfield" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "w",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cómo se llama la radiografía?",
+    "questionResponsesList" : [ "Xerografía", "Xilografía", "Xenofobia", "Xantoma" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "x",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cuál es el nombre de la embarcación de recreo?",
+    "questionResponsesList" : [ "Yate", "Yermo", "Yesca", "Yodo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "y",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué ciudad española es famosa por su Mezquita-Catedral?",
+    "questionResponsesList" : [ "Zaragoza", "Zamora", "Zafra", "Zamalu" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "z",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿En qué país se encuentra la torre Eiffel?",
+    "questionResponsesList" : [ "Alemania", "Andorra", "Austria", "Argelia" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "a",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cuál es la capital de Alemania?",
+    "questionResponsesList" : [ "Berlín", "Bonn", "Bremen", " Baviera" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "b",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué país tiene forma de bota?",
+    "questionResponsesList" : [ "Chipre", "Croacia", "Colombia", "Italia" ],
+    "correctQuestionIndex" : 3,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "c",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Apellido del pintor surrealista español?",
+    "questionResponsesList" : [ "Dalí", "Duchamp", "Degas", "Durero" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "d",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿En qué país se encuentra la Torre Eiffel?",
+    "questionResponsesList" : [ "España", "Escocia", "Egipto", "Francia" ],
+    "correctQuestionIndex" : 3,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "e",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cuál es el río más largo de España?",
+    "questionResponsesList" : [ "Fagusa", "Forth", "Foyle", "Tajo" ],
+    "correctQuestionIndex" : 3,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "f",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Nombre del río más largo del mundo en volumen de agua?",
+    "questionResponsesList" : [ "Amazonas", "Guadiana", "Ganges", "Guadalquivir" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "g",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Ciudad vietnamita, famosa por su arquitectura y sastrería",
+    "questionResponsesList" : [ "Hoi An", "Hanoi", "Hue", "Haiphong" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "h",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué país tiene forma de bota?",
+    "questionResponsesList" : [ "Italia", "India", "Irak", "Islandia" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "i",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿En qué país se encuentra la ciudad de Jerusalén?",
+    "questionResponsesList" : [ "Israel", "Jordania", "Jamaica", "Japón" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "j",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué país asiático es famoso por sus cerezos en flor?",
+    "questionResponsesList" : [ "Kyoto", "Kuwait", "Kazajistán", "Kirguistán" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "k",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Cuál es la capital de Portugal?",
+    "questionResponsesList" : [ "Lisboa", "León", "Liverpool", "Luxemburgo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "l",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "¿Qué metal es un buen conductor de electricidad?",
+    "questionResponsesList" : [ "Mercurio", "Magnesio", "Manganeso", "Molibdeno" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "m",
+    "userResponseRecorded" : "init"
+  } ],
+  "max_length" : 27
+}

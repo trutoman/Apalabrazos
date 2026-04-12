@@ -56,8 +56,8 @@
         <!-- OpenAI Java SDK para generación de preguntas con IA -->
         <dependency>
             <groupId>com.openai</groupId>
-            <artifactId>openai-java-client</artifactId>
-            <version>0.18.0</version>
+            <artifactId>openai-java</artifactId>
+            <version>4.31.0</version>
         </dependency>
     </dependencies>
     <build>
@@ -71,21 +71,32 @@
                 </configuration>
             </plugin>
 
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.6.3</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                    </execution>
-                </executions>
+        <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+            <execution>
+                <id>run-mainapp</id>
+                <goals>
+                    <goal>java</goal>
+                </goals>
                 <configuration>
                     <mainClass>Apalabrazos.MainApp</mainClass>
                 </configuration>
-            </plugin>
+            </execution>
+
+            <execution>
+                <id>run-ai-generator</id>
+                <goals>
+                    <goal>java</goal>
+                </goals>
+                <configuration>
+                    <mainClass>Apalabrazos.backend.tools.AIQuestionGeneratorRunner</mainClass>
+                </configuration>
+            </execution>
+        </executions>
+        </plugin>
         </plugins>
     </build>
 </project>

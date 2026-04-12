@@ -23,7 +23,7 @@ import java.util.List;
  * Variables de entorno:
  * - AI_API_KEY       → API key de OpenRouter (obligatoria para generar)
  * - AI_API_URL       → URL base de la API (default: https://openrouter.ai/api/v1/chat/completions)
- * - AI_MODEL         → Modelo a usar (default: google/gemini-2.0-flash-001)
+ * - AI_MODEL         → Modelo a usar (default: openai/gpt-4o-mini)
  * - AI_QUESTIONS_PER_LETTER → Preguntas por letra (default: 3)
  * - AI_APP_NAME      → Nombre de la app para OpenRouter (default: Apalabrazos)
  * - AI_APP_URL       → URL de la app para OpenRouter (default: https://github.com/Apalabrazos)
@@ -33,7 +33,7 @@ public class AIQuestionGenerator {
     private static final Logger log = LoggerFactory.getLogger(AIQuestionGenerator.class);
 
     private static final String DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String DEFAULT_MODEL = "google/gemini-2.0-flash-001";
+    private static final String DEFAULT_MODEL = "z-ai/glm-4.5-air:free";
     private static final int DEFAULT_QUESTIONS_PER_LETTER = 3;
     private static final String DEFAULT_APP_NAME = "Apalabrazos";
     private static final String DEFAULT_APP_URL = "https://github.com/Apalabrazos";
@@ -48,7 +48,7 @@ public class AIQuestionGenerator {
     private final ObjectMapper mapper;
 
     public AIQuestionGenerator() {
-        this.apiKey = readEnv("AI_API_KEY", "");
+        this.apiKey = readEnv("AI_API_KEY", "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");
         this.apiUrl = readEnv("AI_API_URL", DEFAULT_API_URL);
         this.model = readEnv("AI_MODEL", DEFAULT_MODEL);
         this.questionsPerLetter = readEnvInt("AI_QUESTIONS_PER_LETTER", DEFAULT_QUESTIONS_PER_LETTER);
@@ -163,7 +163,7 @@ public class AIQuestionGenerator {
         // Build JSON manually to avoid extra dependencies
         var body = new java.util.LinkedHashMap<String, Object>();
         body.put("model", model);
-        body.put("temperature", 0.8);
+        body.put("temperature", 0.2);
         body.put("max_tokens", 4000);
 
         var messages = new ArrayList<java.util.Map<String, String>>();
@@ -202,12 +202,28 @@ public class AIQuestionGenerator {
             content = content.substring(0, content.length() - 3);
         }
         content = content.trim();
-
+        // DEBUG: ver qué devuelve realmente la IA
+        log.info("Respuesta cruda de la IA:\n{}", content);
+        
         JsonNode questionsNode = mapper.readTree(content);
-        JsonNode listNode = questionsNode.path("questionList");
+        JsonNode listNode = null;
 
-        if (!listNode.isArray()) {
-            throw new RuntimeException("La respuesta de la IA no contiene un array 'questionList' válido");
+        // Caso 1: objeto con questionList
+        if (questionsNode.isObject() && questionsNode.has("questionList") && questionsNode.get("questionList").isArray()) {
+            listNode = questionsNode.get("questionList");
+        }
+        // Caso 2: objeto con questions
+        else if (questionsNode.isObject() && questionsNode.has("questions") && questionsNode.get("questions").isArray()) {
+            listNode = questionsNode.get("questions");
+        }
+        // Caso 3: array directo
+        else if (questionsNode.isArray()) {
+            listNode = questionsNode;
+        }
+
+        if (listNode == null || !listNode.isArray()) {
+            log.error("Contenido recibido de la IA:\n{}", content);
+            throw new RuntimeException("La respuesta de la IA no contiene un array de preguntas válido");
         }
 
         List<Question> questions = new ArrayList<>();
