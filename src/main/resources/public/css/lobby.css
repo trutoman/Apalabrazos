@@ -84,9 +84,24 @@
 }
 
 .user-name {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
     font-size: 1.5rem;
-    font-weight: bold;
+    font-weight: 600;
     color: var(--primary);
+}
+
+.lobby-username-highlight {
+    font-size: 1.15em;
+    font-weight: 800;
+}
+
+.lobby-username-suffix {
+    font-size: 0.72em;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    opacity: 0.82;
 }
 
 .user-status {
@@ -803,5 +818,4 @@
     color: var(--primary);
     font-style: italic;
     margin: 0;
-}
 }

@@ -48,6 +48,26 @@ function populateGameSelects() {
     populateSelect('cfg-difficulty', GAME_OPTIONS.difficulties);
 }
 
+function renderLobbyUsername(username) {
+    const lobbyUsername = document.getElementById('lobby-username');
+    if (!lobbyUsername) return;
+
+    const safeUsername = String(username || '').trim() || 'User';
+
+    lobbyUsername.textContent = '';
+
+    const usernameHighlight = document.createElement('span');
+    usernameHighlight.className = 'lobby-username-highlight';
+    usernameHighlight.textContent = safeUsername;
+
+    const lobbySuffix = document.createElement('span');
+    lobbySuffix.className = 'lobby-username-suffix';
+    lobbySuffix.textContent = 'on Apalabrazos lobby room';
+
+    lobbyUsername.appendChild(usernameHighlight);
+    lobbyUsername.appendChild(lobbySuffix);
+}
+
 function setCreatePendingState(pending) {
     isCreateGamePending = pending;
     syncCreateGameControlsState();
@@ -727,6 +747,7 @@ LoginUI.init(
             // 5. WebSocket authenticated, switch to lobby
             console.log("✅ Authentication successful, entering lobby...");
             UIManager.switchView('view-lobby');
+            renderLobbyUsername(currentUsername);
 
             // Initialize Lobby UI with message sending logic
             LobbyUI.init((message) => {
