@@ -1,220 +1,604 @@
 {
   "questionList" : [ {
-    "questionText" : "¿Cuál es la capital de Noruega?",
-    "questionResponsesList" : [ "Oslo", "Oviedo", "Oporto", "Orán" ],
+    "questionText" : "Con la X: temor irracional a los extranjeros",
+    "questionResponsesList" : [ "Xenofobia", "Claustrofobia", "Acrofobia", "Hidrofobia" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "n",
+    "questionLetter" : "x",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Qué baile tradicional español lleva la letra 'Ñ' en su nombre?",
-    "questionResponsesList" : [ "Pericón", "Pala", "Pasadoble", "Polka" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "hard",
-    "questionLetter" : "ñ",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Qué océano baña las costas de California?",
-    "questionResponsesList" : [ "Pacífico", "Paraná", "Pilcomayo", "Plata" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "o",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Qué país tiene forma de bota?",
-    "questionResponsesList" : [ "Portugal", "País Vasco", "Principado", "Palencia" ],
+    "questionText" : "Con la X: instrumento musical de percusión formado por láminas de madera",
+    "questionResponsesList" : [ "Xilófono", "Piano", "Arpa", "Violín" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "easy",
-    "questionLetter" : "p",
+    "questionLetter" : "x",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Qué queso italiano se elabora con leche de búfala?",
-    "questionResponsesList" : [ "Quark", "Quinoa", "Quiche", "Quimbaya" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "hard",
-    "questionLetter" : "q",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Cuál de estos ríos es el más largo del mundo?",
-    "questionResponsesList" : [ "Río Amazonas", "Río Nilo", "Río Misisipi", "Río Yangtsé" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "r",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Cuál es la capital de Chile?",
-    "questionResponsesList" : [ "Santiago", "Sucre", "Salvador", "San José" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "easy",
-    "questionLetter" : "s",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Qué país es famoso por el Taj Mahal?",
-    "questionResponsesList" : [ "Turquía", "Tailandia", "Túnez", "India" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "t",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Qué país está al norte de Estados Unidos?",
-    "questionResponsesList" : [ "Ucrania", "Uganda", "Uruguay", "Canadá" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "easy",
-    "questionLetter" : "u",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Qué animal es conocido por ser un gran depredador marino?",
-    "questionResponsesList" : [ "Vaca marina", "Víbora", "Venado", "Orca" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "hard",
-    "questionLetter" : "v",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Cuál es la capital de los Estados Unidos?",
-    "questionResponsesList" : [ "Washington D.C.", "Wisconsin", "Worcester", "Westfield" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "w",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Cómo se llama la radiografía?",
-    "questionResponsesList" : [ "Xerografía", "Xilografía", "Xenofobia", "Xantoma" ],
+    "questionText" : "Contiene la X: persona que habla una lengua extranjera",
+    "questionResponsesList" : [ "Extranjero", "Nativo", "Residente", "Ciudadano" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "hard",
     "questionLetter" : "x",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Cuál es el nombre de la embarcación de recreo?",
-    "questionResponsesList" : [ "Yate", "Yermo", "Yesca", "Yodo" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "y",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Qué ciudad española es famosa por su Mezquita-Catedral?",
-    "questionResponsesList" : [ "Zaragoza", "Zamora", "Zafra", "Zamalu" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "z",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿En qué país se encuentra la torre Eiffel?",
-    "questionResponsesList" : [ "Alemania", "Andorra", "Austria", "Argelia" ],
+    "questionText" : "Contiene la W: programa de radio o televisión",
+    "questionResponsesList" : [ "Show", "Debate", "Reportaje", "Magazine" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "easy",
-    "questionLetter" : "a",
+    "questionLetter" : "w",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Cuál es la capital de Alemania?",
-    "questionResponsesList" : [ "Berlín", "Bonn", "Bremen", " Baviera" ],
+    "questionText" : "Contiene la W: tipo de sándwich con varios pisos",
+    "questionResponsesList" : [ "Club sándwich", "Mixto", "Vegetal", "Bikini" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "b",
+    "questionLetter" : "w",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Qué país tiene forma de bota?",
-    "questionResponsesList" : [ "Chipre", "Croacia", "Colombia", "Italia" ],
-    "correctQuestionIndex" : 3,
+    "questionText" : "Contiene la W: refresco de naranja muy popular",
+    "questionResponsesList" : [ "Fanta", "Sprite", "Schweppes", "Mirinda" ],
+    "correctQuestionIndex" : 2,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "w",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la V: recipiente para beber",
+    "questionResponsesList" : [ "Vaso", "Taza", "Copa", "Jarra" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "easy",
-    "questionLetter" : "c",
+    "questionLetter" : "v",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Apellido del pintor surrealista español?",
-    "questionResponsesList" : [ "Dalí", "Duchamp", "Degas", "Durero" ],
+    "questionText" : "Con la V: mamífero rumiante",
+    "questionResponsesList" : [ "Vaca", "Oveja", "Cabra", "Llama" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "v",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la V: mamífero rumiante de zonas frías",
+    "questionResponsesList" : [ "Venado", "Alce", "Ciervo", "Gacela" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "d",
+    "questionLetter" : "v",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿En qué país se encuentra la Torre Eiffel?",
-    "questionResponsesList" : [ "España", "Escocia", "Egipto", "Francia" ],
-    "correctQuestionIndex" : 3,
+    "questionText" : "Con la U: país de América del Sur",
+    "questionResponsesList" : [ "Uruguay", "Paraguay", "Bolivia", "Ecuador" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "easy",
-    "questionLetter" : "e",
+    "questionLetter" : "u",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Cuál es el río más largo de España?",
-    "questionResponsesList" : [ "Fagusa", "Forth", "Foyle", "Tajo" ],
-    "correctQuestionIndex" : 3,
+    "questionText" : "Con la U: instrumento musical de cuerda",
+    "questionResponsesList" : [ "Ukelele", "Guitarra", "Violín", "Arpa" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "u",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la U: lugar donde se cultivan uvas",
+    "questionResponsesList" : [ "Uveral", "Huerta", "Jardín", "Invernadero" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "u",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la T: bebida caliente estimulante",
+    "questionResponsesList" : [ "Té", "Café", "Chocolate", "Mate" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "t",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la T: arte de representar obras",
+    "questionResponsesList" : [ "Teatro", "Cine", "Danza", "Música" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "t",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la T: acuerdo entre países",
+    "questionResponsesList" : [ "Tratado", "Pacto", "Alianza", "Convenio" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "t",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la S: que tiene mucha sal",
+    "questionResponsesList" : [ "Salado", "Dulce", "Ácido", "Amargo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "s",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la S: mamífero marino de gran tamaño",
+    "questionResponsesList" : [ "Sirena", "Ballena", "Foca", "Delfín" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "s",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la S: periodo de seis meses",
+    "questionResponsesList" : [ "Semestre", "Trimestre", "Anualidad", "Bienio" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "s",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la R: sentimiento de pena profunda",
+    "questionResponsesList" : [ "Remordimiento", "Tristeza", "Melancolía", "Soledad" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "r",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la R: conjunto de normas de una institución",
+    "questionResponsesList" : [ "Reglamento", "Estatuto", "Acuerdo", "Directiva" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "hard",
-    "questionLetter" : "f",
+    "questionLetter" : "r",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Nombre del río más largo del mundo en volumen de agua?",
-    "questionResponsesList" : [ "Amazonas", "Guadiana", "Ganges", "Guadalquivir" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "g",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Ciudad vietnamita, famosa por su arquitectura y sastrería",
-    "questionResponsesList" : [ "Hoi An", "Hanoi", "Hue", "Haiphong" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "hard",
-    "questionLetter" : "h",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "¿Qué país tiene forma de bota?",
-    "questionResponsesList" : [ "Italia", "India", "Irak", "Islandia" ],
+    "questionText" : "Con la Q: persona que tiene quince años",
+    "questionResponsesList" : [ "Quinceañero", "Adolescente", "Joven", "Niño" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "easy",
-    "questionLetter" : "i",
+    "questionLetter" : "q",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿En qué país se encuentra la ciudad de Jerusalén?",
-    "questionResponsesList" : [ "Israel", "Jordania", "Jamaica", "Japón" ],
+    "questionText" : "Con la Q: persona que tiene buen gusto",
+    "questionResponsesList" : [ "Quisquilloso", "Elegante", "Refinado", "Distinguido" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "q",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la Q: dolor o molestia",
+    "questionResponsesList" : [ "Queja", "Alivio", "Consuelo", "Calma" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "q",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la P: lugar donde se guarda el pan",
+    "questionResponsesList" : [ "Panera", "Nevera", "Armario", "Despensa" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "j",
+    "questionLetter" : "p",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Qué país asiático es famoso por sus cerezos en flor?",
-    "questionResponsesList" : [ "Kyoto", "Kuwait", "Kazajistán", "Kirguistán" ],
+    "questionText" : "Con la P: estado o situación en que no hay guerra",
+    "questionResponsesList" : [ "Paz", "Guerra", "Conflicto", "Armisticio" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "p",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la P: elevar a categoría superior",
+    "questionResponsesList" : [ "Promocionar", "Degradar", "Rebajar", "Disminuir" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "k",
+    "questionLetter" : "p",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Cuál es la capital de Portugal?",
-    "questionResponsesList" : [ "Lisboa", "León", "Liverpool", "Luxemburgo" ],
+    "questionText" : "Con la O: lo contrario de occidente",
+    "questionResponsesList" : [ "Oriente", "Norte", "Sur", "Centro" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "o",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la O: metal precioso de color amarillo",
+    "questionResponsesList" : [ "Oro", "Plata", "Bronce", "Cobre" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "o",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la O: persona que tiene un oficio",
+    "questionResponsesList" : [ "Obrero", "Artesano", "Empleado", "Funcionario" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "o",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Contiene la Ñ: árbol de madera dura y resistente",
+    "questionResponsesList" : [ "Castaño", "Ébano", "Nogal", "Cerezo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "ñ",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Contiene la Ñ: golpe dado con los nudillos",
+    "questionResponsesList" : [ "Puñetazo", "Manotazo", "Codazo", "Empujón" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "ñ",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Contiene la Ñ: instrumento musical de percusión, de origen español",
+    "questionResponsesList" : [ "Pandereta", "Castañuela", "Tamboril", "Claves" ],
+    "correctQuestionIndex" : 1,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "ñ",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la N: estado de ánimo de tristeza",
+    "questionResponsesList" : [ "Nostalgia", "Alegría", "Calma", "Ira" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "n",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la N: dicho o hecho necio",
+    "questionResponsesList" : [ "Necedad", "Torpeza", "Sandez", "Tontería" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "n",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la N: persona que tiene por oficio vender nieve o helados",
+    "questionResponsesList" : [ "Nevero", "Heladero", "Ventero", "Frigorista" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "n",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la M: capital de España",
+    "questionResponsesList" : [ "Madrid", "Barcelona", "Valencia", "Sevilla" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "m",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la M: persona que ejerce la medicina",
+    "questionResponsesList" : [ "Médico", "Enfermero", "Farmacéutico", "Biólogo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "m",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la M: sentimiento de temor o sospecha",
+    "questionResponsesList" : [ "Miedo", "Ira", "Tristeza", "Alegría" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "m",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la L: animal felino de gran tamaño",
+    "questionResponsesList" : [ "León", "Tigre", "Guepardo", "Pantera" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "l",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la L: piedra preciosa de color azul intenso",
+    "questionResponsesList" : [ "Lapislázuli", "Esmeralda", "Rubí", "Zafiro" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "l",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "¿Qué metal es un buen conductor de electricidad?",
-    "questionResponsesList" : [ "Mercurio", "Magnesio", "Manganeso", "Molibdeno" ],
+    "questionText" : "Con la L: persona que tiene por oficio hacer o vender lanas",
+    "questionResponsesList" : [ "Lanero", "Textil", "Tejedor", "Ovejero" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "l",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la K: puesto de venta callejero, especialmente de golosinas",
+    "questionResponsesList" : [ "Kiosco", "Puesto", "Tenderete", "Chiringuito" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "easy",
-    "questionLetter" : "m",
+    "questionLetter" : "k",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la K: embarcación ligera utilizada en aguas tranquilas",
+    "questionResponsesList" : [ "Kayak", "Canoa", "Balsa", "Yate" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "k",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la K: Fruta de piel vellosa y pulpa verde",
+    "questionResponsesList" : [ "Kiwi", "Caqui", "Mango", "Melón" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "k",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la J: recipiente para contener líquidos",
+    "questionResponsesList" : [ "Jarra", "Copa", "Vaso", "Taza" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "j",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la J: persona que tiene a su cargo la dirección de una empresa",
+    "questionResponsesList" : [ "Jefe", "Subalterno", "Empleado", "Ayudante" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "j",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la J: mamífero rumiante de cuello largo",
+    "questionResponsesList" : [ "Jirafa", "Gacela", "Impala", "Ñu" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "j",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la I: mamífero carnívoro de pelaje muy fino",
+    "questionResponsesList" : [ "Iltis", "Hurón", "Marta", "Comadreja" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "i",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la I: cualidad de inmenso",
+    "questionResponsesList" : [ "Inmensidad", "Grandeza", "Amplitud", "Extensión" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "i",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la I: persona que profesa el islam",
+    "questionResponsesList" : [ "Islámico", "Cristiano", "Judío", "Budista" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "i",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la H: masa de harina, con levadura y agua, cocida al horno",
+    "questionResponsesList" : [ "Hogaza", "Bollo", "Torta", "Rosca" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "h",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la H: dicho o hecho gracioso y agudo para divertir",
+    "questionResponsesList" : [ "Humorada", "Chiste", "Broma", "Sarcasmo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "h",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la G: mamífero felino de gran tamaño",
+    "questionResponsesList" : [ "Guepardo", "Leopardo", "Tigre", "Lince" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "g",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la F: mamífero carnívoro de la familia de los félidos",
+    "questionResponsesList" : [ "Felino", "Canino", "Mustélido", "Úrsido" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "f",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la F: que es muy fácil de hacer o de conseguir",
+    "questionResponsesList" : [ "Factible", "Complejo", "Difícil", "Complicado" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "f",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la F: persona que ejerce la medicina",
+    "questionResponsesList" : [ "Facultativo", "Enfermero", "Auxiliar", "Sanitario" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "f",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la E: que es muy importante o necesario",
+    "questionResponsesList" : [ "Esencial", "Básico", "Fundamental", "Principal" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "e",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la E: persona que tiene estudios de economía",
+    "questionResponsesList" : [ "Economista", "Contable", "Financiero", "Administrador" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "e",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la E: sentimiento de alegría y satisfacción",
+    "questionResponsesList" : [ "Entusiasmo", "Tristeza", "Ira", "Miedo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "e",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la D: persona que dirige una orquesta",
+    "questionResponsesList" : [ "Director", "Músico", "Compositor", "Intérprete" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "d",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la D: sistema político que defiende la soberanía del pueblo",
+    "questionResponsesList" : [ "Democracia", "Socialismo", "Comunismo", "Liberalismo" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "d",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la D: mamífero marino de gran tamaño",
+    "questionResponsesList" : [ "Delfín", "Foca", "Manatí", "Nutria" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "d",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la C: recipiente para beber",
+    "questionResponsesList" : [ "Copa", "Vaso", "Taza", "Jarra" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "c",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la C: cualidad de ser cierto o verdadero",
+    "questionResponsesList" : [ "Certeza", "Verdad", "Exactitud", "Precisión" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "c",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la C: sentimiento de tristeza profunda",
+    "questionResponsesList" : [ "Congoja", "Melancolía", "Nostalgia", "Soledad" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "c",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la B: mamífero rumiante",
+    "questionResponsesList" : [ "Búfalo", "Vaca", "Oveja", "Cabra" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "b",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la B: persona que trabaja en una biblioteca",
+    "questionResponsesList" : [ "Bibliotecario", "Archivero", "Librero", "Documentalista" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "b",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la B: mamífero rumiante de dos jorobas",
+    "questionResponsesList" : [ "Bactriano", "Dromedario", "Llama", "Alpaca" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "b",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la A: persona que hace acrobacias",
+    "questionResponsesList" : [ "Acróbata", "Gimnasta", "Trapecista", "Funambulista" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "a",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la A: capital de Grecia",
+    "questionResponsesList" : [ "Atenas", "Roma", "Madrid", "París" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "a",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la A: sensación de malestar, angustia o temor",
+    "questionResponsesList" : [ "Ansiedad", "Tristeza", "Melancolía", "Soledad" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "a",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la Z: mamífero artiodáctilo africano de rayas blancas y negras",
+    "questionResponsesList" : [ "Zebra", "Ñu", "Gacela", "Jirafa" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "z",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la Z: instrumento musical de viento",
+    "questionResponsesList" : [ "Zampoña", "Flauta", "Ocarina", "Trompeta" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "hard",
+    "questionLetter" : "z",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la Y: tubérculo comestible",
+    "questionResponsesList" : [ "Yuca", "Ñame", "Papa", "Batata" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "easy",
+    "questionLetter" : "y",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la Y: embarcación pequeña y ligera",
+    "questionResponsesList" : [ "Yate", "Balsa", "Canoa", "Góndola" ],
+    "correctQuestionIndex" : 0,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "y",
     "userResponseRecorded" : "init"
   } ],
-  "max_length" : 27
+  "max_length" : 75
 }

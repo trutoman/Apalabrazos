@@ -33,7 +33,7 @@ JAVA_OPTS=-Xms256m -Xmx512m
 
 # AI Question Generator (opcional - genera preguntas con IA periódicamente)
 AI_GENERATOR_ENABLED=false
-AI_API_KEY=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
+AI_API_KEY=
 AI_API_URL=https://openrouter.ai/api/v1/chat/completions
 AI_MODEL=google/gemini-2.0-flash-001
 AI_QUESTIONS_PER_LETTER=3
