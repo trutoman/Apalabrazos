@@ -17,61 +17,87 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class AIQuestionGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(AIQuestionGenerator.class);
 
-    private static final String DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    private static final String DEFAULT_MODEL = "google/gemini-2.0-flash-001";
+    private static final String ENYE = "ñ";
+    private static final String ENYE_UPPER = "Ñ";
+
+    private static final String DEFAULT_API_URL = "http://172.18.0.20:11434/v1/messages";
+    private static final String DEFAULT_MODEL = "gemma4:latest";
+    private static final String DEFAULT_FALLBACK_MODEL = "";
+
     private static final int DEFAULT_QUESTIONS_PER_LETTER = 3;
+    private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 4;
+    private static final int DEFAULT_LETTERS_PER_BATCH = 5;
+    private static final int DEFAULT_MAX_ATTEMPTS_PER_BATCH = 3;
+    private static final int DEFAULT_MAX_TOKENS = 4000;
+
     private static final String DEFAULT_APP_NAME = "Apalabrazos";
     private static final String DEFAULT_APP_URL = "https://github.com/Apalabrazos";
 
-    private static final int DEFAULT_BATCH_SIZE = 5;
-    private static final int DEFAULT_MAX_BATCH_ATTEMPTS = 5;
-    private static final int DEFAULT_MAX_PARSE_LOG_CHARS = 4000;
+    private static final int DEFAULT_LOG_PREVIEW = 4000;
+    private static final int MAX_RETRIES_ON_503 = 2;
+    private static final long INITIAL_RETRY_DELAY_MS = 1500L;
+    private static final long DEFAULT_429_WAIT_MS = 45000L;
 
-    private static final Set<String> DIFFICULT_LETTERS = Set.of("k", "w", "x", "y", "ñ");
-
-    private static final Set<String> BANNED_ANSWERS = Set.of(
-            "waterfox", "resquemor", "ñafiles", "aproximacion", "yeru", "xisquion", "xilopalo"
+    private static final List<Charset> MOJIBAKE_SOURCE_CHARSETS = List.of(
+            Charset.forName("CP437"),
+            Charset.forName("CP850"),
+            Charset.forName("windows-1252"),
+            StandardCharsets.ISO_8859_1
     );
 
     private final String apiKey;
     private final String apiUrl;
     private final String model;
+    private final String fallbackModel;
     private final int questionsPerLetter;
+    private final int questionsToGeneratePerLetterInBatch;
+    private final int lettersPerBatch;
+    private final int maxAttemptsPerBatch;
+    private final int maxTokens;
     private final String appName;
     private final String appUrl;
-    private final int batchSize;
-    private final int maxBatchAttempts;
 
     private final HttpClient httpClient;
     private final ObjectMapper mapper;
 
     public AIQuestionGenerator() {
         this.apiKey = readEnv("AI_API_KEY", "");
-        this.apiUrl = readEnv("AI_API_URL", DEFAULT_API_URL);
+        this.apiUrl = readEnv("AI_API_URL", DEFAULT_API_URL).trim();
         this.model = readEnv("AI_MODEL", DEFAULT_MODEL);
+        this.fallbackModel = readEnv("AI_FALLBACK_MODEL", DEFAULT_FALLBACK_MODEL);
         this.questionsPerLetter = readEnvInt("AI_QUESTIONS_PER_LETTER", DEFAULT_QUESTIONS_PER_LETTER);
+        this.questionsToGeneratePerLetterInBatch = readEnvInt(
+                "AI_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH",
+                DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH
+        );
+        this.lettersPerBatch = readEnvInt("AI_LETTERS_PER_BATCH", DEFAULT_LETTERS_PER_BATCH);
+        this.maxAttemptsPerBatch = readEnvInt("AI_MAX_ATTEMPTS_PER_BATCH", DEFAULT_MAX_ATTEMPTS_PER_BATCH);
+        this.maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
         this.appName = readEnv("AI_APP_NAME", DEFAULT_APP_NAME);
         this.appUrl = readEnv("AI_APP_URL", DEFAULT_APP_URL);
-        this.batchSize = readEnvInt("AI_BATCH_SIZE", DEFAULT_BATCH_SIZE);
-        this.maxBatchAttempts = readEnvInt("AI_MAX_BATCH_ATTEMPTS", DEFAULT_MAX_BATCH_ATTEMPTS);
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -80,253 +106,468 @@ public class AIQuestionGenerator {
         this.mapper = new ObjectMapper();
         this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-        log.info("AIQuestionGenerator configurado. modelo={}, batchSize={}, questionsPerLetter={}",
-                model, batchSize, questionsPerLetter);
+        log.info(
+                "AIQuestionGenerator configurado para Anthropic-compatible. apiUrl={}, modelo={}, fallbackModel={}, questionsPerLetter={}, questionsToGeneratePerLetterInBatch={}, lettersPerBatch={}, maxAttemptsPerBatch={}, maxTokens={}, appName={}, appUrl={}",
+                apiUrl, model, fallbackModel, questionsPerLetter, questionsToGeneratePerLetterInBatch,
+                lettersPerBatch, maxAttemptsPerBatch, maxTokens, appName, appUrl
+        );
+    }
+
+    public int getQuestionsPerLetter() {
+        return questionsPerLetter;
+    }
+
+    public void validateConfiguration() {
+        if (apiUrl == null || apiUrl.isBlank()) {
+            throw new IllegalStateException("AI_API_URL no configurada.");
+        }
+
+        if (model == null || model.isBlank()) {
+            throw new IllegalStateException("AI_MODEL no configurado.");
+        }
+
+        if (questionsPerLetter <= 0) {
+            throw new IllegalStateException("AI_QUESTIONS_PER_LETTER debe ser > 0.");
+        }
+
+        if (questionsToGeneratePerLetterInBatch < questionsPerLetter) {
+            throw new IllegalStateException("AI_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH debe ser >= AI_QUESTIONS_PER_LETTER.");
+        }
+
+        if (lettersPerBatch <= 0) {
+            throw new IllegalStateException("AI_LETTERS_PER_BATCH debe ser > 0.");
+        }
+
+        if (maxTokens <= 0) {
+            throw new IllegalStateException("AI_MAX_TOKENS debe ser > 0.");
+        }
     }
 
     public QuestionList generateFullBattery() throws Exception {
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("AI_API_KEY no configurada. No se pueden generar preguntas con IA.");
+        validateConfiguration();
+
+        List<String> allLetters = new ArrayList<>(AlphabetMap.MAP.values()).stream()
+                .map(this::normalizeLetter)
+                .distinct()
+                .collect(Collectors.toList());
+
+        return generateBatteryForMissingLetters(allLetters);
+    }
+
+    public QuestionList generateBatteryForMissingLetters(List<String> targetLetters) throws Exception {
+        validateConfiguration();
+
+        if (targetLetters == null || targetLetters.isEmpty()) {
+            log.info("No hay letras pendientes de generar.");
+            return new QuestionList(new ArrayList<>(), 0);
         }
 
-        List<String> allLetters = new ArrayList<>(AlphabetMap.MAP.values());
+        List<String> normalizedTargetLetters = targetLetters.stream()
+                .map(this::normalizeLetter)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
 
-        Map<String, List<Question>> byLetter = new LinkedHashMap<>();
-        for (String letter : allLetters) {
-            byLetter.put(normalizeLetter(letter), new ArrayList<>());
+        Map<String, List<Question>> acceptedByLetter = new LinkedHashMap<>();
+        for (String letter : normalizedTargetLetters) {
+            acceptedByLetter.put(letter, new ArrayList<>());
         }
 
-        for (int i = 0; i < allLetters.size(); i += batchSize) {
-            List<String> batch = allLetters.subList(i, Math.min(i + batchSize, allLetters.size()));
-            completeBatch(batch, byLetter);
+        // Resolver la Ñ localmente, sin IA
+        if (normalizedTargetLetters.contains(ENYE)) {
+            List<Question> enyeQuestions = generateLocalEnyeQuestions();
+            acceptedByLetter.get(ENYE).addAll(enyeQuestions.stream()
+                    .limit(questionsPerLetter)
+                    .collect(Collectors.toList()));
+            log.info("Preguntas locales generadas para la letra '{}': {}", ENYE, acceptedByLetter.get(ENYE).size());
         }
 
-        List<Question> allQuestions = new ArrayList<>();
-        for (String letter : allLetters) {
-            allQuestions.addAll(byLetter.get(normalizeLetter(letter)));
+        List<String> lettersForAI = normalizedTargetLetters.stream()
+                .filter(letter -> !ENYE.equals(letter))
+                .collect(Collectors.toList());
+
+        if (lettersForAI.isEmpty()) {
+            List<Question> allQuestions = flattenQuestions(acceptedByLetter.values());
+            QuestionList result = new QuestionList(allQuestions, allQuestions.size());
+            log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
+            return result;
         }
 
-        QuestionList result = new QuestionList(allQuestions, allQuestions.size());
-        log.info("Batería completa generada: {} preguntas", allQuestions.size());
+        List<List<String>> batches = partitionLetters(lettersForAI, lettersPerBatch);
+        boolean quotaExceeded = false;
 
-        for (String letter : allLetters) {
-            int count = byLetter.get(normalizeLetter(letter)).size();
-            if (count < questionsPerLetter) {
-                log.warn("La letra '{}' quedó incompleta: {}/{}", letter, count, questionsPerLetter);
+        for (List<String> batchLetters : batches) {
+            if (quotaExceeded) {
+                break;
             }
+
+            log.info("Procesando lote de letras pendientes: {}", batchLetters);
+
+            int attempts = 0;
+
+            while (attempts < maxAttemptsPerBatch && !areBatchLettersComplete(batchLetters, acceptedByLetter)) {
+                attempts++;
+
+                try {
+                    String responseBody = callAIForBatch(batchLetters);
+                    List<Question> parsed = parseAIResponse(responseBody, batchLetters);
+
+                    int acceptedThisAttempt = 0;
+
+                    for (Question q : parsed) {
+                        if (!isValidQuestion(q)) {
+                            log.warn(
+                                    "Pregunta descartada | Letra: {} | Pista: {} | Respuestas: {}",
+                                    q != null ? q.getQuestionLetter() : "null",
+                                    q != null ? q.getQuestionText() : "null",
+                                    q != null ? q.getQuestionResponsesList() : "null"
+                            );
+                            continue;
+                        }
+
+                        String letter = normalizeLetter(q.getQuestionLetter());
+                        List<Question> existingForLetter = acceptedByLetter.getOrDefault(letter, Collections.emptyList());
+
+                        if (existingForLetter.size() >= questionsPerLetter) {
+                            continue;
+                        }
+
+                        if (isDuplicate(flattenQuestions(acceptedByLetter.values()), q)) {
+                            log.warn(
+                                    "Pregunta descartada por duplicada | Letra: {} | Pista: {} | Correcta: {}",
+                                    letter,
+                                    q.getQuestionText(),
+                                    q.getQuestionResponsesList().get(q.getCorrectQuestionIndex())
+                            );
+                            continue;
+                        }
+
+                        acceptedByLetter.get(letter).add(q);
+                        acceptedThisAttempt++;
+
+                        log.info(
+                                "Pregunta aceptada | Letra: {} | Pista: {} | Correcta: {} | Total letra: {}/{}",
+                                letter,
+                                q.getQuestionText(),
+                                q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()),
+                                acceptedByLetter.get(letter).size(),
+                                questionsPerLetter
+                        );
+                    }
+
+                    log.info(
+                            "Lote pendiente {} intento {}/{} -> aceptadas en intento: {}",
+                            batchLetters,
+                            attempts,
+                            maxAttemptsPerBatch,
+                            acceptedThisAttempt
+                    );
+
+                } catch (QuotaExceededException e) {
+                    log.warn("Cuota agotada mientras se procesaban letras pendientes. Se detiene la generación: {}", e.getMessage());
+                    quotaExceeded = true;
+                    break;
+                } catch (Exception e) {
+                    log.error(
+                            "Lote pendiente {} intento {}/{} fallido: {}",
+                            batchLetters,
+                            attempts,
+                            maxAttemptsPerBatch,
+                            e.getMessage(),
+                            e
+                    );
+
+                    if (isQuotaException(e)) {
+                        long waitMs = extractRetryDelayMillis(e.getMessage());
+                        if (waitMs <= 0) {
+                            waitMs = DEFAULT_429_WAIT_MS;
+                        }
+
+                        log.warn("Esperando {} ms antes de reintentar lote pendiente {}", waitMs, batchLetters);
+                        Thread.sleep(waitMs);
+                    }
+                }
+            }
+
+            logBatchStatus(batchLetters, acceptedByLetter);
         }
 
+        List<Question> allQuestions = flattenQuestions(acceptedByLetter.values());
+        QuestionList result = new QuestionList(allQuestions, allQuestions.size());
+        log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
         return result;
     }
 
-    private void completeBatch(List<String> originalBatch, Map<String, List<Question>> byLetter) throws Exception {
-        List<String> missingLetters = originalBatch.stream()
-                .map(this::normalizeLetter)
-                .collect(Collectors.toCollection(ArrayList::new));
+    private List<Question> generateLocalEnyeQuestions() {
+        List<Question> list = new ArrayList<>();
 
-        int attempt = 1;
+        list.add(new Question(
+                "Con la Ñ: Tubérculo comestible muy usado en América Latina.",
+                List.of("ñame", "caña", "niña", "sueño"),
+                0,
+                QuestionStatus.INIT,
+                QuestionLevel.MEDIUM,
+                ENYE,
+                "init"
+        ));
 
-        while (!missingLetters.isEmpty() && attempt <= maxBatchAttempts) {
-            log.info("Generando lote intento {}/{} para letras: {}", attempt, maxBatchAttempts, missingLetters);
+        list.add(new Question(
+                "Contiene la Ñ: Juguete o figura con forma de persona.",
+                List.of("muñeca", "caña", "niño", "sueño"),
+                0,
+                QuestionStatus.INIT,
+                QuestionLevel.MEDIUM,
+                ENYE,
+                "init"
+        ));
 
-            String responseBody;
+        list.add(new Question(
+                "Contiene la Ñ: Objeto de cartón que se rompe en fiestas para sacar dulces.",
+                List.of("piñata", "año", "caña", "niña"),
+                0,
+                QuestionStatus.INIT,
+                QuestionLevel.MEDIUM,
+                ENYE,
+                "init"
+        ));
+
+        return list;
+    }
+
+    private String callAIForBatch(List<String> batchLetters) throws Exception {
+        return callAIWithModel(batchLetters, model, true);
+    }
+
+    private String callAIWithModel(List<String> batchLetters, String modelToUse, boolean allowFallback) throws Exception {
+        String prompt = buildBatchPrompt(batchLetters);
+        String requestBody = buildRequestBody(prompt, modelToUse);
+
+        long delayMs = INITIAL_RETRY_DELAY_MS;
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= MAX_RETRIES_ON_503 + 1; attempt++) {
             try {
-                responseBody = callAI(missingLetters);
+                return executeMessagesRequest(batchLetters, modelToUse, requestBody);
             } catch (Exception e) {
-                log.error("No se pudo llamar a la IA para el lote {}: {}", missingLetters, e.getMessage());
-                attempt++;
-                continue;
-            }
+                lastException = e;
 
-            List<Question> parsed;
-            try {
-                parsed = parseAIResponse(responseBody, missingLetters);
-            } catch (Exception e) {
-                log.error("Error parseando respuesta de IA para letras {}: {}", missingLetters, e.getMessage());
-                attempt++;
-                continue;
-            }
-
-            int accepted = 0;
-
-            for (Question q : parsed) {
-                String letter = normalizeLetter(q.getQuestionLetter());
-                List<Question> bucket = byLetter.get(letter);
-                if (bucket == null || bucket.size() >= questionsPerLetter) {
-                    continue;
-                }
-                if (isDuplicate(bucket, q)) {
-                    continue;
+                if (!is503Exception(e) || attempt > MAX_RETRIES_ON_503) {
+                    break;
                 }
 
-                bucket.add(q);
-                accepted++;
+                log.warn(
+                        "Lote {} -> intento {} con modelo '{}' fallido por 503. Reintentando en {} ms",
+                        batchLetters,
+                        attempt,
+                        modelToUse,
+                        delayMs
+                );
+
+                Thread.sleep(delayMs);
+                delayMs *= 2;
             }
-
-            missingLetters = originalBatch.stream()
-                    .map(this::normalizeLetter)
-                    .filter(letter -> byLetter.get(letter).size() < questionsPerLetter)
-                    .collect(Collectors.toCollection(ArrayList::new));
-
-            log.info("Intento {} completado. Aceptadas: {}. Letras pendientes: {}", attempt, accepted, missingLetters);
-            attempt++;
         }
 
-        if (!missingLetters.isEmpty()) {
-            log.info("Recuperando letras individualmente para: {}", missingLetters);
-            for (String letter : new ArrayList<>(missingLetters)) {
-                int singleAttempt = 1;
-                while (byLetter.get(letter).size() < questionsPerLetter && singleAttempt <= maxBatchAttempts) {
-                    log.info("Generando letra individual intento {}/{} para letra: {}", singleAttempt, maxBatchAttempts, letter);
-                    try {
-                        String responseBody = callAI(List.of(letter));
-                        List<Question> parsed = parseAIResponse(responseBody, List.of(letter));
-                        for (Question q : parsed) {
-                            String normalizedLetter = normalizeLetter(q.getQuestionLetter());
-                            if (!letter.equals(normalizedLetter)) {
-                                continue;
-                            }
-                            List<Question> bucket = byLetter.get(normalizedLetter);
-                            if (bucket == null || bucket.size() >= questionsPerLetter) {
-                                continue;
-                            }
-                            if (isDuplicate(bucket, q)) {
-                                continue;
-                            }
-                            bucket.add(q);
-                        }
-                    } catch (Exception e) {
-                        log.error("Fallo generación individual para letra {}: {}", letter, e.getMessage());
-                    }
-                    singleAttempt++;
-                }
-                missingLetters = originalBatch.stream()
-                        .map(this::normalizeLetter)
-                        .filter(l -> byLetter.get(l).size() < questionsPerLetter)
-                        .collect(Collectors.toCollection(ArrayList::new));
-                if (!missingLetters.contains(letter)) {
-                    log.info("Letra {} completada en recuperación individual.", letter);
-                }
-            }
-            log.info("Recuperación individual completada. Letras todavía pendientes: {}", missingLetters);
-        }
-    }
+        if (allowFallback
+                && fallbackModel != null
+                && !fallbackModel.isBlank()
+                && !fallbackModel.equals(modelToUse)
+                && is503Exception(lastException)) {
 
-    private String callAI(List<String> letters) throws Exception {
-        String prompt = buildPrompt(letters);
-        String requestBody = buildRequestBody(prompt);
+            log.warn(
+                    "Lote {} -> fallback de modelo por 503: '{}' -> '{}'",
+                    batchLetters,
+                    modelToUse,
+                    fallbackModel
+            );
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKey)
-                .header("HTTP-Referer", appUrl)
-                .header("X-Title", appName)
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
-                .timeout(Duration.ofSeconds(120))
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-
-        log.info("HTTP status IA: {}", response.statusCode());
-
-        if (response.statusCode() != 200) {
-            log.error("Error de API IA (status {}): {}", response.statusCode(), response.body());
-            throw new RuntimeException("Error llamando a la API de IA: HTTP " + response.statusCode());
+            return callAIWithModel(batchLetters, fallbackModel, false);
         }
 
-        return response.body();
+        if (lastException != null) {
+            throw lastException;
+        }
+
+        throw new RuntimeException("No se pudo obtener respuesta de la IA.");
     }
 
-    private String buildPrompt(List<String> letters) {
-        StringBuilder sb = new StringBuilder();
+    private String buildRequestBody(String prompt, String modelToUse) throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", modelToUse);
+        body.put("max_tokens", maxTokens);
 
-        sb.append("Eres un generador experto del rosco de Pasapalabra.\n");
-        sb.append("Debes generar exactamente ").append(questionsPerLetter)
-                .append(" preguntas por cada letra indicada.\n\n");
+        List<Map<String, Object>> messages = new ArrayList<>();
+        Map<String, Object> userMessage = new LinkedHashMap<>();
+        userMessage.put("role", "user");
 
-        sb.append("IMPORTANTE SOBRE EL ESTILO:\n");
-        sb.append("- Para letras normales, prioriza pistas del tipo 'Con la X: ...'\n");
-        sb.append("- Para letras difíciles (K, W, X, Y, Ñ), puedes priorizar 'Contiene la X: ...' si así la pista es más natural.\n\n");
+        List<Map<String, Object>> content = new ArrayList<>();
+        Map<String, Object> textPart = new LinkedHashMap<>();
+        textPart.put("type", "text");
+        textPart.put("text", prompt);
+        content.add(textPart);
 
-        sb.append("REGLAS OBLIGATORIAS:\n");
-        sb.append("1. Responde SOLO con JSON válido.\n");
-        sb.append("2. Cada objeto debe tener EXACTAMENTE estos campos: questionLetter, questionText, questionResponsesList, correctQuestionIndex, questionStatus, questionLevel, userResponseRecorded.\n");
-        sb.append("3. Cada pregunta debe tener exactamente 4 respuestas.\n");
-        sb.append("4. Solo una respuesta es correcta.\n");
-        sb.append("5. questionStatus siempre 'init'.\n");
-        sb.append("6. userResponseRecorded siempre 'init'.\n");
-        sb.append("7. questionLevel debe ser 'easy', 'medium' o 'hard'.\n");
-        sb.append("8. questionText debe ser una pista estilo rosco.\n");
-        sb.append("9. Si la pista empieza por 'Con la X:', la respuesta correcta debe EMPEZAR por X.\n");
-        sb.append("10. Si la pista empieza por 'Contiene la X:', la respuesta correcta debe CONTENER X pero no empezar por X.\n");
-        sb.append("11. Las respuestas incorrectas deben ser plausibles, pero incorrectas.\n");
-        sb.append("12. Las respuestas incorrectas NO deben cumplir la regla de la letra indicada.\n");
-        sb.append("13. Usa solo palabras reales, comunes y reconocibles en español con acentos y ñ cuando correspondan.\n");
-        sb.append("14. No uses palabras inventadas, arcaicas, artificiales o extremadamente raras.\n");
-        sb.append("15. No uses definiciones ambiguas ni respuestas que no encajen claramente con la pista.\n");
-        sb.append("16. Evita respuestas absurdas o discutibles.\n");
-        sb.append("17. No repitas preguntas ni respuestas.\n");
-        sb.append("18. questionText máximo 128 caracteres.\n");
-        sb.append("19. Si no puedes generar una pregunta buena para una letra, omítela.\n\n");
-
-        sb.append("EJEMPLOS BUENOS:\n");
-        sb.append("- 'Con la H: ciencia que estudia la sangre' -> 'Hematología'\n");
-        sb.append("- 'Contiene la W: programa de radio o televisión' -> 'Show'\n\n");
-
-        sb.append("FORMATO DE SALIDA EXACTO:\n");
-        sb.append("{\n");
-        sb.append("  \"questionList\": [\n");
-        sb.append("    {\n");
-        sb.append("      \"questionLetter\": \"h\",\n");
-        sb.append("      \"questionText\": \"Con la H: ciencia que estudia la sangre\",\n");
-        sb.append("      \"questionResponsesList\": [\"Hematología\", \"Biología\", \"Anatomía\", \"Cardiología\"],\n");
-        sb.append("      \"correctQuestionIndex\": 0,\n");
-        sb.append("      \"questionStatus\": \"init\",\n");
-        sb.append("      \"questionLevel\": \"medium\",\n");
-        sb.append("      \"userResponseRecorded\": \"init\"\n");
-        sb.append("    }\n");
-        sb.append("  ]\n");
-        sb.append("}\n\n");
-
-        sb.append("Genera preguntas para estas letras: ").append(letters).append("\n");
-        sb.append("No añadas explicaciones, markdown ni comentarios.");
-
-        return sb.toString();
-    }
-
-    private String buildRequestBody(String prompt) throws Exception {
-        var body = new LinkedHashMap<String, Object>();
-        body.put("model", model);
-        body.put("temperature", 0.1);
-        body.put("max_tokens", 4000);
-
-        var messages = new ArrayList<Map<String, String>>();
-
-        var systemMsg = new LinkedHashMap<String, String>();
-        systemMsg.put("role", "system");
-        systemMsg.put("content",
-                "Eres un generador experto del rosco de Pasapalabra. " +
-                        "Responde SOLO con JSON válido, sin texto adicional.");
-        messages.add(systemMsg);
-
-        var userMsg = new LinkedHashMap<String, String>();
-        userMsg.put("role", "user");
-        userMsg.put("content", prompt);
-        messages.add(userMsg);
+        userMessage.put("content", content);
+        messages.add(userMessage);
 
         body.put("messages", messages);
+
         return mapper.writeValueAsString(body);
     }
 
+    private String executeMessagesRequest(List<String> batchLetters, String modelToUse, String requestBody) throws Exception {
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .header("anthropic-version", "2023-06-01")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
+                .timeout(Duration.ofSeconds(120));
+
+        if (apiKey != null && !apiKey.isBlank()) {
+            requestBuilder.header("x-api-key", apiKey);
+            requestBuilder.header("Authorization", "Bearer " + apiKey);
+        }
+
+        HttpResponse<String> response = httpClient.send(
+                requestBuilder.build(),
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+        );
+
+        int status = response.statusCode();
+        String body = response.body();
+
+        log.info("HTTP status IA Anthropic-compatible para lote {} con modelo '{}': {}", batchLetters, modelToUse, status);
+
+        if (status == 200) {
+            if (body == null || body.isBlank()) {
+                throw new RuntimeException("La API Anthropic-compatible devolvió HTTP 200 pero el cuerpo está vacío.");
+            }
+            return body;
+        }
+
+        log.error(
+                "Error de API Anthropic-compatible (status {}) con modelo '{}' para lote {}: {}",
+                status,
+                modelToUse,
+                batchLetters,
+                preview(body, DEFAULT_LOG_PREVIEW)
+        );
+
+        String detailedMessage = extractApiErrorMessage(body);
+
+        if (status == 400) {
+            throw new RuntimeException("HTTP 400 INVALID_REQUEST. Detalle: " + detailedMessage);
+        }
+
+        if (status == 401 || status == 403) {
+            throw new RuntimeException("HTTP " + status + " auth/permiso. Detalle: " + detailedMessage);
+        }
+
+        if (status == 404) {
+            throw new RuntimeException("HTTP 404 endpoint/modelo no encontrado. Detalle: " + detailedMessage);
+        }
+
+        if (status == 429) {
+            throw new QuotaExceededException("HTTP 429 cuota/rate limit. Detalle: " + detailedMessage);
+        }
+
+        if (status == 503) {
+            throw new RuntimeException("HTTP 503 UNAVAILABLE. Detalle: " + detailedMessage);
+        }
+
+        if (status >= 500) {
+            throw new RuntimeException("HTTP " + status + " error interno del proveedor. Detalle: " + detailedMessage);
+        }
+
+        throw new RuntimeException("Error llamando a la API Anthropic-compatible: HTTP " + status + ". Detalle: " + detailedMessage);
+    }
+
+    private String buildBatchPrompt(List<String> batchLetters) {
+        String lettersText = batchLetters.stream()
+                .map(String::toUpperCase)
+                .collect(Collectors.joining(", "));
+
+        String rulesByLetter = batchLetters.stream()
+                .map(letter -> """
+- Para la letra "%s":
+  - genera EXACTAMENTE %d preguntas
+  - cada pregunta debe tener "questionLetter": "%s"
+  - el texto debe empezar por "Con la %s: ..." o "Contiene la %s: ..."
+  - TODAS las respuestas deben contener la letra "%s"
+  - si la pista empieza por "Con la %s", la respuesta correcta debe empezar por "%s"
+  - si la pista empieza por "Contiene la %s", la respuesta correcta debe contener "%s"
+""".formatted(
+                        letter,
+                        questionsToGeneratePerLetterInBatch,
+                        letter.toLowerCase(Locale.ROOT),
+                        letter.toUpperCase(Locale.ROOT),
+                        letter.toUpperCase(Locale.ROOT),
+                        letter.toLowerCase(Locale.ROOT),
+                        letter.toUpperCase(Locale.ROOT),
+                        letter.toUpperCase(Locale.ROOT),
+                        letter.toUpperCase(Locale.ROOT),
+                        letter.toUpperCase(Locale.ROOT)
+                ))
+                .collect(Collectors.joining("\n"));
+
+        return """
+Eres un generador experto de preguntas tipo rosco de Pasapalabra en español.
+Debes responder SOLO con JSON válido.
+No escribas markdown. No escribas explicaciones. No escribas comentarios.
+
+Debes generar preguntas para estas letras: %s
+
+REGLAS GENERALES OBLIGATORIAS:
+1. Devuelve SOLO un JSON con un array "questionList".
+2. Cada pregunta debe tener exactamente 4 respuestas.
+3. Solo una respuesta es correcta.
+4. Las respuestas deben ser palabras reales, reconocibles y en español.
+5. No uses nombres propios.
+6. No uses siglas.
+7. No inventes palabras.
+8. No repitas preguntas.
+9. No repitas respuestas correctas.
+10. questionStatus = "init"
+11. userResponseRecorded = "init"
+12. questionLevel = "medium"
+13. Si no puedes generar una pregunta totalmente válida, no la incluyas.
+
+REGLAS POR LETRA:
+%s
+
+FORMATO JSON OBLIGATORIO:
+{
+  "questionList": [
+    {
+      "questionLetter": "a",
+      "questionText": "Con la A: ...",
+      "questionResponsesList": ["Asteroide", "Ancla", "Arena", "Axioma"],
+      "correctQuestionIndex": 0,
+      "questionStatus": "init",
+      "questionLevel": "medium",
+      "userResponseRecorded": "init"
+    }
+  ]
+}
+""".formatted(lettersText, rulesByLetter);
+    }
+
     private List<Question> parseAIResponse(String responseBody, List<String> expectedLetters) throws Exception {
-        JsonNode root = mapper.readTree(responseBody);
-        String content = root.path("choices").path(0).path("message").path("content").asText("");
-        content = sanitizeContent(content);
+        String content = extractTextContentFromResponse(responseBody);
 
-        log.info("Respuesta cruda de la IA:\n{}", preview(content, DEFAULT_MAX_PARSE_LOG_CHARS));
+        if (content.isBlank()) {
+            throw new RuntimeException("La IA devolvió contenido vacío.");
+        }
 
-        JsonNode questionsNode = mapper.readTree(content);
+        log.info("Respuesta cruda IA para lote {}:\n{}", expectedLetters, preview(content, DEFAULT_LOG_PREVIEW));
+
+        JsonNode questionsNode;
+        try {
+            questionsNode = mapper.readTree(content);
+        } catch (Exception e) {
+            throw new RuntimeException("La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000), e);
+        }
+
         JsonNode listNode = null;
 
         if (questionsNode.isObject() && questionsNode.has("questionList") && questionsNode.get("questionList").isArray()) {
@@ -336,10 +577,10 @@ public class AIQuestionGenerator {
         }
 
         if (listNode == null || !listNode.isArray()) {
-            throw new RuntimeException("La respuesta de la IA no contiene un array de preguntas válido");
+            throw new RuntimeException("La respuesta de la IA no contiene un array de preguntas válido.");
         }
 
-        Set<String> expectedSet = expectedLetters.stream()
+        Set<String> expected = expectedLetters.stream()
                 .map(this::normalizeLetter)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
@@ -347,186 +588,217 @@ public class AIQuestionGenerator {
 
         for (JsonNode qNode : listNode) {
             try {
-                String letter = normalizeLetter(qNode.path("questionLetter").asText(""));
-                String text = qNode.path("questionText").asText("").trim();
+                String rawLetter = repairAndTrim(qNode.path("questionLetter").asText(""));
+                String rawText = repairAndTrim(qNode.path("questionText").asText(""));
+
+                String letter = normalizeLetter(rawLetter);
+                String text = rawText;
+
                 int correctIndex = qNode.path("correctQuestionIndex").asInt(-1);
-                String level = qNode.path("questionLevel").asText("medium");
 
                 List<String> responses = new ArrayList<>();
                 JsonNode respNode = qNode.path("questionResponsesList");
                 if (respNode.isArray()) {
                     for (JsonNode r : respNode) {
-                        responses.add(r.asText("").trim());
+                        responses.add(repairAndTrim(r.asText("")));
                     }
                 }
 
-                if (letter.isBlank() || text.isBlank() || responses.size() != 4 || correctIndex < 0 || correctIndex > 3) {
+                if (!expected.contains(letter)) {
                     continue;
                 }
 
-                if (!expectedSet.contains(letter)) {
+                if (text.isBlank() || responses.size() != 4 || correctIndex < 0 || correctIndex > 3) {
                     continue;
                 }
 
-                String correctAnswer = responses.get(correctIndex);
-
-                if (isBannedAnswer(correctAnswer)) {
-                    continue;
-                }
-
-                if (!isRoscoRuleSatisfied(text, correctAnswer, letter)) {
-                    continue;
-                }
-
-                if (wrongOptionsBreakRule(text, responses, correctIndex, letter)) {
-                    continue;
-                }
-
-                if (!looksReasonableQuestionText(text)) {
-                    continue;
-                }
-
-                if (!looksReasonableAnswer(correctAnswer)) {
-                    continue;
-                }
-
-                if (hasDuplicateResponses(responses)) {
-                    continue;
-                }
-
-                QuestionLevel qLevel;
-                try {
-                    qLevel = QuestionLevel.valueOf(level.toUpperCase(Locale.ROOT));
-                } catch (IllegalArgumentException e) {
-                    qLevel = QuestionLevel.MEDIUM;
-                }
-
-                questions.add(new Question(
+                Question q = new Question(
                         text,
                         responses,
                         correctIndex,
                         QuestionStatus.INIT,
-                        qLevel,
+                        QuestionLevel.MEDIUM,
                         letter,
                         "init"
-                ));
+                );
+
+                questions.add(q);
+
             } catch (Exception e) {
-                log.warn("Error parseando pregunta IA: {}", e.getMessage());
+                log.warn("Error parseando pregunta IA para lote {}: {}", expectedLetters, e.getMessage());
             }
         }
 
-        log.info("Parseadas {} preguntas válidas de la IA para letras {}", questions.size(), expectedLetters);
+        log.info("Parseadas {} preguntas candidatas para lote {}", questions.size(), expectedLetters);
         return questions;
     }
 
-    public void saveToFile(QuestionList questions, String filePath) throws Exception {
-        String json = mapper.writeValueAsString(questions);
-        Files.writeString(Path.of(filePath), json, StandardCharsets.UTF_8);
-        log.info("Preguntas guardadas en: {}", filePath);
-    }
-
-    private boolean isDuplicate(List<Question> existing, Question candidate) {
-        String normalizedText = normalizeFreeText(candidate.getQuestionText());
-
-        for (Question q : existing) {
-            if (normalizeFreeText(q.getQuestionText()).equals(normalizedText)) {
-                return true;
-            }
-
-            String existingCorrect = q.getQuestionResponsesList().get(q.getCorrectQuestionIndex());
-            String candidateCorrect = candidate.getQuestionResponsesList().get(candidate.getCorrectQuestionIndex());
-
-            if (normalizeFreeText(existingCorrect).equals(normalizeFreeText(candidateCorrect))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasDuplicateResponses(List<String> responses) {
-        Set<String> set = responses.stream().map(this::normalizeFreeText).collect(Collectors.toSet());
-        return set.size() != responses.size();
-    }
-
-    private boolean isRoscoRuleSatisfied(String questionText, String correctAnswer, String expectedLetter) {
-        String text = normalizeFreeText(questionText);
-
-        if (text.startsWith("con la ")) {
-            return startsWithLetter(correctAnswer, expectedLetter);
+    private String extractTextContentFromResponse(String responseBody) throws Exception {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "";
         }
 
-        if (text.startsWith("contiene la ")) {
-            return containsLetter(correctAnswer, expectedLetter) && !startsWithLetter(correctAnswer, expectedLetter);
+        JsonNode root = mapper.readTree(responseBody);
+        JsonNode contentNode = root.path("content");
+
+        if (!contentNode.isArray() || contentNode.isEmpty()) {
+            throw new RuntimeException("La respuesta Anthropic-compatible no contiene 'content'.");
         }
 
-        if (preferContainsMode(expectedLetter)) {
-            return containsLetter(correctAnswer, expectedLetter);
-        }
-
-        return startsWithLetter(correctAnswer, expectedLetter);
-    }
-
-    private boolean wrongOptionsBreakRule(String questionText, List<String> responses, int correctIndex, String expectedLetter) {
-        String text = normalizeFreeText(questionText);
-        boolean conLa = text.startsWith("con la ");
-        boolean contieneLa = text.startsWith("contiene la ");
-
-        for (int i = 0; i < responses.size(); i++) {
-            if (i == correctIndex) continue;
-
-            String option = responses.get(i);
-
-            if (conLa && startsWithLetter(option, expectedLetter)) {
-                return true;
-            }
-
-            if (contieneLa && containsLetter(option, expectedLetter)) {
-                return true;
-            }
-
-            if (!conLa && !contieneLa) {
-                if (preferContainsMode(expectedLetter)) {
-                    if (containsLetter(option, expectedLetter)) return true;
-                } else {
-                    if (startsWithLetter(option, expectedLetter)) return true;
+        StringBuilder sb = new StringBuilder();
+        for (JsonNode item : contentNode) {
+            String type = item.path("type").asText("");
+            if ("text".equals(type)) {
+                String text = item.path("text").asText("");
+                if (!text.isBlank()) {
+                    sb.append(text);
                 }
             }
         }
 
-        return false;
+        return sanitizeContent(repairMojibakeIfNeeded(sb.toString()));
     }
 
-    private boolean preferContainsMode(String letter) {
-        return DIFFICULT_LETTERS.contains(normalizeLetter(letter));
-    }
+    private boolean isValidQuestion(Question q) {
+        if (q == null) return false;
+        if (q.getQuestionResponsesList() == null || q.getQuestionResponsesList().size() != 4) return false;
+        if (q.getCorrectQuestionIndex() < 0 || q.getCorrectQuestionIndex() > 3) return false;
+        if (q.getQuestionText() == null || q.getQuestionText().isBlank()) return false;
+        if (q.getQuestionLetter() == null || q.getQuestionLetter().isBlank()) return false;
 
-    private boolean isBannedAnswer(String answer) {
-        return BANNED_ANSWERS.contains(normalizeFreeText(answer));
-    }
+        String text = normalizeFreeText(repairAndTrim(q.getQuestionText()));
+        String letter = normalizeLetter(repairAndTrim(q.getQuestionLetter()));
 
-    private boolean looksReasonableQuestionText(String text) {
-        String normalized = normalizeFreeText(text);
+        String expectedStartsPrefix = "con la " + letter;
+        String expectedContainsPrefix = "contiene la " + letter;
 
-        if (!(normalized.startsWith("con la ") || normalized.startsWith("contiene la "))) {
+        boolean startsMode = text.startsWith(expectedStartsPrefix);
+        boolean containsMode = text.startsWith(expectedContainsPrefix);
+
+        if (!startsMode && !containsMode) {
             return false;
         }
 
-        return normalized.length() >= 12 && normalized.length() <= 128;
-    }
+        for (String r : q.getQuestionResponsesList()) {
+            if (!looksReasonableAnswer(r)) {
+                return false;
+            }
+        }
 
-    private boolean looksReasonableAnswer(String answer) {
-        String normalized = normalizeFreeText(answer);
+        String correct = repairAndTrim(q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()));
 
-        if (normalized.isBlank()) return false;
-        if (normalized.length() < 2 || normalized.length() > 30) return false;
-        if (normalized.matches(".*\\d.*")) return false;
-        if (normalized.contains("?") || normalized.contains("¿") || normalized.contains("!")) return false;
+        for (String r : q.getQuestionResponsesList()) {
+            if (!containsLetter(repairAndTrim(r), letter)) return false;
+        }
+
+        if (startsMode && !startsWithLetter(correct, letter)) {
+            return false;
+        }
+
+        if (containsMode && !containsLetter(correct, letter)) {
+            return false;
+        }
+
+        if (hasDuplicateResponses(q.getQuestionResponsesList())) {
+            return false;
+        }
 
         return true;
     }
 
+    private boolean isDuplicate(List<Question> existing, Question candidate) {
+        String candidateText = normalizeFreeText(repairAndTrim(candidate.getQuestionText()));
+        String candidateCorrect = normalizeFreeText(
+                repairAndTrim(candidate.getQuestionResponsesList().get(candidate.getCorrectQuestionIndex()))
+        );
+
+        for (Question q : existing) {
+            String existingText = normalizeFreeText(repairAndTrim(q.getQuestionText()));
+            String existingCorrect = normalizeFreeText(
+                    repairAndTrim(q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()))
+            );
+
+            if (existingText.equals(candidateText)) return true;
+            if (existingCorrect.equals(candidateCorrect)) return true;
+        }
+
+        return false;
+    }
+
+    private boolean hasDuplicateResponses(List<String> responses) {
+        Set<String> set = responses.stream()
+                .map(this::repairAndTrim)
+                .map(this::normalizeFreeText)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        return set.size() != responses.size();
+    }
+
+    private boolean looksReasonableAnswer(String answer) {
+        if (answer == null || answer.isBlank()) return false;
+
+        String repaired = repairAndTrim(answer);
+        String normalized = normalizeFreeText(repaired);
+
+        if (normalized.isBlank()) return false;
+        if (normalized.length() < 2 || normalized.length() > 40) return false;
+        if (normalized.matches(".*\\d.*")) return false;
+        if (normalized.contains("?") || normalized.contains("¿") || normalized.contains("!")) return false;
+        if (normalized.contains(",")) return false;
+        if (normalized.contains(";")) return false;
+        if (normalized.contains(":")) return false;
+
+        int words = repaired.trim().split("\\s+").length;
+        if (words > 2) return false;
+
+        if (looksLikeMojibake(repaired)) return false;
+        if (!repaired.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s-]+$")) return false;
+
+        return true;
+    }
+
+    private boolean areBatchLettersComplete(List<String> batchLetters, Map<String, List<Question>> acceptedByLetter) {
+        for (String letter : batchLetters) {
+            List<Question> list = acceptedByLetter.getOrDefault(letter, Collections.emptyList());
+            if (list.size() < questionsPerLetter) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void logBatchStatus(List<String> batchLetters, Map<String, List<Question>> acceptedByLetter) {
+        for (String letter : batchLetters) {
+            int count = acceptedByLetter.getOrDefault(letter, Collections.emptyList()).size();
+            if (count < questionsPerLetter) {
+                log.warn("La letra '{}' quedó incompleta: {}/{}", letter, count, questionsPerLetter);
+            } else {
+                log.info("La letra '{}' quedó completa: {}/{}", letter, count, questionsPerLetter);
+            }
+        }
+    }
+
+    private List<List<String>> partitionLetters(List<String> letters, int batchSize) {
+        List<List<String>> batches = new ArrayList<>();
+
+        for (int i = 0; i < letters.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, letters.size());
+            batches.add(new ArrayList<>(letters.subList(i, end)));
+        }
+
+        return batches;
+    }
+
+    private List<Question> flattenQuestions(Collection<List<Question>> values) {
+        List<Question> result = new ArrayList<>();
+        for (List<Question> list : values) {
+            result.addAll(list.stream().limit(questionsPerLetter).toList());
+        }
+        return result;
+    }
+
     private String sanitizeContent(String content) {
         if (content == null) return "";
+
         content = content.trim();
 
         if (content.startsWith("```json")) {
@@ -542,23 +814,74 @@ public class AIQuestionGenerator {
         return content.trim();
     }
 
+    public void saveToFile(QuestionList questions, String filePath) throws Exception {
+        String json = mapper.writeValueAsString(questions);
+        Files.writeString(Path.of(filePath), json, StandardCharsets.UTF_8);
+        log.info("Preguntas guardadas en: {}", filePath);
+    }
+
+    private boolean isQuotaException(Exception e) {
+        if (e == null || e.getMessage() == null) return false;
+        return e.getMessage().contains("HTTP 429");
+    }
+
+    private boolean is503Exception(Exception e) {
+        if (e == null || e.getMessage() == null) return false;
+        return e.getMessage().contains("HTTP 503") || e.getMessage().contains("UNAVAILABLE");
+    }
+
+    private long extractRetryDelayMillis(String message) {
+        if (message == null || message.isBlank()) {
+            return 0L;
+        }
+
+        Matcher matcher = Pattern.compile("Please retry in\\s+([0-9]+(?:\\.[0-9]+)?)s", Pattern.CASE_INSENSITIVE)
+                .matcher(message);
+
+        if (matcher.find()) {
+            double seconds = Double.parseDouble(matcher.group(1));
+            return (long) Math.ceil(seconds * 1000);
+        }
+
+        matcher = Pattern.compile("\"retryDelay\"\\s*:\\s*\"([0-9]+)s\"", Pattern.CASE_INSENSITIVE)
+                .matcher(message);
+
+        if (matcher.find()) {
+            long seconds = Long.parseLong(matcher.group(1));
+            return seconds * 1000L;
+        }
+
+        return 0L;
+    }
+
     private String normalizeLetter(String letter) {
         if (letter == null) return "";
-        String trimmed = letter.trim().toLowerCase(Locale.ROOT);
-        if ("ñ".equals(trimmed)) return "ñ";
+        String repaired = repairAndTrim(letter);
+        String trimmed = repaired.trim().toLowerCase(Locale.ROOT);
+
+        if ("ñ".equals(trimmed) || "├▒".equals(trimmed) || "ã±".equals(trimmed) || "Ã±".equals(trimmed) || "┬ñ".equals(trimmed)) {
+            return "ñ";
+        }
+
         return normalizeFreeText(trimmed);
     }
 
     private String normalizeFreeText(String text) {
         if (text == null) return "";
-        return Normalizer.normalize(text.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+        String repaired = repairAndTrim(text);
+
+        if ("ñ".equalsIgnoreCase(repaired)) {
+            return "ñ";
+        }
+
+        return Normalizer.normalize(repaired.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "");
     }
 
     private boolean startsWithLetter(String word, String letter) {
         if (word == null || letter == null) return false;
 
-        String rawWord = word.trim().toLowerCase(Locale.ROOT);
+        String rawWord = repairAndTrim(word).toLowerCase(Locale.ROOT);
         String normalizedLetter = normalizeLetter(letter);
 
         if (rawWord.isBlank() || normalizedLetter.isBlank()) return false;
@@ -573,7 +896,7 @@ public class AIQuestionGenerator {
     private boolean containsLetter(String word, String letter) {
         if (word == null || letter == null) return false;
 
-        String rawWord = word.trim().toLowerCase(Locale.ROOT);
+        String rawWord = repairAndTrim(word).toLowerCase(Locale.ROOT);
         String normalizedLetter = normalizeLetter(letter);
 
         if (rawWord.isBlank() || normalizedLetter.isBlank()) return false;
@@ -585,9 +908,133 @@ public class AIQuestionGenerator {
         return normalizeFreeText(rawWord).contains(normalizedLetter);
     }
 
+    private String extractApiErrorMessage(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "sin detalle";
+        }
+
+        try {
+            JsonNode root = mapper.readTree(responseBody);
+
+            if (root.has("error")) {
+                JsonNode errorNode = root.path("error");
+                String message = errorNode.path("message").asText("");
+                String type = errorNode.path("type").asText("");
+                String code = errorNode.path("code").asText("");
+
+                StringBuilder sb = new StringBuilder();
+
+                if (!code.isBlank()) {
+                    sb.append("code=").append(code);
+                }
+                if (!type.isBlank()) {
+                    if (sb.length() > 0) sb.append(", ");
+                    sb.append("type=").append(type);
+                }
+                if (!message.isBlank()) {
+                    if (sb.length() > 0) sb.append(", ");
+                    sb.append("message=").append(message);
+                }
+
+                if (sb.length() > 0) {
+                    return sb.toString();
+                }
+            }
+
+            String type = root.path("type").asText("");
+            String message = root.path("message").asText("");
+            if (!type.isBlank() || !message.isBlank()) {
+                StringBuilder sb = new StringBuilder();
+                if (!type.isBlank()) sb.append("type=").append(type);
+                if (!message.isBlank()) {
+                    if (sb.length() > 0) sb.append(", ");
+                    sb.append("message=").append(message);
+                }
+                return sb.toString();
+            }
+
+        } catch (Exception e) {
+            log.warn("No se pudo parsear el error de la API: {}", e.getMessage());
+        }
+
+        return preview(responseBody, 500);
+    }
+
     private String preview(String text, int maxLen) {
         if (text == null) return "";
         return text.substring(0, Math.min(text.length(), maxLen));
+    }
+
+    private String repairMojibakeIfNeeded(String input) {
+        if (input == null || input.isBlank()) {
+            return input;
+        }
+
+        if (!looksLikeMojibake(input)) {
+            return input;
+        }
+
+        for (Charset sourceCharset : MOJIBAKE_SOURCE_CHARSETS) {
+            try {
+                String repaired = new String(input.getBytes(sourceCharset), StandardCharsets.UTF_8);
+
+                if (repaired != null
+                        && !repaired.isBlank()
+                        && !repaired.equals(input)
+                        && scoreTextQuality(repaired) > scoreTextQuality(input)) {
+                    return repaired;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        String trimmed = input.trim();
+        if ("├▒".equals(trimmed) || "Ã±".equals(trimmed) || "ã±".equals(trimmed) || "┬ñ".equals(trimmed)) {
+            return "ñ";
+        }
+
+        return input;
+    }
+
+    private boolean looksLikeMojibake(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+
+        return text.contains("Ã")
+                || text.contains("Â")
+                || text.contains("├")
+                || text.contains("┬")
+                || text.contains("�");
+    }
+
+    private int scoreTextQuality(String text) {
+        if (text == null || text.isBlank()) {
+            return Integer.MIN_VALUE;
+        }
+
+        int score = 0;
+
+        if (text.contains("Ã")) score -= 10;
+        if (text.contains("Â")) score -= 10;
+        if (text.contains("├")) score -= 12;
+        if (text.contains("┬")) score -= 12;
+        if (text.contains("�")) score -= 20;
+
+        for (char c : text.toCharArray()) {
+            if ("áéíóúÁÉÍÓÚñÑüÜ".indexOf(c) >= 0) {
+                score += 3;
+            }
+        }
+
+        return score;
+    }
+
+    private String repairAndTrim(String text) {
+        if (text == null) {
+            return "";
+        }
+        return repairMojibakeIfNeeded(text).trim();
     }
 
     private static String readEnv(String key, String defaultValue) {
@@ -607,6 +1054,12 @@ public class AIQuestionGenerator {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
             return defaultValue;
+        }
+    }
+
+    private static class QuotaExceededException extends RuntimeException {
+        public QuotaExceededException(String message) {
+            super(message);
         }
     }
 }
