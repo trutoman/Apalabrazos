@@ -18,13 +18,32 @@ const createdGameRoomIds = new Set();
 const pendingJoinRoomIds = new Set();
 const pendingLeaveRoomIds = new Set();
 
-// Assign a random accent colour to every card field-value badge
-const CARD_COLORS = ['--explode', '--third', '--green', '--orange'];
-function randomCardColors() {
-    document.querySelectorAll('.game-card-field-value, .game-card-players-list-trigger').forEach(el => {
+// Color palette used by lobby game cards.
+const CARD_COLORS = ['--explode', '--third', '--green', '--orange', '--accent'];
+
+function buildRandomCardColors(count) {
+    return Array.from({ length: count }, () => {
         const pick = CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)];
-        el.style.backgroundColor = `var(${pick})`;
+        return `var(${pick})`;
     });
+}
+
+function applyCardColors(card, cardColors = []) {
+    if (!card) return;
+
+    const badges = card.querySelectorAll('.game-card-field-value, .game-card-players-list-trigger');
+    if (!badges.length) return;
+
+    const resolvedColors = Array.isArray(cardColors) && cardColors.length
+        ? cardColors
+        : buildRandomCardColors(badges.length);
+
+    badges.forEach((el, index) => {
+        const fallback = buildRandomCardColors(1)[0];
+        el.style.backgroundColor = resolvedColors[index] || fallback;
+    });
+
+    card.dataset.cardColors = JSON.stringify(resolvedColors);
 }
 
 // Populate create-game selects from the central config
@@ -232,7 +251,7 @@ function removeOnlineGameCard(roomId) {
     syncAllJoinButtonsState();
 }
 
-function updateOnlineGameCard(gameData) {
+function updateOnlineGameCard(gameData, cardColors = null) {
     const roomId = String(gameData?.roomId || '').trim();
     if (!roomId) return;
 
@@ -267,12 +286,15 @@ function updateOnlineGameCard(gameData) {
     const playerNames = Array.isArray(gameData?.playerNames) ? gameData.playerNames : [];
     card.dataset.playerNames = JSON.stringify(playerNames);
 
+    const colorsFromCard = card.dataset.cardColors ? JSON.parse(card.dataset.cardColors) : null;
+    const colorsFromPayload = Array.isArray(gameData?.cardColors) ? gameData.cardColors : null;
+
     syncJoinButtonState(roomId);
     attachPlayerListClickHandler(card);
-    randomCardColors();
+    applyCardColors(card, cardColors || colorsFromPayload || colorsFromCard || []);
 }
 
-function addOnlineGameCard(gameData) {
+function addOnlineGameCard(gameData, cardColors = null) {
     const gamesList = document.getElementById('games-list');
     if (!gamesList) return;
 
@@ -283,7 +305,7 @@ function addOnlineGameCard(gameData) {
 
     const existingCard = gamesList.querySelector(`[data-room-id="${roomId}"]`);
     if (existingCard) {
-        updateOnlineGameCard(gameData);
+        updateOnlineGameCard(gameData, cardColors);
         return;
     }
 
@@ -353,9 +375,11 @@ function addOnlineGameCard(gameData) {
 
     gamesList.prepend(card);
     createdGameRoomIds.add(roomId);
+    const colorsFromPayload = Array.isArray(gameData?.cardColors) ? gameData.cardColors : null;
+
     syncJoinButtonState(roomId);
     attachPlayerListClickHandler(card);
-    randomCardColors();
+    applyCardColors(card, cardColors || colorsFromPayload || []);
 }
 
 function renderLobbyMatchesSnapshot(matches) {
@@ -430,7 +454,7 @@ function registerSocketMessageHandlers() {
                     pendingJoinRoomIds.clear();
                 }
                 console.log('[CREATE] GameCreationRequestValid received:', payload);
-                addOnlineGameCard(payload);
+                addOnlineGameCard(payload, buildRandomCardColors(5));
                 syncAllJoinButtonsState();
             } else if (data.type === 'JoinMatchRequestValid') {
                 const payload = data?.payload || {};
@@ -485,7 +509,6 @@ function registerSocketMessageHandlers() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    randomCardColors();
     populateGameSelects();
     syncCreateGameControlsState();
 
