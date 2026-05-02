@@ -8,6 +8,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service that manages the game logic and publishes events.
@@ -24,6 +28,10 @@ public class GameService implements EventListener {
 
     // Controla que el evento de inicio para el controlador se publique una sola vez
     private boolean creatorInitEventSent = false;
+
+    // Timeout de espera de GameControllerReady de todos los jugadores
+    private final ScheduledExecutorService controllerReadyScheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> controllerReadyTimeout;
 
     // Listeners separados para evitar rebotes entre buses
     private final EventListener globalListener = this::onGlobalEvent;
@@ -113,7 +121,22 @@ public class GameService implements EventListener {
     public void GameStartedValid() {
         // Transicionar a START_VALIDATED en la máquina de estados
         GlobalGameInstance.transitionStartValidated();
+        // Arrancar el timeout: si no todos confirman en N segundos, cancelar la partida
+        int timeoutSecs = GlobalGameInstance.getControllerReadyTimeoutSeconds();
+        controllerReadyTimeout = controllerReadyScheduler.schedule(() -> {
+            if (!GlobalGameInstance.isGameInitialized()
+                    && GlobalGameInstance.getState() != GameGlobal.GameGlobalState.PLAYING) {
+                log.warn("Timeout ({} s) esperando GameControllerReady de todos los jugadores. Cancelando partida {}.", timeoutSecs, matchId);
+                cancelGameDueToTimeout();
+            }
+        }, timeoutSecs, TimeUnit.SECONDS);
         checkAndInitialize();
+    }
+
+    private void cancelGameDueToTimeout() {
+        GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
+        externalBus.publish(new GameFinishedEvent(null, null));
+        log.info("Partida {} cancelada por timeout de GameControllerReady.", matchId);
     }
 
     /**
@@ -327,6 +350,11 @@ public class GameService implements EventListener {
     private void checkAndInitialize() {
         if (GlobalGameInstance.isGameInitialized()) {
             log.info("Ambas condiciones cumplidas (Controller + Start Validation) - notificando al GameController");
+            // Cancelar el timeout ya que todos los jugadores confirmaron a tiempo
+            if (controllerReadyTimeout != null && !controllerReadyTimeout.isDone()) {
+                controllerReadyTimeout.cancel(false);
+                log.info("Timeout de GameControllerReady cancelado para partida {}.", matchId);
+            }
             if (!creatorInitEventSent) {
                 externalBus.publish(new CreatorInitGameEvent());
                 creatorInitEventSent = true;
@@ -353,7 +381,7 @@ public class GameService implements EventListener {
         } else if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
-            GlobalGameInstance.transitionControllerReady();
+            GlobalGameInstance.transitionControllerReady(ready.getPlayerId());
             checkAndInitialize();
         }
     }
@@ -363,7 +391,7 @@ public class GameService implements EventListener {
         if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {} (external bus)", ready.getPlayerId());
-            GlobalGameInstance.transitionControllerReady();
+            GlobalGameInstance.transitionControllerReady(ready.getPlayerId());
             checkAndInitialize();
         } else if (event instanceof TimerTickEvent) {
             // No reenviar TimerTickEvent al mismo bus para evitar bucles

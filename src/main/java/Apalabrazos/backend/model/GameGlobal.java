@@ -1,7 +1,9 @@
 package Apalabrazos.backend.model;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Collection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,8 @@ public class GameGlobal {
     private int numberOfQuestions;
     private int gameDuration; // Duration in seconds
     private int remainingSeconds; // Tiempo restante en la partida
+    private Set<String> controllerReadyPlayers; // Jugadores que han enviado GameControllerReady
+    private int controllerReadyTimeoutSeconds; // Segundos máximos esperando confirmaciones (default 30)
 
     /**
      * Default constructor
@@ -49,11 +53,13 @@ public class GameGlobal {
         this.numberOfQuestions = 10;
         this.gameDuration = 300; // 5 minutes default
         this.remainingSeconds = 300; // Inicializar con la duración
+        this.controllerReadyPlayers = new HashSet<>();
+        this.controllerReadyTimeoutSeconds = 30;
     }
 
     /**
      * Constructor from GamePlayerConfig
-     * 
+     *
      * @param config The player configuration containing game settings
      */
     public GameGlobal(GamePlayerConfig config) {
@@ -65,11 +71,13 @@ public class GameGlobal {
         this.numberOfQuestions = config.getQuestionNumber() > 0 ? config.getQuestionNumber() : 10;
         this.gameDuration = config.getTimerSeconds() > 0 ? config.getTimerSeconds() : 300; // 5 minutes default
         this.remainingSeconds = this.gameDuration; // Inicializar con la duración configurada
+        this.controllerReadyPlayers = new HashSet<>();
+        this.controllerReadyTimeoutSeconds = 30;
     }
 
     /**
      * Add a player instance to the game
-     * 
+     *
      * @param playerId The unique player ID
      * @param instance The GameInstance for this player
      */
@@ -81,7 +89,7 @@ public class GameGlobal {
 
     /**
      * Remove a player from the game
-     * 
+     *
      * @param playerId The unique player ID to remove
      */
     public void removePlayer(String playerId) {
@@ -90,7 +98,7 @@ public class GameGlobal {
 
     /**
      * Get a specific player's game instance
-     * 
+     *
      * @param playerId The player ID
      * @return The GameInstance for this player, or null if not found
      */
@@ -100,7 +108,7 @@ public class GameGlobal {
 
     /**
      * Get all player instances
-     * 
+     *
      * @return Collection of all GameInstance objects
      */
     public Collection<GameInstance> getAllPlayerInstances() {
@@ -109,7 +117,7 @@ public class GameGlobal {
 
     /**
      * Get all player IDs
-     * 
+     *
      * @return Set of player IDs
      */
     public java.util.Set<String> getAllPlayerIds() {
@@ -118,7 +126,7 @@ public class GameGlobal {
 
     /**
      * Get the map of player instances
-     * 
+     *
      * @return Map of playerID -> GameInstance
      */
     public Map<String, GameInstance> getPlayerInstancesMap() {
@@ -127,7 +135,7 @@ public class GameGlobal {
 
     /**
      * Set the player instances map
-     * 
+     *
      * @param playerInstances Map of playerID -> GameInstance
      */
     public void setPlayerInstances(Map<String, GameInstance> playerInstances) {
@@ -136,7 +144,7 @@ public class GameGlobal {
 
     /**
      * Get the current game state
-     * 
+     *
      * @return The current GameState
      */
     public GameGlobalState getState() {
@@ -145,7 +153,7 @@ public class GameGlobal {
 
     /**
      * Set the game state
-     * 
+     *
      * @param state The new GameState
      */
     public void setState(GameGlobalState state) {
@@ -154,7 +162,7 @@ public class GameGlobal {
 
     /**
      * Get the game type
-     * 
+     *
      * @return The GameType
      */
     public GameType getGameType() {
@@ -163,7 +171,7 @@ public class GameGlobal {
 
     /**
      * Set the game type
-     * 
+     *
      * @param gameType The new GameType
      */
     public void setGameType(GameType gameType) {
@@ -172,7 +180,7 @@ public class GameGlobal {
 
     /**
      * Get the difficulty level
-     * 
+     *
      * @return The current QuestionLevel
      */
     public QuestionLevel getDifficulty() {
@@ -181,7 +189,7 @@ public class GameGlobal {
 
     /**
      * Set the difficulty level
-     * 
+     *
      * @param difficulty The new QuestionLevel
      */
     public void setDifficulty(QuestionLevel difficulty) {
@@ -222,7 +230,7 @@ public class GameGlobal {
 
     /**
      * Get the number of players
-     * 
+     *
      * @return The number of players in the game
      */
     public int getPlayerCount() {
@@ -239,7 +247,7 @@ public class GameGlobal {
 
     /**
      * Get the number of questions
-     * 
+     *
      * @return The number of questions in the game
      */
     public int getNumberOfQuestions() {
@@ -248,7 +256,7 @@ public class GameGlobal {
 
     /**
      * Set the number of questions
-     * 
+     *
      * @param numberOfQuestions The number of questions
      */
     public void setNumberOfQuestions(int numberOfQuestions) {
@@ -257,7 +265,7 @@ public class GameGlobal {
 
     /**
      * Get the game duration
-     * 
+     *
      * @return The game duration in seconds
      */
     public int getGameDuration() {
@@ -266,7 +274,7 @@ public class GameGlobal {
 
     /**
      * Set the game duration
-     * 
+     *
      * @param gameDuration The game duration in seconds
      */
     public void setGameDuration(int gameDuration) {
@@ -275,7 +283,7 @@ public class GameGlobal {
 
     /**
      * Check if a player is in the game
-     * 
+     *
      * @param playerId The player ID to check
      * @return true if the player is in the game
      */
@@ -285,7 +293,7 @@ public class GameGlobal {
 
     /**
      * Get remaining seconds in the game
-     * 
+     *
      * @return The remaining seconds
      */
     public int getRemainingSeconds() {
@@ -303,7 +311,7 @@ public class GameGlobal {
 
     /**
      * Check if time is up
-     * 
+     *
      * @return true if no time remaining
      */
     public boolean isTimeUp() {
@@ -318,29 +326,56 @@ public class GameGlobal {
     }
 
     /**
-     * Transiciona a CONTROLLER_READY si es posible
-     * Retorna true si transición exitosa y se alcanzó INITIALIZED
-     * 
+     * Get the timeout in seconds for waiting all GameControllerReady confirmations
+     */
+    public int getControllerReadyTimeoutSeconds() {
+        return controllerReadyTimeoutSeconds;
+    }
+
+    /**
+     * Registra que un jugador ha enviado GameControllerReady.
+     * Retorna true cuando TODOS los jugadores de la partida han confirmado.
+     *
+     * @param playerId El ID del jugador que confirmó
+     * @return true si todos los jugadores han confirmado
+     */
+    public synchronized boolean registerControllerReady(String playerId) {
+        controllerReadyPlayers.add(playerId);
+        int confirmed = controllerReadyPlayers.size();
+        int total = playerInstances.size();
+        log.info("GameControllerReady recibido de jugador '{}' ({}/{} confirmados)", playerId, confirmed, total);
+        return total > 0 && controllerReadyPlayers.containsAll(playerInstances.keySet());
+    }
+
+    /**
+     * Transiciona a CONTROLLER_READY / INITIALIZED según el estado actual.
+     * Solo avanza si TODOS los jugadores han enviado GameControllerReady.
+     * Retorna true si se alcanzó INITIALIZED.
+     *
+     * @param playerId El ID del jugador que envía el evento
      * @return true si se alcanzó INITIALIZED, false en otro caso
      */
-    public synchronized boolean transitionControllerReady() {
+    public synchronized boolean transitionControllerReady(String playerId) {
+        boolean allReady = registerControllerReady(playerId);
+        if (!allReady) {
+            return false; // Esperar a que todos confirmen
+        }
         if (this.state == GameGlobalState.IDLE) {
             this.state = GameGlobalState.CONTROLLER_READY;
-            log.info("State transitioned: IDLE -> CONTROLLER_READY");
+            log.info("State transitioned: IDLE -> CONTROLLER_READY (todos los jugadores confirmaron)");
             return false;
         } else if (this.state == GameGlobalState.START_VALIDATED) {
             this.state = GameGlobalState.INITIALIZED;
-            log.info("State transitioned: START_VALIDATED -> INITIALIZED (ok)");
+            log.info("State transitioned: START_VALIDATED -> INITIALIZED (todos los jugadores confirmaron)");
             return true;
         }
         return false;
     }
 
     /**
-     * Transiciona a START_VALIDATED si es posible
-     * Retorna true si transición exitosa y se alcanzó INITIALIZED
-     * 
-     * @return true si se alcanzó INITIALIZED, false en otro caso
+     * Transiciona a START_VALIDATED si es posible.
+     * Si todos los jugadores ya confirmaron (CONTROLLER_READY), pasa directamente a INITIALIZED.
+     * Retorna true si se alcanzó INITIALIZED, false en otro caso
      */
     public synchronized boolean transitionStartValidated() {
         if (this.state == GameGlobalState.IDLE) {
@@ -348,6 +383,7 @@ public class GameGlobal {
             log.info("State transitioned: IDLE -> START_VALIDATED");
             return false;
         } else if (this.state == GameGlobalState.CONTROLLER_READY) {
+            // CONTROLLER_READY ya implica que todos los jugadores confirmaron
             this.state = GameGlobalState.INITIALIZED;
             log.info("State transitioned: CONTROLLER_READY -> INITIALIZED (ok)");
             return true;
@@ -357,7 +393,7 @@ public class GameGlobal {
 
     /**
      * Verifica si el juego ha sido inicializado (ambas condiciones se cumplen)
-     * 
+     *
      * @return true si el estado es INITIALIZED
      */
     public boolean isGameInitialized() {
