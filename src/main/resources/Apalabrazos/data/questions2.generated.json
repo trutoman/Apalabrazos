@@ -1,212 +1,220 @@
 {
   "questionList" : [ {
-    "questionText" : "Con la A: ...",
-    "questionResponsesList" : [ "Árbol", "Avión", "Animal", "Alfarería" ],
+    "questionText" : "Con la A: Relativo a un lugar donde se establecen tierras o límites.",
+    "questionResponsesList" : [ "atoxica", "atrochan", "aquisten", "aguado" ],
     "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "a",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la B: ...",
-    "questionResponsesList" : [ "Burbuja", "Barco", "Baile", "Bomba" ],
-    "correctQuestionIndex" : 3,
+    "questionText" : "Con la B: Se refiere a algo muy extraño o inusual.",
+    "questionResponsesList" : [ "bolichera", "bofaba", "bizarría", "briznoso" ],
+    "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "b",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la C: ...",
-    "questionResponsesList" : [ "Caminante", "Ciudad", "Cuchara", "Caballo" ],
-    "correctQuestionIndex" : 0,
+    "questionText" : "Con la C: Describe una época o un periodo de tiempo pasado.",
+    "questionResponsesList" : [ "come", "chip", "cordilla", "cercenara" ],
+    "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "c",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la D: ...",
-    "questionResponsesList" : [ "Dedo", "Danza", "Doctor", "Disco" ],
-    "correctQuestionIndex" : 0,
+    "questionText" : "Con la D: Indica la acción de vencer o ganar una disputa.",
+    "questionResponsesList" : [ "dirán", "deletreo", "derrotéis", "descerezara" ],
+    "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "d",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la E: ...",
-    "questionResponsesList" : [ "Elefante", "Equipo", "Escalera", "Estrella" ],
+    "questionText" : "Con la E: Se refiere a un estado de disminución o desvanecimiento.",
+    "questionResponsesList" : [ "encanes", "envanecimos", "europeizáis", "epatar" ],
     "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "e",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la F: ...",
-    "questionResponsesList" : [ "Fuego", "Fútbol", "Fábrica", "Flor" ],
+    "questionText" : "Con la F: Describe lo que cubre una superficie o fachada.",
+    "questionResponsesList" : [ "fugada", "fardes", "fachaban", "fragmentéis" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "f",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la G: ...",
-    "questionResponsesList" : [ "Gato", "Globo", "Guerra", "Girasol" ],
-    "correctQuestionIndex" : 0,
+    "questionText" : "Con la G: Nombre de un juego de pelota con agua.",
+    "questionResponsesList" : [ "gruimos", "golosineéis", "gastropatía", "granulare" ],
+    "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "g",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la H: ...",
-    "questionResponsesList" : [ "Hábito", "Hombre", "Hijama", "Hielo" ],
-    "correctQuestionIndex" : 1,
+    "questionText" : "Con la H: Se refiere a las hojas que dan sombra a una planta.",
+    "questionResponsesList" : [ "hojecer", "huaorani", "hamaquearas", "hermanazgo" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "h",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la I: ...",
-    "questionResponsesList" : [ "Isla", "Imagen", "Incendio", "Idioma" ],
+    "questionText" : "Con la I: Nombre de un grupo de personas o un lugar específico.",
+    "questionResponsesList" : [ "ilipulense", "incordies", "intranquilo", "interrogara" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "i",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la J: ...",
-    "questionResponsesList" : [ "Jirafa", "Juego", "Jubilo", "Jarra" ],
-    "correctQuestionIndex" : 0,
+    "questionText" : "Con la J: Se refiere a un movimiento o sonido característico.",
+    "questionResponsesList" : [ "jiloteado", "julepeéis", "juzgadora", "jipiaren" ],
+    "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "j",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la K: Objeto que se utiliza para cortar madera o materiales duros.",
-    "questionResponsesList" : [ "kiosco", "kebab", "kilt", "kénder" ],
-    "correctQuestionIndex" : 0,
+    "questionText" : "Con la K: Mamífero australiano conocido por su pelaje.",
+    "questionResponsesList" : [ "kiwi", "kebab", "karate", "koala" ],
+    "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "k",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la L: Pieza de vestuario que cubre las piernas y se usa históricamente.",
-    "questionResponsesList" : [ "libro", "lápiz", "local", "leguaje" ],
+    "questionText" : "Con la L: El brillo o reflejo que se produce en ciertas superficies.",
+    "questionResponsesList" : [ "laces", "lampara", "lambucea", "lagoteaba" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "l",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la M: Acción opuesta a avanzar, que implica moverse hacia atrás.",
-    "questionResponsesList" : [ "marcar", "mudar", "mover", "minar" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Con la M: La capacidad de imitar a otro ser.",
+    "questionResponsesList" : [ "matriarcado", "monomanía", "mariol", "mimetizares" ],
+    "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "m",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la N: Acción de dar o cambiar un nombre a algo o a alguien.",
-    "questionResponsesList" : [ "narrar", "notificar", "nombramiento", "navegar" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Con la N: Conjunto de datos o noticias importantes.",
+    "questionResponsesList" : [ "negreces", "ninfo", "nombrable", "normaliza" ],
+    "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "n",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la O: Sistema de transporte que utiliza rieles y funciona con electricidad.",
-    "questionResponsesList" : [ "omnibus", "ovni", "ópera", "óvalo" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Contiene la Ñ: Prenda de tela que se usa para cubrir la cabeza.",
+    "questionResponsesList" : [ "niño", "pañuelo", "señal", "caña" ],
+    "correctQuestionIndex" : 1,
+    "questionStatus" : "init",
+    "questionLevel" : "medium",
+    "questionLetter" : "ñ",
+    "userResponseRecorded" : "init"
+  }, {
+    "questionText" : "Con la O: Sentimiento de gran fijación o deseo intenso.",
+    "questionResponsesList" : [ "obsesa", "objetado", "ojalatero", "ozonizara" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "o",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la P: Lugar donde se venden libros y materiales de lectura.",
-    "questionResponsesList" : [ "palestra", "playa", "plaza", "papelería" ],
+    "questionText" : "Con la P: Superficie vertical de una estructura.",
+    "questionResponsesList" : [ "portrecho", "pastaríais", "previsión", "pared" ],
     "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "p",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la Q: Objeto de escritura que se usa tradicionalmente en la antigüedad.",
-    "questionResponsesList" : [ "quill", "quemador", "quarita", "queso" ],
+    "questionText" : "Con la Q: Se refiere a una acción o concepto que implica un movimiento o desplazamiento.",
+    "questionResponsesList" : [ "quilombeare", "quintillón", "queseaba", "querochara" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "q",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la R: Tipo de bebida espirituosa de color ámbar, a base de malta.",
-    "questionResponsesList" : [ "ron", "rum", "rhubarb", "rumba" ],
+    "questionText" : "Con la R: Grandes formaciones de roca naturales.",
+    "questionResponsesList" : [ "roches", "refunde", "redujera", "refringid" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "r",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la S: Conjunto de elementos que se utilizan para crear obras de arte en una superficie.",
-    "questionResponsesList" : [ "salero", "sombra", "sílabas", "sculptura" ],
-    "correctQuestionIndex" : 3,
+    "questionText" : "Con la S: Tipo de tela o material textil.",
+    "questionResponsesList" : [ "sonriamos", "suecano", "saquero", "silvana" ],
+    "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "s",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la T: ... metal que sirve para atar.",
-    "questionResponsesList" : [ "Tornillo", "Trampa", "Tijera", "Tornelado" ],
-    "correctQuestionIndex" : 0,
+    "questionText" : "Con la T: Acción de cruzar una línea o límite.",
+    "questionResponsesList" : [ "trapica", "tablaban", "transgreda", "tarjaban" ],
+    "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "t",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la U: ... objeto que usa un pintor.",
-    "questionResponsesList" : [ "Uretano", "Uña", "Utensilio", "Ubícola" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Con la U: La acción de tomar posesión de algo por la fuerza.",
+    "questionResponsesList" : [ "upaban", "usurpabas", "unieron", "usufructuó" ],
+    "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "u",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la V: ... cuerpo dulce usado en postres.",
-    "questionResponsesList" : [ "Vainilla", "Vino", "Velvet", "Vibrante" ],
+    "questionText" : "Con la V: Número que se forma al juntar dos decenas.",
+    "questionResponsesList" : [ "veintidós", "vitrineares", "vislumbres", "videodisco" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "v",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la W: ... forma de energía usada en publicidad.",
-    "questionResponsesList" : [ "Waffle", "Whirlpool", "Widget", "Wow" ],
+    "questionText" : "Con la W: Deporte practicado en el agua.",
+    "questionResponsesList" : [ "whisky", "wifi", "waterpolo", "windsurf" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "w",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la X: ... planta con flores de color amarillo.",
-    "questionResponsesList" : [ "Xilografía", "Xiloteca", "Xilofón", "Xantofil" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Con la X: Tejido esencial de las plantas.",
+    "questionResponsesList" : [ "xilema", "xilografia", "xilofono", "xerografia" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "x",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la Y: ... tipo de recipiente para el cabello.",
-    "questionResponsesList" : [ "Yacimiento", "Yoyó", "Yema", "Yate" ],
-    "correctQuestionIndex" : 3,
+    "questionText" : "Con la Y: Nombre de un animal de cuatro patas.",
+    "questionResponsesList" : [ "yerno", "yate", "yegua", "yema" ],
+    "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "y",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la Z: ... tipo de material usado para el tejido.",
-    "questionResponsesList" : [ "Zafiro", "Zócalo", "zigzag", "Zest" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Con la Z: Pequeño objeto o elemento de almacenamiento.",
+    "questionResponsesList" : [ "zarcearas", "zorrongo", "zurriagazo", "zajurín" ],
+    "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "z",
     "userResponseRecorded" : "init"
   } ],
-  "max_length" : 26
+  "max_length" : 27
 }

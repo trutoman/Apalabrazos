@@ -187,14 +187,24 @@ public class AIQuestionGeneratorRunner {
     }
 
     private static String normalizeLetter(String text) {
-        if (text == null) return "";
-        text = repairMojibakeIfNeeded(text).toLowerCase().trim();
+    if (text == null) return "";
 
-        if (text.contains("ñ")) return "ñ";
+    text = text.trim();
 
-        return Normalizer.normalize(text, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+    // Casos raros por consola / encoding Windows
+    if (text.equals("ñ") || text.equals("Ñ") || text.equals("├▒") || text.equals("�")) {
+        return "ñ";
     }
+
+    String repaired = repairMojibakeIfNeeded(text).toLowerCase(Locale.ROOT).trim();
+
+    if (repaired.contains("ñ") || repaired.contains("├▒") || repaired.contains("�")) {
+        return "ñ";
+    }
+
+    return Normalizer.normalize(repaired, Normalizer.Form.NFD)
+            .replaceAll("\\p{M}", "");
+}
 
     private static String repairMojibakeIfNeeded(String input) {
         if (input == null) return "";

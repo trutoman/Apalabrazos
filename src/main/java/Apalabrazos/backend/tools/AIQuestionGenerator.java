@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,13 +45,15 @@ public class AIQuestionGenerator {
     private static final String ENYE_UPPER = "Ñ";
 
     private static final String DEFAULT_API_URL = "http://172.18.0.20:11434/v1/messages";
-    private static final String DEFAULT_MODEL = "gemma4:latest";
+    private static final String DEFAULT_MODEL = "gemma4:e2b";
     private static final String DEFAULT_FALLBACK_MODEL = "";
+
+    private static final String DEFAULT_WORD_DICTIONARY_PATH = "src/main/resources/Apalabrazos/data/0_palabras_todas.txt";
 
     private static final int DEFAULT_QUESTIONS_PER_LETTER = 1;
     private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
-    private static final int DEFAULT_LETTERS_PER_BATCH = 10;
-    private static final int DEFAULT_MAX_ATTEMPTS_PER_BATCH = 2;
+    private static final int DEFAULT_LETTERS_PER_BATCH = 27;
+    private static final int DEFAULT_MAX_ATTEMPTS_PER_BATCH = 1;
     private static final int DEFAULT_MAX_TOKENS = 4000;
 
     private static final String DEFAULT_APP_NAME = "Apalabrazos";
@@ -68,6 +71,18 @@ public class AIQuestionGenerator {
             StandardCharsets.ISO_8859_1
     );
 
+    /**
+     * Palabras de apoyo SOLO para letras difíciles.
+     * El resto de letras sigue usando el diccionario completo para mantener aleatoriedad.
+     */
+    private static final Map<String, List<String>> SAFE_WORDS_BY_LETTER = Map.of(
+            "k", List.of("kilo", "kiwi", "karate", "kayak", "kebab", "koala"),
+            "w", List.of("wifi", "wok", "waterpolo", "whisky", "windsurf", "web"),
+            "x", List.of("xilofono", "xenofobia", "xerografia", "xilografia", "xenon", "xilema"),
+            "ñ", List.of("niño", "señal", "montaña", "pañuelo", "caña", "bañera", "sueño", "araña"),
+            "y", List.of("yate", "yema", "yogur", "yerno", "yunque", "yegua")
+    );
+
     private final String apiKey;
     private final String apiUrl;
     private final String model;
@@ -79,9 +94,11 @@ public class AIQuestionGenerator {
     private final int maxTokens;
     private final String appName;
     private final String appUrl;
+    private final String wordDictionaryPath;
 
     private final HttpClient httpClient;
     private final ObjectMapper mapper;
+    private Map<String, List<String>> wordsByLetterCache;
 
     public AIQuestionGenerator() {
         this.apiKey = readEnv("AI_API_KEY", "");
@@ -98,6 +115,7 @@ public class AIQuestionGenerator {
         this.maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
         this.appName = readEnv("AI_APP_NAME", DEFAULT_APP_NAME);
         this.appUrl = readEnv("AI_APP_URL", DEFAULT_APP_URL);
+        this.wordDictionaryPath = readEnv("AI_WORD_DICTIONARY_PATH", DEFAULT_WORD_DICTIONARY_PATH);
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -111,6 +129,8 @@ public class AIQuestionGenerator {
                 apiUrl, model, fallbackModel, questionsPerLetter, questionsToGeneratePerLetterInBatch,
                 lettersPerBatch, maxAttemptsPerBatch, maxTokens, appName, appUrl
         );
+
+        log.info("Diccionario de palabras configurado en: {}", wordDictionaryPath);
     }
 
     public int getQuestionsPerLetter() {
@@ -198,8 +218,16 @@ public class AIQuestionGenerator {
                 attempts++;
 
                 try {
-                    String responseBody = callAIForBatch(batchLetters);
-                    List<Question> parsed = parseAIResponse(responseBody, batchLetters);
+                    Map<String, CandidateQuestionData> candidatesByLetter = buildCandidatesForBatch(batchLetters);
+
+                    if (candidatesByLetter.isEmpty()) {
+                        log.warn("No se pudieron preparar candidatas para el lote {}. Se salta el intento.", batchLetters);
+                        break;
+                    }
+
+                    log.info("Enviando lote {} a la IA con {} candidatas", batchLetters, candidatesByLetter.size());
+                    String responseBody = callAIForBatch(batchLetters, candidatesByLetter);
+                    List<Question> parsed = parseAIResponse(responseBody, batchLetters, candidatesByLetter);
 
                     int acceptedThisAttempt = 0;
 
@@ -286,12 +314,20 @@ public class AIQuestionGenerator {
         log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
         return result;
     }
-    private String callAIForBatch(List<String> batchLetters) throws Exception {
-        return callAIWithModel(batchLetters, model, true);
+    private String callAIForBatch(
+            List<String> batchLetters,
+            Map<String, CandidateQuestionData> candidatesByLetter
+    ) throws Exception {
+        return callAIWithModel(batchLetters, candidatesByLetter, model, true);
     }
 
-    private String callAIWithModel(List<String> batchLetters, String modelToUse, boolean allowFallback) throws Exception {
-        String prompt = buildBatchPrompt(batchLetters);
+    private String callAIWithModel(
+            List<String> batchLetters,
+            Map<String, CandidateQuestionData> candidatesByLetter,
+            String modelToUse,
+            boolean allowFallback
+    ) throws Exception {
+        String prompt = buildBatchPrompt(batchLetters, candidatesByLetter);
         String requestBody = buildRequestBody(prompt, modelToUse);
 
         long delayMs = INITIAL_RETRY_DELAY_MS;
@@ -333,7 +369,7 @@ public class AIQuestionGenerator {
                     fallbackModel
             );
 
-            return callAIWithModel(batchLetters, fallbackModel, false);
+            return callAIWithModel(batchLetters, candidatesByLetter, fallbackModel, false);
         }
 
         if (lastException != null) {
@@ -434,68 +470,41 @@ public class AIQuestionGenerator {
         throw new RuntimeException("Error llamando a la API Anthropic-compatible: HTTP " + status + ". Detalle: " + detailedMessage);
     }
 
-    private String buildBatchPrompt(List<String> batchLetters) {
-        String lettersText = batchLetters.stream()
-                .map(String::toUpperCase)
-                .collect(Collectors.joining(", "));
-String rulesByLetter = batchLetters.stream()
-        .map(letter -> {
-            boolean isEnye = ENYE.equals(normalizeLetter(letter));
-            String upper = isEnye ? ENYE_UPPER : letter.toUpperCase(Locale.ROOT);
+    private String buildBatchPrompt(
+            List<String> batchLetters,
+            Map<String, CandidateQuestionData> candidatesByLetter
+    ) {
+        String wordsData = batchLetters.stream()
+                .map(this::normalizeLetter)
+                .filter(candidatesByLetter::containsKey)
+                .map(letter -> {
+                    CandidateQuestionData c = candidatesByLetter.get(letter);
+                    boolean isEnye = ENYE.equals(letter);
+                    String upper = isEnye ? ENYE_UPPER : letter.toUpperCase(Locale.ROOT);
+                    String prefix = isEnye ? "Contiene la Ñ:" : "Con la " + upper + ":";
 
-            String textRule = isEnye
-                    ? "el texto debe empezar SIEMPRE por \"Contiene la Ñ: ...\""
-                    : "el texto debe empezar por \"Con la " + upper + ": ...\" o \"Contiene la " + upper + ": ...\"";
-
-            return """
-- Para la letra "%s":
-  - genera EXACTAMENTE %d preguntas
-  - cada pregunta debe tener "questionLetter": "%s"
-  - %s
-  - TODAS las respuestas deben contener la letra "%s"
-  - si la pista empieza por "Con la %s", la respuesta correcta debe empezar por "%s"
-  - si la pista empieza por "Contiene la %s", la respuesta correcta debe contener "%s"
-""".formatted(
-                    upper,
-                    questionsToGeneratePerLetterInBatch,
-                    normalizeLetter(letter),
-                    textRule,
-                    normalizeLetter(letter),
-                    upper,
-                    upper,
-                    upper,
-                    upper
-            );
-        })
-        .collect(Collectors.joining("\n"));
+                    return """
+- Letra: "%s"
+  Palabra correcta: "%s"
+  El enunciado debe empezar exactamente por: "%s"
+""".formatted(letter, c.correctWord(), prefix);
+                })
+                .collect(Collectors.joining("\n"));
 
         return """
 Eres un generador experto de preguntas tipo rosco de Pasapalabra en español.
 Debes responder SOLO con JSON válido.
-No escribas markdown. No escribas explicaciones. No escribas comentarios.
+No escribas markdown.
+No escribas explicaciones.
+No generes respuestas posibles.
+No generes correctQuestionIndex.
 
-Debes generar preguntas para estas letras: %s
+Tu única tarea es generar una pista breve para cada palabra correcta.
+La pista NO puede mencionar literalmente la palabra correcta ni derivados evidentes.
+La pista debe definir EXACTAMENTE la palabra correcta, no otra palabra parecida.
+La pista debe ser clara, natural, en español y de dificultad media.
 
-REGLAS GENERALES OBLIGATORIAS:
-1. Devuelve SOLO un JSON con un array "questionList".
-2. Cada pregunta debe tener exactamente 4 respuestas.
-3. Solo una respuesta es correcta.
-4. TODAS las respuestas de cada pregunta deben contener la letra indicada.
-5. Si el enunciado empieza por "Con la X", la respuesta correcta debe empezar por X.
-6. Si el enunciado empieza por "Contiene la X", la respuesta correcta debe contener X.
-7. Para la Ñ usa preferentemente "Contiene la Ñ", no "Con la Ñ".
-8. Las respuestas deben ser palabras reales, reconocibles y en español.
-9. No uses nombres propios.
-10. No uses siglas.
-11. No inventes palabras.
-12. No repitas preguntas.
-13. No repitas respuestas correctas.
-14. questionStatus = "init"
-15. userResponseRecorded = "init"
-16. questionLevel = "medium"
-17. Si no puedes generar una pregunta totalmente válida, no la incluyas.
-
-REGLAS POR LETRA:
+DATOS:
 %s
 
 FORMATO JSON OBLIGATORIO:
@@ -503,19 +512,18 @@ FORMATO JSON OBLIGATORIO:
   "questionList": [
     {
       "questionLetter": "a",
-      "questionText": "Con la A: ...",
-      "questionResponsesList": ["Asteroide", "Ancla", "Arena", "Axioma"],
-      "correctQuestionIndex": 0,
-      "questionStatus": "init",
-      "questionLevel": "medium",
-      "userResponseRecorded": "init"
+      "questionText": "Con la A: Pista breve sin decir la respuesta."
     }
   ]
 }
-""".formatted(lettersText, rulesByLetter);
+""".formatted(wordsData);
     }
 
-    private List<Question> parseAIResponse(String responseBody, List<String> expectedLetters) throws Exception {
+    private List<Question> parseAIResponse(
+            String responseBody,
+            List<String> expectedLetters,
+            Map<String, CandidateQuestionData> candidatesByLetter
+    ) throws Exception {
         String content = extractTextContentFromResponse(responseBody);
 
         if (content.isBlank()) {
@@ -557,34 +565,29 @@ FORMATO JSON OBLIGATORIO:
                 String letter = normalizeLetter(rawLetter);
                 String text = rawText;
 
-                int correctIndex = qNode.path("correctQuestionIndex").asInt(-1);
-
-                List<String> responses = new ArrayList<>();
-                JsonNode respNode = qNode.path("questionResponsesList");
-                if (respNode.isArray()) {
-                    for (JsonNode r : respNode) {
-                        responses.add(repairAndTrim(r.asText("")));
-                    }
-                }
-
                 if (!expected.contains(letter)) {
                     continue;
                 }
 
-                if (text.isBlank() || responses.size() != 4 || correctIndex < 0 || correctIndex > 3) {
+                CandidateQuestionData candidate = candidatesByLetter.get(letter);
+
+                if (candidate == null || text.isBlank()) {
                     continue;
                 }
 
+                String finalLetter = normalizeLetter(candidate.letter());
+
                 Question q = new Question(
                         text,
-                        responses,
-                        correctIndex,
+                        new ArrayList<>(candidate.responses()),
+                        candidate.correctIndex(),
                         QuestionStatus.INIT,
                         QuestionLevel.MEDIUM,
-                        letter,
+                        finalLetter,
                         "init"
                 );
 
+                q.setQuestionLetter(finalLetter);
                 questions.add(q);
 
             } catch (Exception e) {
@@ -621,6 +624,217 @@ FORMATO JSON OBLIGATORIO:
 
         return sanitizeContent(repairMojibakeIfNeeded(sb.toString()));
     }
+
+    private Map<String, CandidateQuestionData> buildCandidatesForBatch(List<String> batchLetters) throws Exception {
+        Map<String, List<String>> wordsByLetter = getWordsByLetter();
+        Map<String, CandidateQuestionData> result = new LinkedHashMap<>();
+        Random random = new Random();
+
+        for (String rawLetter : batchLetters) {
+            String letter = normalizeLetter(rawLetter);
+
+            List<String> availableWords;
+
+            // Para letras difíciles usamos una bolsa de apoyo estable, porque el diccionario bruto
+            // suele tener muy pocas palabras jugables. Para el resto mantenemos aleatoriedad total.
+            List<String> safeWords = SAFE_WORDS_BY_LETTER.get(letter);
+            if (isDifficultLetter(letter) && safeWords != null && safeWords.size() >= 4) {
+                availableWords = new ArrayList<>(safeWords);
+                log.info("Usando bolsa de apoyo para letra '{}': {}", letter, safeWords);
+            } else {
+                availableWords = new ArrayList<>(wordsByLetter.getOrDefault(letter, Collections.emptyList()));
+            }
+
+            if (availableWords.size() < 4) {
+                log.warn("No hay suficientes palabras para la letra '{}'. Disponibles: {}", letter, availableWords.size());
+                continue;
+            }
+
+            Collections.shuffle(availableWords);
+
+            List<String> responses = availableWords.stream()
+                    .limit(4)
+                    .collect(Collectors.toCollection(ArrayList::new));
+
+            int correctIndex = random.nextInt(4);
+            String correctWord = responses.get(correctIndex);
+
+            result.put(letter, new CandidateQuestionData(letter, responses, correctIndex, correctWord));
+
+            log.info(
+                    "Candidatas preparadas | Letra: {} | Respuestas: {} | Correcta: {}",
+                    letter,
+                    responses,
+                    correctWord
+            );
+        }
+
+        return result;
+    }
+
+    private Map<String, List<String>> getWordsByLetter() throws Exception {
+        if (wordsByLetterCache != null) {
+            return wordsByLetterCache;
+        }
+
+        Path path = Path.of(wordDictionaryPath).toAbsolutePath().normalize();
+
+        if (!Files.exists(path)) {
+            throw new IllegalStateException("No existe el diccionario de palabras: " + path);
+        }
+
+        log.info("Cargando diccionario desde {}", path);
+
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        Map<String, Set<String>> seenByLetter = new LinkedHashMap<>();
+
+        long totalLines = 0;
+        long acceptedWords = 0;
+
+        try (java.util.stream.Stream<String> lines = Files.lines(path, StandardCharsets.UTF_8)) {
+            for (String line : (Iterable<String>) lines::iterator) {
+                totalLines++;
+
+                String word = repairAndTrim(line);
+
+                if (!looksReasonableDictionaryWord(word)) {
+                    continue;
+                }
+
+                String firstLetter = getDictionaryKeyForWord(word);
+
+                if (firstLetter.isBlank()) {
+                    continue;
+                }
+
+                String normalizedWord = normalizeFreeText(word);
+
+                result.computeIfAbsent(firstLetter, k -> new ArrayList<>());
+                seenByLetter.computeIfAbsent(firstLetter, k -> new LinkedHashSet<>());
+
+                if (seenByLetter.get(firstLetter).add(normalizedWord)) {
+                    result.get(firstLetter).add(word);
+                    acceptedWords++;
+                }
+            }
+        }
+
+        wordsByLetterCache = result;
+
+        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", path, totalLines, acceptedWords);
+        for (Map.Entry<String, List<String>> entry : wordsByLetterCache.entrySet()) {
+            log.info("Letra '{}' -> {} palabras disponibles", entry.getKey(), entry.getValue().size());
+        }
+
+        return wordsByLetterCache;
+    }
+
+    private boolean looksReasonableDictionaryWord(String word) {
+        if (word == null) return false;
+
+        String repaired = repairAndTrim(word);
+        String normalized = normalizeFreeText(repaired);
+        String firstLetter = getDictionaryKeyForWord(repaired);
+
+        if (repaired.isBlank()) return false;
+        if (repaired.length() < 4 || repaired.length() > 11) return false;
+        if (repaired.contains(" ")) return false;
+        if (repaired.contains("-")) return false;
+        if (looksLikeMojibake(repaired)) return false;
+        if (!repaired.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$")) return false;
+
+        // Evita palabras raras con k/w en letras normales, pero permite K y W.
+        if (!"k".equals(firstLetter) && !"w".equals(firstLetter)) {
+            if (normalized.contains("k") || normalized.contains("w")) {
+                return false;
+            }
+        }
+
+        if (isLikelyBadConjugation(normalized)) return false;
+
+        return true;
+    }
+
+    private boolean isDifficultLetter(String letter) {
+        return "k".equals(letter)
+                || "w".equals(letter)
+                || "x".equals(letter)
+                || "ñ".equals(letter)
+                || "y".equals(letter);
+    }
+
+    private boolean isLikelyBadConjugation(String normalized) {
+        if (normalized == null || normalized.isBlank()) return true;
+
+        return normalized.endsWith("abais")
+                || normalized.endsWith("abamos")
+                || normalized.endsWith("arais")
+                || normalized.endsWith("erais")
+                || normalized.endsWith("irais")
+                || normalized.endsWith("aramos")
+                || normalized.endsWith("eramos")
+                || normalized.endsWith("iramos")
+                || normalized.endsWith("aremos")
+                || normalized.endsWith("eremos")
+                || normalized.endsWith("iremos")
+                || normalized.endsWith("aria")
+                || normalized.endsWith("arias")
+                || normalized.endsWith("arian")
+                || normalized.endsWith("eria")
+                || normalized.endsWith("erias")
+                || normalized.endsWith("erian")
+                || normalized.endsWith("iria")
+                || normalized.endsWith("irias")
+                || normalized.endsWith("irian")
+                || normalized.endsWith("ase")
+                || normalized.endsWith("ases")
+                || normalized.endsWith("asen")
+                || normalized.endsWith("aseis")
+                || normalized.endsWith("iese")
+                || normalized.endsWith("iesen")
+                || normalized.endsWith("ieses")
+                || normalized.endsWith("ieseis")
+                || normalized.endsWith("aste")
+                || normalized.endsWith("asteis")
+                || normalized.endsWith("iste")
+                || normalized.endsWith("isteis")
+                || normalized.endsWith("aron")
+                || normalized.endsWith("aran")
+                || normalized.endsWith("areis")
+                || normalized.endsWith("ereis")
+                || normalized.endsWith("ireis")
+                || normalized.endsWith("ando")
+                || normalized.endsWith("iendo")
+                || normalized.endsWith("ad");
+    }
+
+    /**
+     * Clave con la que se agrupa una palabra del diccionario.
+     *
+     * Reglas tipo Pasapalabra:
+     * - A-Z: la palabra debe EMPEZAR por la letra.
+     * - Ñ: la palabra debe CONTENER la ñ, no necesariamente empezar por ella.
+     */
+    private String getDictionaryKeyForWord(String word) {
+        if (word == null || word.isBlank()) return "";
+
+        String repaired = repairAndTrim(word);
+        String lower = repaired.toLowerCase(Locale.ROOT);
+
+        if (lower.contains(ENYE)) {
+            return ENYE;
+        }
+
+        String first = lower.substring(0, 1);
+        return normalizeFreeText(first);
+    }
+
+    private record CandidateQuestionData(
+            String letter,
+            List<String> responses,
+            int correctIndex,
+            String correctWord
+    ) {}
 
     private boolean isValidQuestion(Question q) {
         if (q == null) return false;
@@ -831,14 +1045,24 @@ FORMATO JSON OBLIGATORIO:
 
     private String normalizeFreeText(String text) {
         if (text == null) return "";
-        String repaired = repairAndTrim(text);
 
-        if ("ñ".equalsIgnoreCase(repaired)) {
-            return "ñ";
-        }
+        String repaired = repairAndTrim(text)
+                .trim()
+                .toLowerCase(Locale.ROOT);
 
-        return Normalizer.normalize(repaired.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+        // IMPORTANTE:
+        // Normalizer NFD convierte "ñ" en "n" + tilde combinada.
+        // Si luego quitamos los diacríticos, la ñ se pierde y pasa a ser n.
+        // Para el rosco necesitamos conservar la ñ como letra distinta.
+        repaired = repaired
+                .replace("ñ", "__ENYE__")
+                .replace("Ñ", "__ENYE__");
+
+        String normalized = Normalizer.normalize(repaired, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace("__ENYE__", "ñ");
+
+        return normalized;
     }
 
     private boolean startsWithLetter(String word, String letter) {
