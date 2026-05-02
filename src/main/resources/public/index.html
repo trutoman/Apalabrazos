@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/register.css">
     <link rel="stylesheet" href="css/lobby.css">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
 </head>
 
 <body>
@@ -172,14 +173,7 @@
     </section>
 
     <section id="view-match-start" class="game-view hidden">
-        <div class="match-start-screen">
-            <div class="match-start-panel">
-                <div class="match-start-label">Partida Iniciada</div>
-                <h1 class="match-start-title">Chess Lobby Arena</h1>
-                <p class="match-start-subtitle" id="match-start-subtitle">Esperando la siguiente fase del juego...</p>
-                <div class="match-start-board" id="match-start-board" aria-label="Tablero de ajedrez visual"></div>
-            </div>
-        </div>
+        <div id="phaser-game-container"></div>
     </section>
         <script type="module" src="js/main.js" defer></script>
 </body>

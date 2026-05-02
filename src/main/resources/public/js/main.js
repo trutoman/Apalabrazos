@@ -18,6 +18,7 @@ let currentJoinedRoomId = null;
 let currentOwnedRoomId = null;
 let currentJoinedRoomPlayers = 0;
 let currentStartedRoomId = null;
+let phaserGame = null;
 const createdGameRoomIds = new Set();
 const pendingJoinRoomIds = new Set();
 const pendingLeaveRoomIds = new Set();
@@ -91,31 +92,24 @@ function renderLobbyUsername(username) {
     lobbyUsername.appendChild(lobbySuffix);
 }
 
-function ensureMatchStartBoard() {
-    const board = document.getElementById('match-start-board');
-    if (!board || board.childElementCount > 0) return;
-
-    for (let row = 0; row < 8; row += 1) {
-        for (let col = 0; col < 8; col += 1) {
-            const cell = document.createElement('div');
-            cell.className = `match-start-cell ${(row + col) % 2 === 0 ? 'is-light' : 'is-dark'}`;
-            board.appendChild(cell);
-        }
+function destroyPhaserGame() {
+    if (phaserGame) {
+        phaserGame.destroy(true);
+        phaserGame = null;
     }
+    const container = document.getElementById('phaser-game-container');
+    if (container) container.innerHTML = '';
 }
 
 function showMatchStartView(payload = {}) {
     const roomId = String(payload?.roomId || currentJoinedRoomId || '').trim();
-    const subtitle = document.getElementById('match-start-subtitle');
-
-    ensureMatchStartBoard();
-
-    if (subtitle) {
-        const roomName = String(payload?.name || roomId || 'tu partida').trim();
-        subtitle.textContent = `La partida ${roomName} ha comenzado. Todos los jugadores conectados han sido movidos desde el lobby a esta pantalla inicial.`;
-    }
 
     UIManager.switchView('view-match-start');
+
+    destroyPhaserGame();
+    import('/js/phaser_src/main.js').then((mod) => {
+        phaserGame = mod.startGame('phaser-game-container');
+    });
 
     if (roomId && currentStartedRoomId !== roomId) {
         currentStartedRoomId = roomId;
@@ -202,6 +196,9 @@ function handleLogout() {
     createdGameRoomIds.clear();
     pendingJoinRoomIds.clear();
     pendingLeaveRoomIds.clear();
+
+    // Destroy Phaser game if running
+    destroyPhaserGame();
 
     // Clear any pending timeouts
     if (createGamePendingTimeout) {
@@ -621,6 +618,7 @@ function registerSocketMessageHandlers() {
                     currentOwnedRoomId = null;
                 }
 
+                destroyPhaserGame();
                 UIManager.switchView('view-lobby');
                 showCreateGameErrors([cause]);
                 syncAllJoinButtonsState();
@@ -732,7 +730,6 @@ document.addEventListener('DOMContentLoaded', () => {
     syncCreateGameControlsState();
     bindLogoutButton();
     bindStartMatchButton();
-    ensureMatchStartBoard();
 
     // --- Create Game button validation ---
     const btnConfirm = document.getElementById('btn-confirm-create');
