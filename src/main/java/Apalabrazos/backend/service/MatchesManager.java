@@ -278,6 +278,22 @@ public class MatchesManager implements EventListener {
         return null;
     }
 
+    private Player findConnectedPlayerByPlayerId(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return null;
+        }
+
+        for (Player connectedPlayer : activeConnections.values()) {
+            if (connectedPlayer == null || connectedPlayer.getPlayerID() == null) {
+                continue;
+            }
+            if (playerId.equals(connectedPlayer.getPlayerID())) {
+                return connectedPlayer;
+            }
+        }
+        return null;
+    }
+
     private Map<String, Object> buildMatchRemovedSummary(String matchId, GameService gameService) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("roomId", matchId);
@@ -285,6 +301,30 @@ public class MatchesManager implements EventListener {
             payload.put("name", gameService.getGameName());
         }
         return payload;
+    }
+
+    private void broadcastMatchStarted(String matchId, GameService gameService) {
+        if (matchId == null || matchId.isBlank() || gameService == null) {
+            return;
+        }
+
+        GameGlobal gameInstance = gameService.getGameInstance();
+        if (gameInstance == null) {
+            return;
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>(buildMatchSummary(gameService));
+        payload.put("roomId", matchId);
+        payload.put("started", true);
+
+        for (String playerId : new ArrayList<>(gameInstance.getAllPlayerIds())) {
+            Player player = findConnectedPlayerByPlayerId(playerId);
+            if (player != null && player.isConnected()) {
+                player.sendMessage(Map.of(
+                        "type", "MatchStarted",
+                        "payload", payload));
+            }
+        }
     }
 
     private void recalculateAllMatchesPlayersState() {
@@ -339,6 +379,39 @@ public class MatchesManager implements EventListener {
             return null;
         }
 
+        String creatorPlayerId = service.getCreatorPlayerId();
+        boolean creatorLeaving = creatorPlayerId != null && creatorPlayerId.equals(playerId);
+
+        if (creatorLeaving) {
+            List<String> affectedPlayerIds = new ArrayList<>(gameInstance.getAllPlayerIds());
+            affectedPlayerIds.removeIf(id -> id == null || id.isBlank() || id.equals(playerId));
+
+            for (String affectedPlayerId : affectedPlayerIds) {
+                gameInstance.removePlayer(affectedPlayerId);
+            }
+            gameInstance.removePlayer(playerId);
+
+            for (String affectedPlayerId : affectedPlayerIds) {
+                Player affectedPlayer = findConnectedPlayerByPlayerId(affectedPlayerId);
+                if (affectedPlayer != null && affectedPlayer.isConnected()) {
+                    affectedPlayer.sendMessage(Map.of(
+                            "type", "MatchClosedByCreator",
+                            "payload", Map.of(
+                                    "roomId", currentMatchId,
+                                    "cause", "El creador abandonó la partida. Has vuelto al lobby.")));
+                }
+            }
+
+            matchPlayerNames.remove(currentMatchId);
+            if (activeMatches.remove(currentMatchId) != null) {
+                LobbyRoom.getInstance().broadcastMatchRemoved(buildMatchRemovedSummary(currentMatchId, service), this);
+            }
+
+            log.info("Creator {} left match {}. Match removed and remaining players were ejected.",
+                    playerId, currentMatchId);
+            return currentMatchId;
+        }
+
         gameInstance.removePlayer(playerId);
         refreshMatchPlayerNames(currentMatchId, service);
         log.info("Player {} left match {}", playerId, currentMatchId);
@@ -350,6 +423,20 @@ public class MatchesManager implements EventListener {
         }
 
         return currentMatchId;
+    }
+
+    public boolean markMatchControllerReady(String matchId, String playerId) {
+        if (matchId == null || matchId.isBlank() || playerId == null || playerId.isBlank()) {
+            return false;
+        }
+
+        GameService service = getMatchById(matchId);
+        if (service == null) {
+            return false;
+        }
+
+        service.publishExternal(new GameControllerReady(playerId, matchId));
+        return true;
     }
 
     /**
@@ -520,29 +607,57 @@ public class MatchesManager implements EventListener {
      */
     private void handleGameStartedRequest(GameStartedRequestEvent event) {
         String roomId = event.getRoomId();
-        String username = event.getUsername();
+        String requesterPlayerId = event.getPlayerId();
+        Player requester = findConnectedPlayerByPlayerId(requesterPlayerId);
+        String requesterName = requester != null ? requester.getName() : requesterPlayerId;
 
-        log.info("Game start requested by {} for room {}", username, roomId);
+        log.info("Game start requested by {} for room {}", requesterName, roomId);
 
         // Validar que el usuario sea el creador de la partida
         String creator = getMatchCreatorId(roomId);
         if (creator == null) {
             log.error("No se encontró el creador para la sala {}", roomId);
+            if (requester != null) {
+                requester.sendMessage(Map.of(
+                        "type", "StartMatchRequestInvalid",
+                        "payload", Map.of("cause", "No se ha encontrado el creador de la partida.")));
+            }
             return;
         }
 
-        if (!creator.equals(username)) {
-            log.error("Solo el creador puede iniciar la partida. Creador: {}, Usuario: {}", creator, username);
+        if (!creator.equals(requesterPlayerId)) {
+            log.error("Solo el creador puede iniciar la partida. Creador: {}, Usuario: {}", creator, requesterPlayerId);
+            if (requester != null) {
+                requester.sendMessage(Map.of(
+                        "type", "StartMatchRequestInvalid",
+                        "payload", Map.of("cause", "Solo el creador puede iniciar la partida.")));
+            }
             return;
         }
 
         // Obtener el GameService y validar inicio
         GameService service = getMatchById(roomId);
         if (service != null) {
+            GameGlobal gameInstance = service.getGameInstance();
+            if (gameInstance == null || gameInstance.getPlayerCount() < 2) {
+                if (requester != null) {
+                    requester.sendMessage(Map.of(
+                            "type", "StartMatchRequestInvalid",
+                            "payload", Map.of("cause", "Se necesitan al menos 2 jugadores para iniciar la partida.")));
+                }
+                return;
+            }
+
             service.GameStartedValid();
-            log.info("Validación exitosa. Juego iniciado por {} en sala {}", username, roomId);
+            broadcastMatchStarted(roomId, service);
+            log.info("Validación exitosa. Juego iniciado por {} en sala {}", requesterName, roomId);
         } else {
             log.error("Room with ID {} not found", roomId);
+            if (requester != null) {
+                requester.sendMessage(Map.of(
+                        "type", "StartMatchRequestInvalid",
+                        "payload", Map.of("cause", "La partida ya no existe.")));
+            }
         }
     }
 

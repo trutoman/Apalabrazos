@@ -9,11 +9,15 @@ import { validate_game_creation } from './validation/game-validation.js';
 
 // Module-level session info — populated after a successful login
 let currentUsername = null;
+let currentToken = null;
 let isCreateGamePending = false;
 let createGamePendingTimeout = null;
 let hasClearedMockGames = false;
 let hasRegisteredSocketMessageHandler = false;
 let currentJoinedRoomId = null;
+let currentOwnedRoomId = null;
+let currentJoinedRoomPlayers = 0;
+let currentStartedRoomId = null;
 const createdGameRoomIds = new Set();
 const pendingJoinRoomIds = new Set();
 const pendingLeaveRoomIds = new Set();
@@ -87,6 +91,144 @@ function renderLobbyUsername(username) {
     lobbyUsername.appendChild(lobbySuffix);
 }
 
+function ensureMatchStartBoard() {
+    const board = document.getElementById('match-start-board');
+    if (!board || board.childElementCount > 0) return;
+
+    for (let row = 0; row < 8; row += 1) {
+        for (let col = 0; col < 8; col += 1) {
+            const cell = document.createElement('div');
+            cell.className = `match-start-cell ${(row + col) % 2 === 0 ? 'is-light' : 'is-dark'}`;
+            board.appendChild(cell);
+        }
+    }
+}
+
+function showMatchStartView(payload = {}) {
+    const roomId = String(payload?.roomId || currentJoinedRoomId || '').trim();
+    const subtitle = document.getElementById('match-start-subtitle');
+
+    ensureMatchStartBoard();
+
+    if (subtitle) {
+        const roomName = String(payload?.name || roomId || 'tu partida').trim();
+        subtitle.textContent = `La partida ${roomName} ha comenzado. Todos los jugadores conectados han sido movidos desde el lobby a esta pantalla inicial.`;
+    }
+
+    UIManager.switchView('view-match-start');
+
+    if (roomId && currentStartedRoomId !== roomId) {
+        currentStartedRoomId = roomId;
+        SocketClient.send('GameControllerReady', { roomId });
+    }
+}
+
+function syncStartMatchButtonState() {
+    const startBtn = document.getElementById('btn-start-match');
+    if (!startBtn) return;
+
+    const ownsCurrentRoom = Boolean(currentOwnedRoomId) && currentOwnedRoomId === currentJoinedRoomId;
+    const enoughPlayers = currentJoinedRoomPlayers >= 2;
+    const canStart = ownsCurrentRoom && enoughPlayers;
+
+    startBtn.disabled = !canStart;
+
+    if (!ownsCurrentRoom) {
+        startBtn.textContent = 'Start Match';
+    } else if (!enoughPlayers) {
+        startBtn.textContent = 'Waiting Players';
+    } else {
+        startBtn.textContent = 'Start Match';
+    }
+}
+
+function bindStartMatchButton() {
+    const startBtn = document.getElementById('btn-start-match');
+    if (!startBtn) return;
+    if (startBtn.dataset.boundStartMatch === '1') return;
+
+    startBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+
+        if (!currentOwnedRoomId || currentOwnedRoomId !== currentJoinedRoomId) {
+            showCreateGameErrors(['Solo el creador de la partida puede iniciarla.']);
+            return;
+        }
+
+        if (currentJoinedRoomPlayers < 2) {
+            showCreateGameErrors(['Necesitas al menos 2 jugadores para iniciar la partida.']);
+            return;
+        }
+
+        SocketClient.send('StartMatchRequest', {
+            roomId: currentOwnedRoomId,
+            requestedAt: Math.floor(Date.now() / 1000),
+        });
+    });
+
+    startBtn.dataset.boundStartMatch = '1';
+}
+
+function updateCurrentRoomState(roomId, players = null) {
+    const normalizedRoomId = String(roomId || '').trim();
+
+    if (!normalizedRoomId || currentJoinedRoomId !== normalizedRoomId) {
+        syncStartMatchButtonState();
+        return;
+    }
+
+    if (players != null && Number.isFinite(Number(players))) {
+        currentJoinedRoomPlayers = Number(players);
+    }
+
+    syncStartMatchButtonState();
+}
+
+function handleLogout() {
+    console.log('🚪 Logging out...');
+
+    // Disconnect WebSocket
+    SocketClient.disconnect();
+
+    // Clear session variables
+    currentUsername = null;
+    currentToken = null;
+    hasRegisteredSocketMessageHandler = false;
+    currentJoinedRoomId = null;
+    currentOwnedRoomId = null;
+    currentJoinedRoomPlayers = 0;
+    currentStartedRoomId = null;
+    isCreateGamePending = false;
+    createdGameRoomIds.clear();
+    pendingJoinRoomIds.clear();
+    pendingLeaveRoomIds.clear();
+
+    // Clear any pending timeouts
+    if (createGamePendingTimeout) {
+        clearTimeout(createGamePendingTimeout);
+        createGamePendingTimeout = null;
+    }
+
+    // Clear lobby UI
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+
+    const gamesList = document.getElementById('games-list');
+    if (gamesList) {
+        gamesList.innerHTML = '';
+    }
+
+    // Return to login screen
+    UIManager.switchView('view-login');
+    if (typeof LoginUI.focusUsernameInput === 'function') {
+        LoginUI.focusUsernameInput();
+    }
+
+    console.log('✅ Logged out successfully');
+}
+
 function setCreatePendingState(pending) {
     isCreateGamePending = pending;
     syncCreateGameControlsState();
@@ -111,6 +253,8 @@ function syncCreateGameControlsState() {
     if (joinedAnyMatch && createCard) {
         createCard.classList.add('hidden');
     }
+
+    syncStartMatchButtonState();
 }
 
 function toTitleCase(value) {
@@ -204,6 +348,18 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+function bindLogoutButton() {
+    const logoutBtn = document.getElementById('btn-logout');
+    if (!logoutBtn) return;
+    if (logoutBtn.dataset.boundLogout === '1') return;
+
+    logoutBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleLogout();
+    });
+    logoutBtn.dataset.boundLogout = '1';
+}
+
 function applyJoinButtonState(button) {
     if (!button) return;
 
@@ -246,6 +402,12 @@ function removeOnlineGameCard(roomId) {
 
     if (currentJoinedRoomId === normalizedRoomId) {
         currentJoinedRoomId = null;
+        currentJoinedRoomPlayers = 0;
+        currentStartedRoomId = null;
+    }
+
+    if (currentOwnedRoomId === normalizedRoomId) {
+        currentOwnedRoomId = null;
     }
 
     syncAllJoinButtonsState();
@@ -289,6 +451,7 @@ function updateOnlineGameCard(gameData, cardColors = null) {
     const colorsFromCard = card.dataset.cardColors ? JSON.parse(card.dataset.cardColors) : null;
     const colorsFromPayload = Array.isArray(gameData?.cardColors) ? gameData.cardColors : null;
 
+    updateCurrentRoomState(roomId, currentPlayers);
     syncJoinButtonState(roomId);
     attachPlayerListClickHandler(card);
     applyCardColors(card, cardColors || colorsFromPayload || colorsFromCard || []);
@@ -377,6 +540,7 @@ function addOnlineGameCard(gameData, cardColors = null) {
     createdGameRoomIds.add(roomId);
     const colorsFromPayload = Array.isArray(gameData?.cardColors) ? gameData.cardColors : null;
 
+    updateCurrentRoomState(roomId, currentPlayers);
     syncJoinButtonState(roomId);
     attachPlayerListClickHandler(card);
     applyCardColors(card, cardColors || colorsFromPayload || []);
@@ -391,6 +555,9 @@ function renderLobbyMatchesSnapshot(matches) {
     pendingJoinRoomIds.clear();
     pendingLeaveRoomIds.clear();
     currentJoinedRoomId = null;
+    currentOwnedRoomId = null;
+    currentJoinedRoomPlayers = 0;
+    currentStartedRoomId = null;
     hasClearedMockGames = true;
 
     if (!Array.isArray(matches) || matches.length === 0) {
@@ -428,6 +595,48 @@ function registerSocketMessageHandlers() {
                 const roomId = String(data?.payload?.roomId || '').trim();
                 console.log('[LOBBY] Match removed:', roomId);
                 removeOnlineGameCard(roomId);
+                if (currentJoinedRoomId === roomId) {
+                    currentJoinedRoomId = null;
+                    currentJoinedRoomPlayers = 0;
+                    currentStartedRoomId = null;
+                    UIManager.switchView('view-lobby');
+                    showCreateGameErrors(['La partida a la que estabas unido ya no existe.']);
+                    syncAllJoinButtonsState();
+                }
+            } else if (data.type === 'MatchClosedByCreator') {
+                const roomId = String(data?.payload?.roomId || '').trim();
+                const cause = data?.payload?.cause || 'El creador abandonó la partida.';
+
+                pendingJoinRoomIds.delete(roomId);
+                pendingLeaveRoomIds.delete(roomId);
+                removeOnlineGameCard(roomId);
+
+                if (!roomId || currentJoinedRoomId === roomId) {
+                    currentJoinedRoomId = null;
+                    currentJoinedRoomPlayers = 0;
+                    currentStartedRoomId = null;
+                }
+
+                if (!roomId || currentOwnedRoomId === roomId) {
+                    currentOwnedRoomId = null;
+                }
+
+                UIManager.switchView('view-lobby');
+                showCreateGameErrors([cause]);
+                syncAllJoinButtonsState();
+            } else if (data.type === 'MatchStarted') {
+                const payload = data?.payload || {};
+                const roomId = String(payload?.roomId || '').trim();
+
+                if (roomId) {
+                    currentJoinedRoomId = roomId;
+                    currentJoinedRoomPlayers = Number(payload?.players || currentJoinedRoomPlayers || 0);
+                }
+
+                showMatchStartView(payload);
+            } else if (data.type === 'StartMatchRequestInvalid') {
+                const cause = data?.payload?.cause || 'No se ha podido iniciar la partida.';
+                showCreateGameErrors([cause]);
             } else if (data.type === 'chat_message') {
                 const { text, username_originator } = data.payload || {};
                 if (text && username_originator) {
@@ -451,6 +660,9 @@ function registerSocketMessageHandlers() {
                 const roomId = String(payload?.roomId || '').trim();
                 if (roomId) {
                     currentJoinedRoomId = roomId;
+                    currentOwnedRoomId = roomId;
+                    currentJoinedRoomPlayers = Number(payload?.players || 1);
+                    currentStartedRoomId = null;
                     pendingJoinRoomIds.clear();
                 }
                 console.log('[CREATE] GameCreationRequestValid received:', payload);
@@ -462,6 +674,8 @@ function registerSocketMessageHandlers() {
                 if (roomId) {
                     pendingJoinRoomIds.clear();
                     currentJoinedRoomId = roomId;
+                    currentJoinedRoomPlayers = Number(payload?.players || currentJoinedRoomPlayers || 0);
+                    currentStartedRoomId = null;
                 }
                 console.log('[JOIN] JoinMatchRequestValid received:', payload);
                 addOnlineGameCard(payload);
@@ -481,6 +695,11 @@ function registerSocketMessageHandlers() {
                 pendingJoinRoomIds.clear();
                 if (!roomId || currentJoinedRoomId === roomId) {
                     currentJoinedRoomId = null;
+                    currentJoinedRoomPlayers = 0;
+                    currentStartedRoomId = null;
+                }
+                if (!roomId || currentOwnedRoomId === roomId) {
+                    currentOwnedRoomId = null;
                 }
                 console.log('[LEAVE] LeaveMatchRequestValid received:', data?.payload || {});
                 syncAllJoinButtonsState();
@@ -511,6 +730,9 @@ function registerSocketMessageHandlers() {
 document.addEventListener('DOMContentLoaded', () => {
     populateGameSelects();
     syncCreateGameControlsState();
+    bindLogoutButton();
+    bindStartMatchButton();
+    ensureMatchStartBoard();
 
     // --- Create Game button validation ---
     const btnConfirm = document.getElementById('btn-confirm-create');
@@ -738,6 +960,7 @@ LoginUI.init(
             // 3. Extract token from response
             const loginData = await loginResponse.json();
             const token = loginData.token;
+            currentToken = token;  // Store token for logout
 
             if (!token) {
                 LoginUI.showError("Error: No authentication token received");
@@ -753,7 +976,7 @@ LoginUI.init(
                 return;
             }
             currentUsername = username; // store for later use (e.g. game creation)
-            registerSocketMessageHandlers();
+            currentToken = token;  // store token for logout
 
             // 4. Connect to WebSocket with token using userId in the path
             const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(userId)}`;
@@ -766,6 +989,10 @@ LoginUI.init(
                 LoginUI.showError("Error al conectar con el servidor WebSocket. Verifica que el servidor esté en línea.");
                 return;
             }
+
+            // Register socket message handlers AFTER connecting (before handlers were cleared by connect())
+            hasRegisteredSocketMessageHandler = false;  // Reset for new connection
+            registerSocketMessageHandlers();
 
             // 5. WebSocket authenticated, switch to lobby
             console.log("✅ Authentication successful, entering lobby...");

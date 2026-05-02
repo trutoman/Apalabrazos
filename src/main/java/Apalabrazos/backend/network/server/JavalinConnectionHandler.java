@@ -227,6 +227,53 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                                         "cause", "No estás unido a ninguna partida.")));
                     }
 
+                    // ── START MATCH REQUEST ─────────────────────────────────────
+                } else if ("StartMatchRequest".equalsIgnoreCase(type)) {
+                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+
+                    if (player == null) {
+                        log.warn("[GAME-START] ⚠️ StartMatchRequest received but player was not found for session {}", sessionId);
+                        return;
+                    }
+
+                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
+                    String roomId = data != null ? data.path("roomId").asText("").trim() : "";
+
+                    if (roomId.isEmpty()) {
+                        player.sendMessage(java.util.Map.of(
+                                "type", "StartMatchRequestInvalid",
+                                "payload", java.util.Map.of(
+                                        "cause", "No se ha indicado una sala válida para iniciar la partida.")));
+                        return;
+                    }
+
+                    log.info("[GAME-START] ▶️ Solicitud de inicio recibida de '{}' para la sala {}",
+                            player.getName(), roomId);
+
+                    Apalabrazos.backend.events.GlobalAsyncEventBus.getInstance().publish(
+                            new Apalabrazos.backend.events.GameStartedRequestEvent(roomId, player.getPlayerID()));
+
+                    // ── GAME CONTROLLER READY ───────────────────────────────────
+                } else if ("GameControllerReady".equalsIgnoreCase(type)) {
+                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+
+                    if (player == null) {
+                        log.warn("[GAME-READY] ⚠️ GameControllerReady received but player was not found for session {}", sessionId);
+                        return;
+                    }
+
+                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
+                    String roomId = data != null ? data.path("roomId").asText("").trim() : "";
+
+                    if (roomId.isEmpty()) {
+                        log.warn("[GAME-READY] ⚠️ GameControllerReady sin roomId de '{}'", player.getName());
+                        return;
+                    }
+
+                    boolean readyAccepted = sessionManager.markMatchControllerReady(roomId, player.getPlayerID());
+                    log.info("[GAME-READY] 🎛️ Controller ready de '{}' para sala {} => {}",
+                            player.getName(), roomId, readyAccepted ? "accepted" : "ignored");
+
                     // ── UNKNOWN ──────────────────────────────────────────────────
                 } else if (!type.isEmpty() && !"PING".equalsIgnoreCase(type)) {
                     log.warn("[MESSAGE] ⚠️ Tipo de mensaje desconocido: '{}' de sesión {}", type, sessionId);
