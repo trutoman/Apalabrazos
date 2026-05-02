@@ -1,652 +1,212 @@
 {
   "questionList" : [ {
-    "questionText" : "Con la A: Órgano encargado de hacer circular la sangre.",
-    "questionResponsesList" : [ "Arteria", "Articulación", "Anillo", "Álbum" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "a",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la A: Estación donde se guardan o venden libros.",
-    "questionResponsesList" : [ "Tienda", "Academia", "Librería", "Plaza" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "a",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la A: Conjunto de elementos que componen una obra musical.",
-    "questionResponsesList" : [ "Armonía", "Aria", "Acento", "Aparato" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "a",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la B: ... Diminutivo de un cuerpo celeste que gira alrededor de otros.",
-    "questionResponsesList" : [ "bombilla", "burbuja", "brillo", "bosque" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "b",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la B: ... Gran zona de tierra cubierta de árboles.",
-    "questionResponsesList" : [ "bosque", "bahía", "bordillo", "bestiario" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "b",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la B: ... Sinónimo de bello; hermoso.",
-    "questionResponsesList" : [ "buen", "bonito", "bello", "belén" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "b",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la C: ... Elemento natural líquido que nutre la vida.",
-    "questionResponsesList" : [ "canto", "campo", "calor", "cristal" ],
+    "questionText" : "Con la A: ...",
+    "questionResponsesList" : [ "Árbol", "Avión", "Animal", "Alfarería" ],
     "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "c",
+    "questionLetter" : "a",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Contiene la C: ... Sinónimo de alegría o felicidad.",
-    "questionResponsesList" : [ "cariño", "cuidado", "calma", "complacer" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "c",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la C: ... Conjunto de reglas que rigen un país.",
-    "questionResponsesList" : [ "costumbre", "civismo", "códigos", "campamento" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "c",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la D: ... Estructura que soporta el cuerpo humano, es rígida.",
-    "questionResponsesList" : [ "dieta", "derecho", "dedo", "diente" ],
+    "questionText" : "Con la B: ...",
+    "questionResponsesList" : [ "Burbuja", "Barco", "Baile", "Bomba" ],
     "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "d",
+    "questionLetter" : "b",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la D: ... Es el opuesto de avanzar; retroceder.",
-    "questionResponsesList" : [ "declinación", "desayuno", "desceso", "desafío" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Con la C: ...",
+    "questionResponsesList" : [ "Caminante", "Ciudad", "Cuchara", "Caballo" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "d",
+    "questionLetter" : "c",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la D: ... Parte superior de una abertura (puerta o ventana).",
-    "questionResponsesList" : [ "Dintel", "Danza", "Disperso", "Ducha" ],
+    "questionText" : "Con la D: ...",
+    "questionResponsesList" : [ "Dedo", "Danza", "Doctor", "Disco" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "d",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la E: ... Lo opuesto a nulo; capacidad de existir.",
-    "questionResponsesList" : [ "existencia", "elección", "educación", "experiencia" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "e",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la E: ... Sinónimo de tristeza o pesar.",
-    "questionResponsesList" : [ "pena", "decepción", "etéreo", "escena" ],
+    "questionText" : "Con la E: ...",
+    "questionResponsesList" : [ "Elefante", "Equipo", "Escalera", "Estrella" ],
     "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "e",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la E: ... Es el opuesto de simple; complejo.",
-    "questionResponsesList" : [ "exceso", "escalera", "elaborado", "emergencia" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "e",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la F: ... Es un tejido fuerte usado para cuerdas o cuerdas de salto.",
-    "questionResponsesList" : [ "fábrica", "fiza", "fibra", "fiesta" ],
+    "questionText" : "Con la F: ...",
+    "questionResponsesList" : [ "Fuego", "Fútbol", "Fábrica", "Flor" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "f",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Contiene la F: ... Tipo de metal utilizado para hacer objetos decorativos o útiles.",
-    "questionResponsesList" : [ "cifras", "cofre", "alfombra", "alfarería" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "f",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la F: ... Es el opuesto de grande, diminuto.",
-    "questionResponsesList" : [ "furioso", "frío", "fresco", "frágil" ],
-    "correctQuestionIndex" : 3,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "f",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la G: ... Acción de moverse o desplazarse con paso coordinado.",
-    "questionResponsesList" : [ "Gatear", "Galopar", "Gesticular", "Girar" ],
-    "correctQuestionIndex" : 1,
+    "questionText" : "Con la G: ...",
+    "questionResponsesList" : [ "Gato", "Globo", "Guerra", "Girasol" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "g",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la G: ... Lugar que es de naturaleza acuática y generalmente grande.",
-    "questionResponsesList" : [ "Geranía", "Guadiana", "Golfo", "Garganta" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "g",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la G: ... Sustancia ácida que se produce en la digestión.",
-    "questionResponsesList" : [ "Glicerina", "Gases", "Gastrina", "Gravedad" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "g",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la H: ... Estar en estado de reposo o calma.",
-    "questionResponsesList" : [ "Hambre", "Hilar", "Hiberna", "Hostil" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "h",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la H: ... Sustancia gaseosa necesaria para respirar.",
-    "questionResponsesList" : [ "Hielo", "Helio", "Hogar", "Hilo" ],
+    "questionText" : "Con la H: ...",
+    "questionResponsesList" : [ "Hábito", "Hombre", "Hijama", "Hielo" ],
     "correctQuestionIndex" : 1,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "h",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la H: ... Estado de suspensión de la actividad eléctrica en un circuito.",
-    "questionResponsesList" : [ "Humedad", "Halo", "Histeresis", "Historia" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "h",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la I: ... Unidad de tiempo que marca un intervalo de segundos.",
-    "questionResponsesList" : [ "Instantánea", "Intervalo", "Índice", "Isoterma" ],
-    "correctQuestionIndex" : 1,
+    "questionText" : "Con la I: ...",
+    "questionResponsesList" : [ "Isla", "Imagen", "Incendio", "Idioma" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "i",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Contiene la I: ... Sentimiento profundo de alegría y contentamiento.",
-    "questionResponsesList" : [ "Angustia", "Tristeza", "Felicidad", "Infancia" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "i",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la I: ... Instrumento que se utiliza para medir niveles o pendientes.",
-    "questionResponsesList" : [ "Inglete", "Indicador", "Inclinómetro", "Iluminador" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "i",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la J: ... Persona o personaje que enciende la hoguera.",
-    "questionResponsesList" : [ "Jefe", "Jóbar", "Jinete", "Jerarca" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "j",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la J: ... Adjetivo que describe a lo que es más duro y resistente.",
-    "questionResponsesList" : [ "Jovial", "Júpiter", "Jóven", "Jacen" ],
+    "questionText" : "Con la J: ...",
+    "questionResponsesList" : [ "Jirafa", "Juego", "Jubilo", "Jarra" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "j",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la J: ... Unidad de medida de fuerza, usada en física.",
-    "questionResponsesList" : [ "Julio", "Joule", "Jiffy", "Jarabe" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "j",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la K: ... Tipo de magia o fantasía mitológica.",
-    "questionResponsesList" : [ "Kriptonita", "Kármico", "Kelek", "Kifón" ],
+    "questionText" : "Con la K: Objeto que se utiliza para cortar madera o materiales duros.",
+    "questionResponsesList" : [ "kiosco", "kebab", "kilt", "kénder" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "k",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la K: ... Diminutivo de caballo o animal similar.",
-    "questionResponsesList" : [ "Kink", "Kabuki", "Kukú", "Keko" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "k",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la K: ... Objeto usado para escribir o dibujar.",
-    "questionResponsesList" : [ "Kardex", "Kerosene", "Kitchen", "Kimono" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "k",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la L: Metal precioso y muy brillante, usado en joyería.",
-    "questionResponsesList" : [ "Laca", "Librería", "Lujo", "Látigo" ],
+    "questionText" : "Con la L: Pieza de vestuario que cubre las piernas y se usa históricamente.",
+    "questionResponsesList" : [ "libro", "lápiz", "local", "leguaje" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "l",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la L: Cuerpo celeste que gira alrededor de la Tierra.",
-    "questionResponsesList" : [ "Luna", "Lunar", "Latitud", "Libro" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "l",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la L: ... Pieza de metal usada para sujetar o cerrar un recipiente.",
-    "questionResponsesList" : [ "Llave", "Lazo", "Línea", "Lámpara" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "l",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la M: Conjunto de animales que viven en manada.",
-    "questionResponsesList" : [ "Manada", "Mantenida", "Macabra", "Melancolía" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "m",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la M: Tipo de azúcar cristalizado, dulce y blanco.",
-    "questionResponsesList" : [ "Melaza", "Miel", "Mármol", "Musgo" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "m",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la M: Instrumento de cocina usado para remover o mezclar ingredientes.",
-    "questionResponsesList" : [ "Marmita", "Mazo", "Mortero", "Mesa" ],
+    "questionText" : "Con la M: Acción opuesta a avanzar, que implica moverse hacia atrás.",
+    "questionResponsesList" : [ "marcar", "mudar", "mover", "minar" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "m",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la N: Sustancia que se añade a la ropa para evitar que se arrugue.",
-    "questionResponsesList" : [ "Nailon", "Naranja", "Nitrato", "Nicotina" ],
+    "questionText" : "Con la N: Acción de dar o cambiar un nombre a algo o a alguien.",
+    "questionResponsesList" : [ "narrar", "notificar", "nombramiento", "navegar" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "n",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la N: Elemento natural que proporciona luz y calor.",
-    "questionResponsesList" : [ "Nube", "Niebla", "Noche", "Nicho" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "n",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la N: ... Se puede hacer en un gimnasio o un club deportivo.",
-    "questionResponsesList" : [ "Nado", "Noción", "Negocio", "Nudo" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "n",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la O: Astropartícula muy grande que orbita el sol.",
-    "questionResponsesList" : [ "Orbita", "Osario", "Octógono", "Ópera" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "o",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la O: Color opaco que se encuentra entre el azul y el verde.",
-    "questionResponsesList" : [ "Ocre", "Cobalto", "Bronceado", "Rosa" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "o",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la O: Profesión que consiste en el análisis de huesos.",
-    "questionResponsesList" : [ "Odontólogo", "Ortodoncista", "Osteólogo", "Oncológico" ],
+    "questionText" : "Con la O: Sistema de transporte que utiliza rieles y funciona con electricidad.",
+    "questionResponsesList" : [ "omnibus", "ovni", "ópera", "óvalo" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "o",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la P: ... es la parte del cuerpo que usamos para escribir y señalar.",
-    "questionResponsesList" : [ "pata", "piel", "pico", "palma" ],
+    "questionText" : "Con la P: Lugar donde se venden libros y materiales de lectura.",
+    "questionResponsesList" : [ "palestra", "playa", "plaza", "papelería" ],
     "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "p",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la P: ... es el estado natural de los sólidos, líquidos y gases.",
-    "questionResponsesList" : [ "psicología", "propiedad", "plasma", "porcentaje" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "p",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la P: Materia escrita o impresa.",
-    "questionResponsesList" : [ "Papel", "Plástico", "Piedra", "Pelo" ],
+    "questionText" : "Con la Q: Objeto de escritura que se usa tradicionalmente en la antigüedad.",
+    "questionResponsesList" : [ "quill", "quemador", "quarita", "queso" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "p",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la Q: ... es un fenómeno natural que se presenta en el cielo y se relaciona con el agua.",
-    "questionResponsesList" : [ "quijote", "química", "quinto", "quercus" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
     "questionLetter" : "q",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la Q: ... se refiere a un tipo de planta con grandes hojas y que crece en climas tropicales.",
-    "questionResponsesList" : [ "quinoa", "queso", "quinua", "quercus" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "q",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la Q: Color que se obtiene de la quema o quemadura.",
-    "questionResponsesList" : [ "Quino", "Quema", "Quimera", "Quisiera" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "q",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la R: ... es una bebida caliente y aromática que se consume habitualmente por la mañana.",
-    "questionResponsesList" : [ "resaca", "respiro", "remolacha", "refresco" ],
-    "correctQuestionIndex" : 3,
+    "questionText" : "Con la R: Tipo de bebida espirituosa de color ámbar, a base de malta.",
+    "questionResponsesList" : [ "ron", "rum", "rhubarb", "rumba" ],
+    "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "r",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Contiene la R: ... se utiliza para cocinar y suele tener formas geométricas.",
-    "questionResponsesList" : [ "rejilla", "redonda", "rectángulo", "parrilla" ],
+    "questionText" : "Con la S: Conjunto de elementos que se utilizan para crear obras de arte en una superficie.",
+    "questionResponsesList" : [ "salero", "sombra", "sílabas", "sculptura" ],
     "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "r",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la R: ... es una acción de moverse o pasar de un lugar a otro.",
-    "questionResponsesList" : [ "rotación", "resistencia", "remanso", "ruta" ],
-    "correctQuestionIndex" : 3,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "r",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la S: ... es un tipo de tejido o material usado para vestir.",
-    "questionResponsesList" : [ "satén", "seda", "suéter", "skate" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
     "questionLetter" : "s",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la S: ... es la capa atmosférica donde vivimos los seres humanos.",
-    "questionResponsesList" : [ "sombra", "sol", "sistema", "salitre" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "s",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la S: Tejido que se usa para dormir.",
-    "questionResponsesList" : [ "Satén", "Siesta", "Sábana", "Semilla" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "s",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la T: ... es un tipo de prenda de vestir para el tren inferior.",
-    "questionResponsesList" : [ "traje", "tejer", "tostada", "tutela" ],
+    "questionText" : "Con la T: ... metal que sirve para atar.",
+    "questionResponsesList" : [ "Tornillo", "Trampa", "Tijera", "Tornelado" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "t",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la T: ... significa la acción de transitar por un lugar.",
-    "questionResponsesList" : [ "trayecto", "tinta", "tierra", "tiempo" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "t",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la T: Es un lugar alto y vertical.",
-    "questionResponsesList" : [ "Textil", "Tapiz", "Taller", "Tierra" ],
+    "questionText" : "Con la U: ... objeto que usa un pintor.",
+    "questionResponsesList" : [ "Uretano", "Uña", "Utensilio", "Ubícola" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
-    "questionLetter" : "t",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la U: ... Planeta del sistema solar, conocido por sus anillos visibles.",
-    "questionResponsesList" : [ "Urano", "Urbe", "Uruguay", "Ulul" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
     "questionLetter" : "u",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la U: ... Fruto pequeño de color morado o verde.",
-    "questionResponsesList" : [ "Uva", "Urraca", "Umbral", "Uña" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "u",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la U: ... Unidad de tiempo.",
-    "questionResponsesList" : [ "ÚLTIMO", "URANO", "ULTRA", "UNIÓN" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "u",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la V: ... Inicial de un verbo que significa no tener nada de un espacio.",
-    "questionResponsesList" : [ "Vacío", "Viuda", "Volumen", "Vía" ],
+    "questionText" : "Con la V: ... cuerpo dulce usado en postres.",
+    "questionResponsesList" : [ "Vainilla", "Vino", "Velvet", "Vibrante" ],
     "correctQuestionIndex" : 0,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "v",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la V: ... Rastro o línea de color en una roca o material.",
-    "questionResponsesList" : [ "Veta", "Vértice", "Valle", "Vista" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "v",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la V: ... Que no puede ser visto por los sentidos.",
-    "questionResponsesList" : [ "Visible", "Invisible", "Vacilante", "Vibrante" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "v",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la W: ... Planeta conocido como la estrella de la tarde.",
-    "questionResponsesList" : [ "Wénus", "Wix", "Wombat", "Wall" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "w",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la W: ... Mamífero australiano con forma redonda.",
-    "questionResponsesList" : [ "Wombat", "Web", "Waifu", "Wasto" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "w",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la W: ... Personaje de televisión.",
-    "questionResponsesList" : [ "WAGON", "WASHINGTON", "WIFI", "WORKFLOW" ],
+    "questionText" : "Con la W: ... forma de energía usada en publicidad.",
+    "questionResponsesList" : [ "Waffle", "Whirlpool", "Widget", "Wow" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "w",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Contiene la X: ... Ciencia que clasifica y estudia los seres vivos.",
-    "questionResponsesList" : [ "Éxodo", "Tórax", "Taxonomía", "Excedente" ],
+    "questionText" : "Con la X: ... planta con flores de color amarillo.",
+    "questionResponsesList" : [ "Xilografía", "Xiloteca", "Xilofón", "Xantofil" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "x",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la X: ... Instrumento musical de teclas",
-    "questionResponsesList" : [ "Xilófono", "Xilografía", "Xenopus", "Xanadu" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "x",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la X: ... Nombre de un animal, género de pez saltador.",
-    "questionResponsesList" : [ "Xenopus", "Xilofón", "Xis", "Xylia" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "x",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la Y: ... Planta que se alimenta de otros organismos.",
-    "questionResponsesList" : [ "Yute", "Yaca", "Yugo", "Ylang-ylang" ],
-    "correctQuestionIndex" : 2,
+    "questionText" : "Con la Y: ... tipo de recipiente para el cabello.",
+    "questionResponsesList" : [ "Yacimiento", "Yoyó", "Yema", "Yate" ],
+    "correctQuestionIndex" : 3,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "y",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Contiene la Y: ... Indica necesidad de ayuda o socorro.",
-    "questionResponsesList" : [ "Hoy", "Hiyerba", "Ayuda", "Ley" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "y",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la Y: ... Sustancia extraída de la tierra.",
-    "questionResponsesList" : [ "YACIMIENTO", "YOGA", "YAMAMOTE", "YUTAKA" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "y",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la Z: instrumento musical de viento parecido a la flauta, con lengüeta de zurrón",
-    "questionResponsesList" : [ "Zambomba", "Zanfona", "Zingara", "Zancudo" ],
-    "correctQuestionIndex" : 1,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "z",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la Z: conjunto de objetos o animales que pertenecen a una misma clase o especie",
-    "questionResponsesList" : [ "Zoológico", "Zoología", "Zorzales", "Zonzo" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "z",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la Z: persona o cosa que tiene mucha risa o es muy graciosa",
-    "questionResponsesList" : [ "Zarandaja", "Zaragoza", "Zascandil", "Zagalaz" ],
+    "questionText" : "Con la Z: ... tipo de material usado para el tejido.",
+    "questionResponsesList" : [ "Zafiro", "Zócalo", "zigzag", "Zest" ],
     "correctQuestionIndex" : 2,
     "questionStatus" : "init",
     "questionLevel" : "medium",
     "questionLetter" : "z",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Con la Ñ: Tubérculo comestible muy usado en América Latina.",
-    "questionResponsesList" : [ "ñame", "caña", "niña", "sueño" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "ñ",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la Ñ: Juguete o figura con forma de persona.",
-    "questionResponsesList" : [ "muñeca", "caña", "niño", "sueño" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "ñ",
-    "userResponseRecorded" : "init"
-  }, {
-    "questionText" : "Contiene la Ñ: Objeto de cartón que se rompe en fiestas para sacar dulces.",
-    "questionResponsesList" : [ "piñata", "año", "caña", "niña" ],
-    "correctQuestionIndex" : 0,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "ñ",
     "userResponseRecorded" : "init"
   } ],
-  "max_length" : 81
+  "max_length" : 26
 }

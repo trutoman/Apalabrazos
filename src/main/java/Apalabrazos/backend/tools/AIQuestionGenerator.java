@@ -47,10 +47,10 @@ public class AIQuestionGenerator {
     private static final String DEFAULT_MODEL = "gemma4:latest";
     private static final String DEFAULT_FALLBACK_MODEL = "";
 
-    private static final int DEFAULT_QUESTIONS_PER_LETTER = 3;
-    private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 4;
-    private static final int DEFAULT_LETTERS_PER_BATCH = 5;
-    private static final int DEFAULT_MAX_ATTEMPTS_PER_BATCH = 3;
+    private static final int DEFAULT_QUESTIONS_PER_LETTER = 1;
+    private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
+    private static final int DEFAULT_LETTERS_PER_BATCH = 10;
+    private static final int DEFAULT_MAX_ATTEMPTS_PER_BATCH = 2;
     private static final int DEFAULT_MAX_TOKENS = 4000;
 
     private static final String DEFAULT_APP_NAME = "Apalabrazos";
@@ -172,19 +172,8 @@ public class AIQuestionGenerator {
         for (String letter : normalizedTargetLetters) {
             acceptedByLetter.put(letter, new ArrayList<>());
         }
-
-        // Resolver la Ñ localmente, sin IA
-        if (normalizedTargetLetters.contains(ENYE)) {
-            List<Question> enyeQuestions = generateLocalEnyeQuestions();
-            acceptedByLetter.get(ENYE).addAll(enyeQuestions.stream()
-                    .limit(questionsPerLetter)
-                    .collect(Collectors.toList()));
-            log.info("Preguntas locales generadas para la letra '{}': {}", ENYE, acceptedByLetter.get(ENYE).size());
-        }
-
-        List<String> lettersForAI = normalizedTargetLetters.stream()
-                .filter(letter -> !ENYE.equals(letter))
-                .collect(Collectors.toList());
+        // Ahora TODAS las letras (incluida la ñ) van a la IA
+        List<String> lettersForAI = new ArrayList<>(normalizedTargetLetters);
 
         if (lettersForAI.isEmpty()) {
             List<Question> allQuestions = flattenQuestions(acceptedByLetter.values());
@@ -297,43 +286,6 @@ public class AIQuestionGenerator {
         log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
         return result;
     }
-
-    private List<Question> generateLocalEnyeQuestions() {
-        List<Question> list = new ArrayList<>();
-
-        list.add(new Question(
-                "Con la Ñ: Tubérculo comestible muy usado en América Latina.",
-                List.of("ñame", "caña", "niña", "sueño"),
-                0,
-                QuestionStatus.INIT,
-                QuestionLevel.MEDIUM,
-                ENYE,
-                "init"
-        ));
-
-        list.add(new Question(
-                "Contiene la Ñ: Juguete o figura con forma de persona.",
-                List.of("muñeca", "caña", "niño", "sueño"),
-                0,
-                QuestionStatus.INIT,
-                QuestionLevel.MEDIUM,
-                ENYE,
-                "init"
-        ));
-
-        list.add(new Question(
-                "Contiene la Ñ: Objeto de cartón que se rompe en fiestas para sacar dulces.",
-                List.of("piñata", "año", "caña", "niña"),
-                0,
-                QuestionStatus.INIT,
-                QuestionLevel.MEDIUM,
-                ENYE,
-                "init"
-        ));
-
-        return list;
-    }
-
     private String callAIForBatch(List<String> batchLetters) throws Exception {
         return callAIWithModel(batchLetters, model, true);
     }
@@ -486,29 +438,36 @@ public class AIQuestionGenerator {
         String lettersText = batchLetters.stream()
                 .map(String::toUpperCase)
                 .collect(Collectors.joining(", "));
+String rulesByLetter = batchLetters.stream()
+        .map(letter -> {
+            boolean isEnye = ENYE.equals(normalizeLetter(letter));
+            String upper = isEnye ? ENYE_UPPER : letter.toUpperCase(Locale.ROOT);
 
-        String rulesByLetter = batchLetters.stream()
-                .map(letter -> """
+            String textRule = isEnye
+                    ? "el texto debe empezar SIEMPRE por \"Contiene la Ñ: ...\""
+                    : "el texto debe empezar por \"Con la " + upper + ": ...\" o \"Contiene la " + upper + ": ...\"";
+
+            return """
 - Para la letra "%s":
   - genera EXACTAMENTE %d preguntas
   - cada pregunta debe tener "questionLetter": "%s"
-  - el texto debe empezar por "Con la %s: ..." o "Contiene la %s: ..."
+  - %s
   - TODAS las respuestas deben contener la letra "%s"
   - si la pista empieza por "Con la %s", la respuesta correcta debe empezar por "%s"
   - si la pista empieza por "Contiene la %s", la respuesta correcta debe contener "%s"
 """.formatted(
-                        letter,
-                        questionsToGeneratePerLetterInBatch,
-                        letter.toLowerCase(Locale.ROOT),
-                        letter.toUpperCase(Locale.ROOT),
-                        letter.toUpperCase(Locale.ROOT),
-                        letter.toLowerCase(Locale.ROOT),
-                        letter.toUpperCase(Locale.ROOT),
-                        letter.toUpperCase(Locale.ROOT),
-                        letter.toUpperCase(Locale.ROOT),
-                        letter.toUpperCase(Locale.ROOT)
-                ))
-                .collect(Collectors.joining("\n"));
+                    upper,
+                    questionsToGeneratePerLetterInBatch,
+                    normalizeLetter(letter),
+                    textRule,
+                    normalizeLetter(letter),
+                    upper,
+                    upper,
+                    upper,
+                    upper
+            );
+        })
+        .collect(Collectors.joining("\n"));
 
         return """
 Eres un generador experto de preguntas tipo rosco de Pasapalabra en español.
@@ -521,16 +480,20 @@ REGLAS GENERALES OBLIGATORIAS:
 1. Devuelve SOLO un JSON con un array "questionList".
 2. Cada pregunta debe tener exactamente 4 respuestas.
 3. Solo una respuesta es correcta.
-4. Las respuestas deben ser palabras reales, reconocibles y en español.
-5. No uses nombres propios.
-6. No uses siglas.
-7. No inventes palabras.
-8. No repitas preguntas.
-9. No repitas respuestas correctas.
-10. questionStatus = "init"
-11. userResponseRecorded = "init"
-12. questionLevel = "medium"
-13. Si no puedes generar una pregunta totalmente válida, no la incluyas.
+4. TODAS las respuestas de cada pregunta deben contener la letra indicada.
+5. Si el enunciado empieza por "Con la X", la respuesta correcta debe empezar por X.
+6. Si el enunciado empieza por "Contiene la X", la respuesta correcta debe contener X.
+7. Para la Ñ usa preferentemente "Contiene la Ñ", no "Con la Ñ".
+8. Las respuestas deben ser palabras reales, reconocibles y en español.
+9. No uses nombres propios.
+10. No uses siglas.
+11. No inventes palabras.
+12. No repitas preguntas.
+13. No repitas respuestas correctas.
+14. questionStatus = "init"
+15. userResponseRecorded = "init"
+16. questionLevel = "medium"
+17. Si no puedes generar una pregunta totalmente válida, no la incluyas.
 
 REGLAS POR LETRA:
 %s
