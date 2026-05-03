@@ -108,7 +108,7 @@ function showMatchStartView(payload = {}) {
     UIManager.switchView('view-match-start');
 
     destroyPhaserGame();
-    import('/js/phaser_src/main.js').then((mod) => {
+    import('/js/phaser_src/game-launcher.js').then((mod) => {
         phaserGame = mod.startGame('phaser-game-container');
     });
 
