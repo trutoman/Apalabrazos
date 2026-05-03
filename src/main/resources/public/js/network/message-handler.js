@@ -41,6 +41,21 @@ function _route(data, state, actions) {
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
 
+    } else if (data.type === 'QuestionChanged') {
+        // El servidor manda el resultado de la pregunta anterior y la siguiente a mostrar
+        const p = data?.payload || {};
+        PhaserEventBus.emit('net:questionChanged', {
+            questionIndex:  p.questionIndex  ?? -1,
+            status:         p.status         ?? 'init',
+            nextQuestion:   p.nextQuestion   || null,
+            totalCorrect:   p.totalCorrect   ?? 0,
+            totalIncorrect: p.totalIncorrect ?? 0,
+        });
+
+    } else if (data.type === 'GameFinished') {
+        // La partida terminó, notificar a Phaser para mostrar resultados finales
+        PhaserEventBus.emit('net:gameFinished', data?.payload || {});
+
     } else if (data.type === 'LobbyMatchesSnapshot') {
         const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
         console.log(`[LOBBY] Snapshot received with ${matches.length} matches`);

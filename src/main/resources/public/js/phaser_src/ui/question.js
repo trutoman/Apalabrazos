@@ -19,6 +19,11 @@ export class Question {
         this.answerButtons = new Map();
         this.answerTextLabels = [];
 
+        // Callback que se dispara cuando el jugador elige una de las 4 opciones
+        this._onAnswerSelected = options.onAnswerSelected || null;
+        // Índice de la pregunta que está en pantalla en este momento
+        this._currentQuestionIndex = -1;
+
         this.positionMap = this._buildSidePositionMap(options);
 
         this._drawAll();
@@ -63,6 +68,17 @@ export class Question {
         };
     }
 
+    // Reemplaza el enunciado y las opciones con los datos de la siguiente pregunta
+    update({ questionText, questionResponsesList, questionIndex }) {
+        this._currentQuestionIndex = questionIndex;
+        this.questionBox.text.setText(questionText);
+        // answerTextLabels[0] = texto de opción 1, [1] = opción 2, etc.
+        questionResponsesList.forEach((text, i) => {
+            const label = this.answerTextLabels[i];
+            if (label) label.setText(text);
+        });
+    }
+
     _drawAll() {
         this.answers.forEach(answer => this._drawAnswer(answer));
         this._drawQuestion();
@@ -73,6 +89,7 @@ export class Question {
         const label = this.labelMap[answer.index];
         const r     = this.answerRadius;
 
+        // Al pulsar una opción se envía el índice de pregunta y la opción elegida (0-3) al servidor
         const button = new InteractiveButton(
             this.scene,
             `answer_${answer.index}_button`,
@@ -81,7 +98,12 @@ export class Question {
             r * 2,
             r * 2,
             label,
-            null,
+            () => {
+                if (this._onAnswerSelected) {
+                    // answer.index va de 1 a 4, el servidor espera 0 a 3
+                    this._onAnswerSelected(this._currentQuestionIndex, answer.index - 1);
+                }
+            },
             {
                 type: 'irregular',
                 circleColor: 0xff00f4,

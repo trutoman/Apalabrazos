@@ -14,7 +14,9 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
             shadowColor = 0x000000,
             shadowAlpha = 1,
             useHandCursor = true,
-            shadowDepth = 4
+            shadowDepth = 4,
+            // si es false, el botón es solo visual y no reacciona al mouse
+            interactive = true
         } = options;
 
         this.buttonName = buttonName;
@@ -52,21 +54,23 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
             this.circle.strokePoints(pts, true, true);
 
             const polygon = new Phaser.Geom.Polygon(pts.flatMap(p => [p.x, p.y]));
-            this.circle.setInteractive(polygon, Phaser.Geom.Polygon.Contains);
-            if (useHandCursor) this.circle.input.cursor = 'pointer';
+            if (interactive) {
+                this.circle.setInteractive(polygon, Phaser.Geom.Polygon.Contains);
+                if (useHandCursor) this.circle.input.cursor = 'pointer';
+            }
 
         } else if (type === 'square') {
             this.shadow = scene.add.rectangle(this.shadowOffset, this.shadowOffset, displayWidth, displayHeight, shadowColor, shadowAlpha);
             this.circle = scene.add.rectangle(0, 0, displayWidth, displayHeight, circleColor);
             this.circle.setStrokeStyle(strokeWidth, strokeColor);
-            this.circle.setInteractive({ useHandCursor });
+            if (interactive) this.circle.setInteractive({ useHandCursor });
 
         } else {
             // default: circle
             this.shadow = scene.add.circle(this.shadowOffset, this.shadowOffset, radius, shadowColor, shadowAlpha);
             this.circle = scene.add.circle(0, 0, radius, circleColor);
             this.circle.setStrokeStyle(strokeWidth, strokeColor);
-            this.circle.setInteractive({ useHandCursor });
+            if (interactive) this.circle.setInteractive({ useHandCursor });
         }
 
         this.text = scene.add.text(0, 0, label, {
@@ -79,9 +83,12 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
         this.setSize(displayWidth, displayHeight);
         this.setName(buttonName);
 
-        this.circle.on('pointerover', this.handlePointerOver, this);
-        this.circle.on('pointerout', this.handlePointerOut, this);
-        this.circle.on('pointerdown', this.handlePointerDown, this);
+        // solo registrar eventos de puntero si el botón es interactivo
+        if (interactive) {
+            this.circle.on('pointerover', this.handlePointerOver, this);
+            this.circle.on('pointerout', this.handlePointerOut, this);
+            this.circle.on('pointerdown', this.handlePointerDown, this);
+        }
 
         scene.add.existing(this);
     }

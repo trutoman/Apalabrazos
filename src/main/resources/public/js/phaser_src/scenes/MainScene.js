@@ -16,6 +16,13 @@ export class MainScene extends Phaser.Scene {
         this.scoreboard  = null;
         this.standings   = null;
         this._resizeTimer = null;
+
+        // Letra del rosco que está activa en este momento
+        this._activeLetter = null;
+        // Índice de la pregunta que el jugador está viendo ahora
+        this._currentQuestionIndex = -1;
+        // Referencia al handler del bus para poder quitarlo al destruir la escena
+        this._onQuestionChanged = null;
     }
 
     preload() {
@@ -28,6 +35,50 @@ export class MainScene extends Phaser.Scene {
     create() {
         this._buildLayout(this.scale.width, this.scale.height);
         this.scale.on('resize', this._onResize, this);
+
+        // Escuchar cuando el servidor manda una nueva pregunta o el resultado de la respondida
+        this._onQuestionChanged = (data) => this._handleQuestionChanged(data);
+        PhaserEventBus.on('net:questionChanged', this._onQuestionChanged);
+    }
+
+    // Procesa el evento que llega desde el servidor con el resultado de la pregunta anterior
+    // y los datos de la siguiente pregunta que hay que mostrar
+    _handleQuestionChanged({ questionIndex, status, nextQuestion, totalCorrect, totalIncorrect }) {
+        // Marcar la letra del rosco que acaba de responderse con el color del resultado
+        if (this._activeLetter && questionIndex >= 0) {
+            const colorByStatus = {
+                'responsed_ok':   'correct',
+                'responsed_fail': 'incorrect',
+                'passed':         'passed'
+            };
+            if (this.rosco) {
+                this.rosco.setLetterState(this._activeLetter, colorByStatus[status] || 'pending');
+            }
+        }
+
+        // Mostrar la siguiente pregunta si el servidor la mandó
+        if (nextQuestion) {
+            const letter = nextQuestion.questionLetter.toUpperCase();
+            this._activeLetter = letter;
+            this._currentQuestionIndex = questionIndex + 1;
+
+            if (this.question) {
+                this.question.update({
+                    questionText: nextQuestion.questionText,
+                    questionResponsesList: nextQuestion.questionResponsesList,
+                    questionIndex: questionIndex + 1
+                });
+            }
+
+            // Resaltar en azul la letra del rosco que toca responder ahora
+            if (this.rosco) this.rosco.setLetterState(letter, 'active');
+        }
+
+        // Actualizar el marcador de aciertos y fallos en el contador
+        if (this.counter) {
+            this.counter.setCorrect(totalCorrect);
+            this.counter.setWrong(totalIncorrect);
+        }
     }
 
     _onResize(gameSize) {
@@ -54,23 +105,34 @@ export class MainScene extends Phaser.Scene {
             centerY: layoutCenter.y - roscoVerticalOffset,
             roscoRadius,
             buttonRadius: 20,
-            backgroundColor: '#F0F0F0'
+            backgroundColor: '#F0F0F0',
+            // Al pulsar PASAR, emitir selectedOption -1 para que main.js lo envíe al servidor
+            onPassSelected: () => {
+                PhaserEventBus.emit('ui:answerSelected', {
+                    questionIndex: this._currentQuestionIndex,
+                    selectedOption: -1
+                });
+            }
         };
         this.rosco = new Rosco(this, roscoConfig);
 
         this.question = new Question(
             this,
-            { text: 'Respuesta A', index: 1 },
-            { text: 'Respuesta B', index: 2 },
-            { text: 'Respuesta C', index: 3 },
-            { text: 'Respuesta D', index: 4 },
-            'Escribe aquí el enunciado de la pregunta?',
+            { text: '...', index: 1 },
+            { text: '...', index: 2 },
+            { text: '...', index: 3 },
+            { text: '...', index: 4 },
+            'Esperando la primera pregunta...',
             {
                 centerX: layoutCenter.x,
                 centerY: layoutCenter.y,
                 roscoRadius: roscoConfig.roscoRadius,
                 roscoButtonRadius: roscoConfig.buttonRadius,
-                questionBottomOffset: 45
+                questionBottomOffset: 45,
+                // Al pulsar una opción de respuesta, emitir el evento hacia main.js
+                onAnswerSelected: (questionIndex, selectedOption) => {
+                    PhaserEventBus.emit('ui:answerSelected', { questionIndex, selectedOption });
+                }
             }
         );
 
@@ -103,6 +165,11 @@ export class MainScene extends Phaser.Scene {
             correctValue: 0,
             wrongValue: 0
         });
+
+        // Si ya había una pregunta activa antes del resize, restaurar su estado visual
+        if (this._activeLetter) {
+            this.rosco.setLetterState(this._activeLetter, 'active');
+        }
     }
 
     _destroyLayout() {
@@ -120,6 +187,11 @@ export class MainScene extends Phaser.Scene {
     shutdown() {
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
+        // Quitar el listener de preguntas al salir de la escena para no dejar fugas
+        if (this._onQuestionChanged) {
+            PhaserEventBus.off('net:questionChanged', this._onQuestionChanged);
+            this._onQuestionChanged = null;
+        }
         this._destroyLayout();
     }
 

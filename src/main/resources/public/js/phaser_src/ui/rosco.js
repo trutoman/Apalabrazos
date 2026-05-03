@@ -1,5 +1,14 @@
 import { InteractiveButton } from './interactiveButton.js';
 
+// Color de cada estado posible de una letra en el rosco
+const LETTER_COLORS = {
+    pending:   0xFADF09,  // amarillo — todavía sin responder
+    active:    0x00b4ff,  // azul     — es la letra en juego ahora mismo
+    correct:   0x6dd44a,  // verde    — respondida correctamente
+    incorrect: 0xe05050,  // rojo     — respondida de forma incorrecta
+    passed:    0xffa94d   // naranja  — el jugador decidió pasar esta pregunta
+};
+
 export class Rosco {
     constructor(scene, options = {}) {
         this.scene = scene;
@@ -9,6 +18,9 @@ export class Rosco {
         this.roscoRadius = options.roscoRadius || 220;
         this.buttonRadius = options.buttonRadius || 22;
         this.backgroundColor = options.backgroundColor || '#F0F0F0';
+
+        // Callback que se ejecuta cuando el jugador pulsa el botón PASAR
+        this._onPassSelected = options.onPassSelected || null;
 
         this.letterButtons = new Map();
         this.buttonsByName = new Map();
@@ -27,6 +39,7 @@ export class Rosco {
             const buttonY = this.centerY + Math.sin(angle) * this.roscoRadius;
             const buttonName = `${char}_button`;
 
+            // Las letras del rosco son solo indicadores visuales, no se pueden pulsar
             const button = new InteractiveButton(
                 this.scene,
                 buttonName,
@@ -34,7 +47,9 @@ export class Rosco {
                 buttonY,
                 this.buttonRadius * 2,
                 this.buttonRadius * 2,
-                char
+                char,
+                null,
+                { interactive: false }
             );
 
             this.buttonsGroup.add(button);
@@ -48,6 +63,7 @@ export class Rosco {
         const maxCenterRadius = this.roscoRadius - this.buttonRadius - marginToLetters;
         const centerRadius = Math.max(60, maxCenterRadius);
 
+        // Al pulsar PASAR se notifica a la escena para enviar selectedOption -1 al servidor
         this.centerButton = new InteractiveButton(
             this.scene,
             'pass_button',
@@ -56,7 +72,7 @@ export class Rosco {
             centerRadius * 2,
             centerRadius * 2,
             'PASAR',
-            null,
+            () => { if (this._onPassSelected) this._onPassSelected(); },
             {
                 circleColor: 0x00f0ff,
                 strokeColor: 0x000000,
@@ -66,6 +82,13 @@ export class Rosco {
                 shadowDepth: 8
             }
         );
+    }
+
+    // Cambia el color de una letra del rosco según su estado en la partida
+    setLetterState(letter, state) {
+        const btn = this.letterButtons.get(letter.toUpperCase());
+        if (!btn) return;
+        btn.circle.setFillStyle(LETTER_COLORS[state] ?? LETTER_COLORS.pending);
     }
 
     destroy() {

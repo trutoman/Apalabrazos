@@ -7,6 +7,7 @@ import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.j
 import { GAME_OPTIONS } from './config/game-options.js';
 import { validate_game_creation } from './validation/game-validation.js';
 import { bindSocketMessageHandlers } from './network/message-handler.js';
+import { PhaserEventBus } from './phaser_src/phaserEventBus.js';
 
 // Module-level session info — populated after a successful login
 let currentUsername = null;
@@ -20,6 +21,8 @@ let currentOwnedRoomId = null;
 let currentJoinedRoomPlayers = 0;
 let currentStartedRoomId = null;
 let phaserGame = null;
+// Handler de respuestas del jugador — se guarda para poder eliminarlo al destruir el juego
+let _answerSelectedHandler = null;
 const createdGameRoomIds = new Set();
 const pendingJoinRoomIds = new Set();
 const pendingLeaveRoomIds = new Set();
@@ -94,6 +97,11 @@ function renderLobbyUsername(username) {
 }
 
 function destroyPhaserGame() {
+    // Quitar el listener de respuestas antes de destruir el juego para evitar fugas
+    if (_answerSelectedHandler) {
+        PhaserEventBus.off('ui:answerSelected', _answerSelectedHandler);
+        _answerSelectedHandler = null;
+    }
     if (phaserGame) {
         phaserGame.destroy(true);
         phaserGame = null;
@@ -116,6 +124,16 @@ function showMatchStartView(payload = {}) {
         currentStartedRoomId = roomId;
         SocketClient.send('GameControllerReady', { roomId });
     }
+
+    // Registrar el listener que envía las respuestas del jugador al servidor vía WebSocket
+    if (_answerSelectedHandler) {
+        PhaserEventBus.off('ui:answerSelected', _answerSelectedHandler);
+    }
+    _answerSelectedHandler = ({ questionIndex, selectedOption }) => {
+        const roomId = String(currentJoinedRoomId || currentStartedRoomId || '').trim();
+        if (roomId) SocketClient.send('AnswerSubmit', { roomId, questionIndex, selectedOption });
+    };
+    PhaserEventBus.on('ui:answerSelected', _answerSelectedHandler);
 }
 
 function syncStartMatchButtonState() {
