@@ -6,6 +6,7 @@ import { UIManager } from './ui/ui-manager.js';
 import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.js';
 import { GAME_OPTIONS } from './config/game-options.js';
 import { validate_game_creation } from './validation/game-validation.js';
+import { bindSocketMessageHandlers } from './network/message-handler.js';
 
 // Module-level session info — populated after a successful login
 let currentUsername = null;
@@ -569,159 +570,40 @@ function registerSocketMessageHandlers() {
     if (hasRegisteredSocketMessageHandler) {
         return;
     }
-
     hasRegisteredSocketMessageHandler = true;
-    SocketClient.onMessage((msg) => {
-        console.log('Message received:', msg);
-        try {
-            const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
 
-            if (data.type === 'LobbyMatchesSnapshot') {
-                const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
-                console.log(`[LOBBY] Snapshot received with ${matches.length} matches`);
-                renderLobbyMatchesSnapshot(matches);
-            } else if (data.type === 'LobbyMatchCreated') {
-                const payload = data?.payload || {};
-                console.log('[LOBBY] Real-time match broadcast received:', payload);
-                addOnlineGameCard(payload);
-            } else if (data.type === 'LobbyMatchUpdated') {
-                const payload = data?.payload || {};
-                console.log('[LOBBY] Match updated:', payload);
-                addOnlineGameCard(payload);
-            } else if (data.type === 'LobbyMatchRemoved') {
-                const roomId = String(data?.payload?.roomId || '').trim();
-                console.log('[LOBBY] Match removed:', roomId);
-                removeOnlineGameCard(roomId);
-                if (currentJoinedRoomId === roomId) {
-                    currentJoinedRoomId = null;
-                    currentJoinedRoomPlayers = 0;
-                    currentStartedRoomId = null;
-                    UIManager.switchView('view-lobby');
-                    showCreateGameErrors(['La partida a la que estabas unido ya no existe.']);
-                    syncAllJoinButtonsState();
-                }
-            } else if (data.type === 'MatchClosedByCreator') {
-                const roomId = String(data?.payload?.roomId || '').trim();
-                const cause = data?.payload?.cause || 'El creador abandonó la partida.';
-
-                pendingJoinRoomIds.delete(roomId);
-                pendingLeaveRoomIds.delete(roomId);
-                removeOnlineGameCard(roomId);
-
-                if (!roomId || currentJoinedRoomId === roomId) {
-                    currentJoinedRoomId = null;
-                    currentJoinedRoomPlayers = 0;
-                    currentStartedRoomId = null;
-                }
-
-                if (!roomId || currentOwnedRoomId === roomId) {
-                    currentOwnedRoomId = null;
-                }
-
-                destroyPhaserGame();
-                UIManager.switchView('view-lobby');
-                showCreateGameErrors([cause]);
-                syncAllJoinButtonsState();
-            } else if (data.type === 'MatchStarted') {
-                const payload = data?.payload || {};
-                const roomId = String(payload?.roomId || '').trim();
-
-                if (roomId) {
-                    currentJoinedRoomId = roomId;
-                    currentJoinedRoomPlayers = Number(payload?.players || currentJoinedRoomPlayers || 0);
-                }
-
-                showMatchStartView(payload);
-            } else if (data.type === 'StartMatchRequestInvalid') {
-                const cause = data?.payload?.cause || 'No se ha podido iniciar la partida.';
-                showCreateGameErrors([cause]);
-            } else if (data.type === 'chat_message') {
-                const { text, username_originator } = data.payload || {};
-                if (text && username_originator) {
-                    const isOwn = username_originator === currentUsername;
-                    LobbyUI.addMessage(username_originator, text, isOwn);
-                }
-            } else if (data.type === 'GameCreationRequestValid') {
-                if (createGamePendingTimeout) {
-                    clearTimeout(createGamePendingTimeout);
-                    createGamePendingTimeout = null;
-                }
-                setCreatePendingState(false);
-                clearCreateGameErrors();
-                resetCreateGameForm();
-
-                if (_createCard) {
-                    _createCard.classList.add('hidden');
-                }
-
-                const payload = data?.payload || {};
-                const roomId = String(payload?.roomId || '').trim();
-                if (roomId) {
-                    currentJoinedRoomId = roomId;
-                    currentOwnedRoomId = roomId;
-                    currentJoinedRoomPlayers = Number(payload?.players || 1);
-                    currentStartedRoomId = null;
-                    pendingJoinRoomIds.clear();
-                }
-                console.log('[CREATE] GameCreationRequestValid received:', payload);
-                addOnlineGameCard(payload, buildRandomCardColors(5));
-                syncAllJoinButtonsState();
-            } else if (data.type === 'JoinMatchRequestValid') {
-                const payload = data?.payload || {};
-                const roomId = String(payload?.roomId || '').trim();
-                if (roomId) {
-                    pendingJoinRoomIds.clear();
-                    currentJoinedRoomId = roomId;
-                    currentJoinedRoomPlayers = Number(payload?.players || currentJoinedRoomPlayers || 0);
-                    currentStartedRoomId = null;
-                }
-                console.log('[JOIN] JoinMatchRequestValid received:', payload);
-                addOnlineGameCard(payload);
-                syncAllJoinButtonsState();
-            } else if (data.type === 'JoinMatchRequestInvalid') {
-                const roomId = String(data?.payload?.roomId || '').trim();
-                if (roomId) {
-                    pendingJoinRoomIds.delete(roomId);
-                    syncAllJoinButtonsState();
-                }
-                const cause = data?.payload?.cause || 'No se ha podido unir a la partida.';
-                console.warn('[JOIN] Join failed:', cause);
-                showCreateGameErrors([cause]);
-            } else if (data.type === 'LeaveMatchRequestValid') {
-                const roomId = String(data?.payload?.roomId || '').trim();
-                pendingLeaveRoomIds.clear();
-                pendingJoinRoomIds.clear();
-                if (!roomId || currentJoinedRoomId === roomId) {
-                    currentJoinedRoomId = null;
-                    currentJoinedRoomPlayers = 0;
-                    currentStartedRoomId = null;
-                }
-                if (!roomId || currentOwnedRoomId === roomId) {
-                    currentOwnedRoomId = null;
-                }
-                console.log('[LEAVE] LeaveMatchRequestValid received:', data?.payload || {});
-                syncAllJoinButtonsState();
-            } else if (data.type === 'LeaveMatchRequestInvalid') {
-                pendingLeaveRoomIds.clear();
-                const cause = data?.payload?.cause || 'No se ha podido salir de la partida.';
-                console.warn('[LEAVE] Leave failed:', cause);
-                showCreateGameErrors([cause]);
-                syncAllJoinButtonsState();
-            } else if (data.type === 'GameCreationRequestInvalid') {
-                if (createGamePendingTimeout) {
-                    clearTimeout(createGamePendingTimeout);
-                    createGamePendingTimeout = null;
-                }
-                setCreatePendingState(false);
-
-                const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
-                const errors = [cause];
-                console.warn('[CREATE] Validation failed:', errors);
-                showCreateGameErrors(errors);
-            }
-        } catch (e) {
-            // Ignore parsing errors for non-JSON messages
-        }
+    bindSocketMessageHandlers({
+        state: {
+            get currentUsername()           { return currentUsername; },
+            get currentJoinedRoomId()       { return currentJoinedRoomId; },
+            set currentJoinedRoomId(v)      { currentJoinedRoomId = v; },
+            get currentOwnedRoomId()        { return currentOwnedRoomId; },
+            set currentOwnedRoomId(v)       { currentOwnedRoomId = v; },
+            get currentJoinedRoomPlayers()  { return currentJoinedRoomPlayers; },
+            set currentJoinedRoomPlayers(v) { currentJoinedRoomPlayers = v; },
+            get currentStartedRoomId()      { return currentStartedRoomId; },
+            set currentStartedRoomId(v)     { currentStartedRoomId = v; },
+            get pendingJoinRoomIds()        { return pendingJoinRoomIds; },
+            get pendingLeaveRoomIds()       { return pendingLeaveRoomIds; },
+            get createGamePendingTimeout()  { return createGamePendingTimeout; },
+            set createGamePendingTimeout(v) { createGamePendingTimeout = v; },
+            get createCard()                { return _createCard; },
+        },
+        actions: {
+            renderLobbyMatchesSnapshot,
+            addOnlineGameCard,
+            removeOnlineGameCard,
+            showMatchStartView,
+            showCreateGameErrors,
+            syncAllJoinButtonsState,
+            setCreatePendingState,
+            clearCreateGameErrors,
+            resetCreateGameForm,
+            destroyPhaserGame,
+            buildRandomCardColors,
+            switchView:      (id) => UIManager.switchView(id),
+            addLobbyMessage: (username, text, isOwn) => LobbyUI.addMessage(username, text, isOwn),
+        },
     });
 }
 

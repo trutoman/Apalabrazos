@@ -1,4 +1,5 @@
 import { InteractiveButton } from './interactiveButton.js';
+import { PhaserEventBus } from '../phaserEventBus.js';
 
 export class Counter {
     constructor(scene, options = {}) {
@@ -14,6 +15,14 @@ export class Counter {
         this.wrongValue = options.wrongValue ?? 0;
 
         this._draw();
+
+        // Listen for backend timer ticks delivered via the internal event bus
+        this._onTimerTick = ({ remaining }) => this.setTime(String(remaining));
+        PhaserEventBus.on('net:timerTick', this._onTimerTick);
+    }
+
+    destroy() {
+        PhaserEventBus.off('net:timerTick', this._onTimerTick);
     }
 
     _draw() {

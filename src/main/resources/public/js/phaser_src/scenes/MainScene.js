@@ -4,6 +4,7 @@ import { Counter } from '../ui/counter.js';
 import { InteractiveButton } from '../ui/interactiveButton.js';
 import { Scoreboard } from '../ui/scoreboard.js';
 import { Standings } from '../ui/standings.js';
+import { PhaserEventBus } from '../phaserEventBus.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -96,6 +97,15 @@ export class MainScene extends Phaser.Scene {
     };
 
     update() {
+    }
+
+    shutdown() {
+        // Clean up all UI components that hold PhaserEventBus listeners
+        if (this.counter) {
+            this.counter.destroy();
+            this.counter = null;
+        }
+        // Future: this.rosco.destroy(), this.question.destroy(), ...
     }
 
 }

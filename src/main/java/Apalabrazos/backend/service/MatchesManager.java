@@ -327,6 +327,25 @@ public class MatchesManager implements EventListener {
         }
     }
 
+    private void registerMatchNetworkBridge(String matchId, GameService service) {
+        service.addListener(gameEvent -> {
+            if (gameEvent instanceof TimerTickEvent tick) {
+                GameGlobal gi = service.getGameInstance();
+                if (gi == null) return;
+                Map<String, Object> msg = Map.of(
+                        "type", "TimerTick",
+                        "payload", Map.of("remaining", tick.getRemainingSeconds()));
+                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+                    Player p = findConnectedPlayerByPlayerId(pid);
+                    if (p != null && p.isConnected()) {
+                        p.sendMessage(msg);
+                    }
+                }
+            }
+        });
+        log.info("Network bridge registrado para partida {}", matchId);
+    }
+
     private void recalculateAllMatchesPlayersState() {
         List<Map.Entry<String, GameService>> snapshot = new ArrayList<>(activeMatches.entrySet());
         List<Map<String, Object>> removedMatches = new ArrayList<>();
@@ -650,6 +669,7 @@ public class MatchesManager implements EventListener {
 
             service.GameStartedValid();
             broadcastMatchStarted(roomId, service);
+            registerMatchNetworkBridge(roomId, service);
             log.info("Validación exitosa. Juego iniciado por {} en sala {}", requesterName, roomId);
         } else {
             log.error("Room with ID {} not found", roomId);
