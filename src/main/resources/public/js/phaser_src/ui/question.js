@@ -17,6 +17,7 @@ export class Question {
         this.answerTextMaxWidth = options.answerTextMaxWidth || 200;
         this.labelMap = { 1: '1', 2: '2', 3: '3', 4: '4' };
         this.answerButtons = new Map();
+        this.answerTextLabels = [];
 
         this.positionMap = this._buildSidePositionMap(options);
 
@@ -99,12 +100,13 @@ export class Question {
         const textX    = pos.textSide === 'right' ? pos.x + gap : pos.x - gap;
         const originX  = pos.textSide === 'right' ? 0 : 1;
 
-        this.scene.add.text(textX, pos.y, answer.text, {
+        const textObj = this.scene.add.text(textX, pos.y, answer.text, {
             fontSize: '20px',
             fontFamily: 'Archivo Black',
             color: '#222222',
             wordWrap: { width: this.answerTextMaxWidth },
         }).setOrigin(originX, 0.5);
+        this.answerTextLabels.push(textObj);
     }
 
     _drawQuestion() {
@@ -140,5 +142,16 @@ export class Question {
         this.questionBox.text.setWordWrapWidth(barWidth - 40, true);
         this.questionBox.text.setAlign('center');
         this.questionBox.text.setOrigin(0.5);
+    }
+
+    destroy() {
+        this.answerButtons.forEach(btn => btn.destroy());
+        this.answerButtons.clear();
+        this.answerTextLabels.forEach(t => t.destroy());
+        this.answerTextLabels = [];
+        if (this.questionBox) {
+            this.questionBox.destroy();
+            this.questionBox = null;
+        }
     }
 }

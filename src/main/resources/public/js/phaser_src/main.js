@@ -11,8 +11,6 @@ export function startGame(containerId) {
     const config = {
         type: Phaser.AUTO,
         parent: containerId,
-        width: window.innerWidth,
-        height: window.innerHeight,
         backgroundColor: '#F0F0F0',
         scale: {
             mode: Phaser.Scale.RESIZE,

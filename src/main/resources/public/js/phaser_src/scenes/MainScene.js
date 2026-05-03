@@ -9,10 +9,13 @@ import { PhaserEventBus } from '../phaserEventBus.js';
 export class MainScene extends Phaser.Scene {
     constructor() {
         super('MainScene');
-        this.mainButton = null;
-        this.rosco = null;
-        this.question = null;
-        this.counter = null;
+        this.bg        = null;
+        this.rosco     = null;
+        this.question  = null;
+        this.counter   = null;
+        this.scoreboard  = null;
+        this.standings   = null;
+        this._resizeTimer = null;
     }
 
     preload() {
@@ -23,16 +26,26 @@ export class MainScene extends Phaser.Scene {
     }
 
     create() {
-        const bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background');
-        const bgScale = Math.max(this.scale.width / bg.width, this.scale.height / bg.height);
-        bg.setScale(bgScale);
+        this._buildLayout(this.scale.width, this.scale.height);
+        this.scale.on('resize', this._onResize, this);
+    }
 
-        const roscoRadius = Math.min(210, Math.max(190, Math.round(this.scale.height * 0.22)));
-        const layoutCenter = {
-            x: this.scale.width / 2,
-            y: this.scale.height * 0.40
-        };
+    _onResize(gameSize) {
+        // Debounce: wait 80 ms after the last resize event before rebuilding
+        if (this._resizeTimer) clearTimeout(this._resizeTimer);
+        this._resizeTimer = setTimeout(() => {
+            this._resizeTimer = null;
+            this._destroyLayout();
+            this._buildLayout(gameSize.width, gameSize.height);
+        }, 80);
+    }
 
+    _buildLayout(w, h) {
+        this.bg = this.add.image(w / 2, h / 2, 'background');
+        this.bg.setScale(Math.max(w / this.bg.width, h / this.bg.height));
+
+        const roscoRadius  = Math.min(210, Math.max(190, Math.round(h * 0.22)));
+        const layoutCenter = { x: w / 2, y: h * 0.40 };
         const roscoVerticalOffset = roscoRadius * 0.25;
 
         const roscoConfig = {
@@ -43,9 +56,7 @@ export class MainScene extends Phaser.Scene {
             buttonRadius: 20,
             backgroundColor: '#F0F0F0'
         };
-
         this.rosco = new Rosco(this, roscoConfig);
-
 
         this.question = new Question(
             this,
@@ -64,7 +75,7 @@ export class MainScene extends Phaser.Scene {
         );
 
         const counterHeight = 110;
-        const counterTopY = this.question.questionBox.y + (this.question.questionBox.height / 2) + 24;
+        const counterTopY   = this.question.questionBox.y + (this.question.questionBox.height / 2) + 24;
 
         const leftAnswerEdgeX  = this.question.positionMap[1].x - this.question.answerRadius;
         const rightAnswerEdgeX = this.question.positionMap[2].x + this.question.answerRadius;
@@ -85,27 +96,31 @@ export class MainScene extends Phaser.Scene {
 
         this.counter = new Counter(this, {
             centerX: layoutCenter.x,
-            topY: Math.min(counterTopY, this.scale.height - counterHeight - 12),
+            topY: Math.min(counterTopY, h - counterHeight - 12),
             width: 240,
             height: counterHeight,
             timeValue: '180',
             correctValue: 0,
             wrongValue: 0
         });
+    }
 
-
-    };
+    _destroyLayout() {
+        if (this.counter)    { this.counter.destroy();    this.counter    = null; }
+        if (this.rosco)      { this.rosco.destroy();      this.rosco      = null; }
+        if (this.question)   { this.question.destroy();   this.question   = null; }
+        if (this.scoreboard) { this.scoreboard.destroy(); this.scoreboard = null; }
+        if (this.standings)  { this.standings.destroy();  this.standings  = null; }
+        if (this.bg)         { this.bg.destroy();         this.bg         = null; }
+    }
 
     update() {
     }
 
     shutdown() {
-        // Clean up all UI components that hold PhaserEventBus listeners
-        if (this.counter) {
-            this.counter.destroy();
-            this.counter = null;
-        }
-        // Future: this.rosco.destroy(), this.question.destroy(), ...
+        this.scale.off('resize', this._onResize, this);
+        if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
+        this._destroyLayout();
     }
 
 }

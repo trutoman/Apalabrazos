@@ -23,6 +23,9 @@ export class Counter {
 
     destroy() {
         PhaserEventBus.off('net:timerTick', this._onTimerTick);
+        if (this.timeButton)    { this.timeButton.destroy();    this.timeButton    = null; }
+        if (this.correctButton) { this.correctButton.destroy(); this.correctButton = null; }
+        if (this.wrongButton)   { this.wrongButton.destroy();   this.wrongButton   = null; }
     }
 
     _draw() {

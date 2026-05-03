@@ -68,6 +68,20 @@ export class Rosco {
         );
     }
 
+    destroy() {
+        this.letterButtons.forEach(btn => btn.destroy());
+        this.letterButtons.clear();
+        this.buttonsByName.clear();
+        if (this.centerButton) {
+            this.centerButton.destroy();
+            this.centerButton = null;
+        }
+        if (this.buttonsGroup) {
+            this.buttonsGroup.destroy(true);
+            this.buttonsGroup = null;
+        }
+    }
+
     getButtonByLetter(letter) {
         return this.letterButtons.get(letter) || null;
     }

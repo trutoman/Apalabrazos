@@ -46,4 +46,11 @@ export class Scoreboard {
         }).setOrigin(0.5, 0);
         this.panel.add(this.titleText);
     }
+
+    destroy() {
+        if (this.panel) {
+            this.panel.destroy();
+            this.panel = null;
+        }
+    }
 }
