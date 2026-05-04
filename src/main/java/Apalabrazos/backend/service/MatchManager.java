@@ -4,6 +4,8 @@ import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.Player;
+import Apalabrazos.backend.service.ConnectionRegistry;
+import Apalabrazos.backend.service.GameService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,31 +13,28 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Service responsible for managing multiplayer game sessions.
+ * Coordinator responsible for managing multiplayer game sessions.
  * Handles creation, deletion, and listing of active game sessions.
  * Singleton pattern to ensure only one instance manages all sessions.
  *
- * This is the Level 2 - Match Manager:
- * - Maintains active connections (Map<SessionID, Player>)
+ * This is the Level 2B - Match Coordinator:
  * - Routes events to appropriate matches based on session IDs
- * - Handles player lifecycle (connect, disconnect, reconnect)
+ * - Manages match lifecycle (create, start, finish)
+ * - Handles player join/leave operations
+ * - Validates match operations
  */
-public class MatchesManager implements EventListener {
+public class MatchManager implements EventListener {
 
-    private static final Logger log = LoggerFactory.getLogger(MatchesManager.class);
+    private static final Logger log = LoggerFactory.getLogger(MatchManager.class);
 
     // Singleton instance
-    private static volatile MatchesManager instance;
+    private static volatile MatchManager instance;
 
     private final AsyncEventBus eventBus;
-
-    // ===== Connection Registry (Level 1 → Level 2 Bridge) =====
-    // Maps physical connections (sessionId) to Player objects
-    private final Map<UUID, Player> activeConnections;
+    private final ConnectionRegistry connectionRegistry;
 
     // ===== Match Registry =====
     /**
@@ -55,26 +54,26 @@ public class MatchesManager implements EventListener {
     /**
      * Private constructor to prevent direct instantiation
      */
-    private MatchesManager() {
+    private MatchManager() {
         this.eventBus = GlobalAsyncEventBus.getInstance();
-        this.activeConnections = new ConcurrentHashMap<>();
+        this.connectionRegistry = ConnectionRegistry.getInstance();
         this.activeMatches = new ConcurrentHashMap<>();
         this.matchPlayerNames = new ConcurrentHashMap<>();
         // Registrarse como listener de eventos
         eventBus.addListener(this);
-        log.info("MatchesManager singleton initialized");
+        log.info("MatchManager singleton initialized");
     }
 
     /**
-     * Get the singleton instance of MatchesManager
+     * Get the singleton instance of MatchManager
      *
      * @return The singleton instance
      */
-    public static MatchesManager getInstance() {
+    public static MatchManager getInstance() {
         if (instance == null) {
-            synchronized (MatchesManager.class) {
+            synchronized (MatchManager.class) {
                 if (instance == null) {
-                    instance = new MatchesManager();
+                    instance = new MatchManager();
                 }
             }
         }
@@ -278,22 +277,6 @@ public class MatchesManager implements EventListener {
         return null;
     }
 
-    private Player findConnectedPlayerByPlayerId(String playerId) {
-        if (playerId == null || playerId.isBlank()) {
-            return null;
-        }
-
-        for (Player connectedPlayer : activeConnections.values()) {
-            if (connectedPlayer == null || connectedPlayer.getPlayerID() == null) {
-                continue;
-            }
-            if (playerId.equals(connectedPlayer.getPlayerID())) {
-                return connectedPlayer;
-            }
-        }
-        return null;
-    }
-
     private Map<String, Object> buildMatchRemovedSummary(String matchId, GameService gameService) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("roomId", matchId);
@@ -318,7 +301,7 @@ public class MatchesManager implements EventListener {
         payload.put("started", true);
 
         for (String playerId : new ArrayList<>(gameInstance.getAllPlayerIds())) {
-            Player player = findConnectedPlayerByPlayerId(playerId);
+            Player player = connectionRegistry.findConnectedPlayerByPlayerId(playerId);
             if (player != null && player.isConnected()) {
                 player.sendMessage(Map.of(
                         "type", "MatchStarted",
@@ -336,7 +319,7 @@ public class MatchesManager implements EventListener {
                         "type", "TimerTick",
                         "payload", Map.of("remaining", tick.getRemainingSeconds()));
                 for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
-                    Player p = findConnectedPlayerByPlayerId(pid);
+                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
                     if (p != null && p.isConnected()) {
                         p.sendMessage(msg);
                     }
@@ -411,7 +394,7 @@ public class MatchesManager implements EventListener {
             gameInstance.removePlayer(playerId);
 
             for (String affectedPlayerId : affectedPlayerIds) {
-                Player affectedPlayer = findConnectedPlayerByPlayerId(affectedPlayerId);
+                Player affectedPlayer = connectionRegistry.findConnectedPlayerByPlayerId(affectedPlayerId);
                 if (affectedPlayer != null && affectedPlayer.isConnected()) {
                     affectedPlayer.sendMessage(Map.of(
                             "type", "MatchClosedByCreator",
@@ -627,7 +610,7 @@ public class MatchesManager implements EventListener {
     private void handleGameStartedRequest(GameStartedRequestEvent event) {
         String roomId = event.getRoomId();
         String requesterPlayerId = event.getPlayerId();
-        Player requester = findConnectedPlayerByPlayerId(requesterPlayerId);
+        Player requester = connectionRegistry.findConnectedPlayerByPlayerId(requesterPlayerId);
         String requesterName = requester != null ? requester.getName() : requesterPlayerId;
 
         log.info("Game start requested by {} for room {}", requesterName, roomId);
@@ -658,11 +641,11 @@ public class MatchesManager implements EventListener {
         GameService service = getMatchById(roomId);
         if (service != null) {
             GameGlobal gameInstance = service.getGameInstance();
-            if (gameInstance == null || gameInstance.getPlayerCount() < 2) {
+            if (gameInstance == null || gameInstance.getPlayerCount() < 1) {
                 if (requester != null) {
                     requester.sendMessage(Map.of(
                             "type", "StartMatchRequestInvalid",
-                            "payload", Map.of("cause", "Se necesitan al menos 2 jugadores para iniciar la partida.")));
+                            "payload", Map.of("cause", "Se necesita al menos 1 jugador para iniciar la partida.")));
                 }
                 return;
             }
@@ -670,7 +653,8 @@ public class MatchesManager implements EventListener {
             service.GameStartedValid();
             broadcastMatchStarted(roomId, service);
             registerMatchNetworkBridge(roomId, service);
-            log.info("Validación exitosa. Juego iniciado por {} en sala {}", requesterName, roomId);
+            log.info("Validación exitosa. Juego iniciado por {} en sala {} con {} jugadores", 
+                    requesterName, roomId, gameInstance.getPlayerCount());
         } else {
             log.error("Room with ID {} not found", roomId);
             if (requester != null) {
@@ -812,116 +796,6 @@ public class MatchesManager implements EventListener {
         log.info("All matches cleared");
     }
 
-    // ===== Connection Management (Level 1 Bridge) =====
-
-    /**
-     * Register a new player connection.
-     * This is called when a physical connection (WebSocket) is established.
-     *
-     * @param player The Player object representing the connected user
-     * @return true if registered successfully
-     */
-    public boolean registerConnection(Player player) {
-        try {
-            if (player == null || player.getSessionId() == null) {
-                log.error("[REGISTER] ❌ No se puede registrar: Player null o sin sessionId");
-                return false;
-            }
-
-            log.info("[REGISTER] 🔐 Registrando jugador: {} con SessionID: {}",
-                    player.getName(), player.getSessionId());
-
-            activeConnections.put(player.getSessionId(), player);
-
-            log.info("[REGISTER] ✅ Jugador registrado exitosamente: {} (SessionID: {}). Conexiones activas: {}",
-                    player.getName(), player.getSessionId(), activeConnections.size());
-            log.debug("[REGISTER] Estado del jugador: {}", player.getState());
-
-            return true;
-        } catch (Exception e) {
-            log.error("[REGISTER] ❌ Error registrando jugador: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-
-    /**
-     * Unregister a player connection.
-     * Called when a connection is closed or times out.
-     *
-     * @param sessionId The session identifier
-     * @return The removed Player, or null if not found
-     */
-    public Player unregisterConnection(UUID sessionId) {
-        try {
-            log.debug("[UNREGISTER] 🔍 Buscando jugador con SessionID: {}", sessionId);
-
-            Player player = activeConnections.remove(sessionId);
-
-            if (player != null) {
-                String leftMatchId = leavePlayerFromCurrentMatch(player);
-                if (leftMatchId != null) {
-                    log.info("[UNREGISTER] Player {} removed from match {} during disconnect",
-                            player.getPlayerID(), leftMatchId);
-                }
-                log.debug("[UNREGISTER] 📤 Desconectando jugador: {}", player.getName());
-                player.disconnect();
-                log.info(
-                        "[UNREGISTER] ✅ Jugador desregistrado exitosamente: {} (SessionID: {}). Conexiones restantes: {}",
-                        player.getName(), sessionId, activeConnections.size());
-                log.debug("[UNREGISTER] Estado final del jugador: {}", player.getState());
-            } else {
-                log.warn("[UNREGISTER] ⚠️ Intento de desregistrar SessionID no encontrada: {}", sessionId);
-            }
-
-            return player;
-        } catch (Exception e) {
-            log.error("[UNREGISTER] ❌ Error desregistrando SessionID {}: {}", sessionId, e.getMessage(), e);
-            return null;
-        }
-    }
-
-    /**
-     * Get a player by their session ID
-     *
-     * @param sessionId The session identifier
-     * @return The Player object, or null if not found
-     */
-    public Player getPlayerBySessionId(UUID sessionId) {
-        try {
-            Player player = activeConnections.get(sessionId);
-            if (player == null) {
-                log.warn("[GET-PLAYER] ⚠️ Jugador no encontrado para SessionID: {}", sessionId);
-            } else {
-                log.debug("[GET-PLAYER] ✓ Jugador encontrado: {} (SessionID: {})", player.getName(), sessionId);
-            }
-            return player;
-        } catch (Exception e) {
-            log.error("[GET-PLAYER] ❌ Error obteniendo jugador para SessionID {}: {}", sessionId, e.getMessage(), e);
-            return null;
-        }
-    }
-
-    /**
-     * Resolve a player's display name from their logical player ID.
-     *
-     * @param playerId The logical player ID (e.g. nombre-xxxx)
-     * @return The player's name if found in active connections, otherwise null
-     */
-    public String getPlayerNameByPlayerId(String playerId) {
-        if (playerId == null || playerId.isBlank()) {
-            return null;
-        }
-
-        for (Player player : activeConnections.values()) {
-            if (player != null && playerId.equals(player.getPlayerID())) {
-                return player.getName();
-            }
-        }
-
-        log.debug("[GET-PLAYER-NAME] No active player found for playerId: {}", playerId);
-        return null;
-    }
-
     /**
      * Returns the player names currently stored for a match.
      *
@@ -957,7 +831,7 @@ public class MatchesManager implements EventListener {
         log.debug("[PLAYER-NAMES] Building snapshot for {} players: {}", playerIds.size(), playerIds);
 
         for (String playerId : playerIds) {
-            String resolvedName = getPlayerNameByPlayerId(playerId);
+            String resolvedName = connectionRegistry.getPlayerNameByPlayerId(playerId);
             if (resolvedName == null || resolvedName.isBlank()) {
                 resolvedName = extractNameFromPlayerId(playerId);
                 log.debug("[PLAYER-NAMES] Fallback for {}: extracted as '{}'", playerId, resolvedName);
@@ -983,67 +857,5 @@ public class MatchesManager implements EventListener {
             return playerId;
         }
         return playerId.substring(0, separator);
-    }
-
-    /**
-     * Get all connected players
-     *
-     * @return List of all active players
-     */
-    public List<Player> getAllConnectedPlayers() {
-        try {
-            List<Player> players = new ArrayList<>(activeConnections.values());
-            log.debug("[GET-ALL-PLAYERS] 📊 Obteniendo lista de {} jugadores conectados", players.size());
-            return players;
-        } catch (Exception e) {
-            log.error("[GET-ALL-PLAYERS] ❌ Error obteniendo lista de jugadores: {}", e.getMessage(), e);
-            return new ArrayList<>();
-        }
-    }
-
-    /**
-     * Get the count of active connections
-     *
-     * @return Number of connected players
-     */
-    public int getActiveConnectionCount() {
-        int count = activeConnections.size();
-        log.debug("[CONNECTION-COUNT] 📊 Total de conexiones activas: {}", count);
-        return count;
-    }
-
-    /**
-     * Check if a session is active
-     *
-     * @param sessionId The session identifier
-     * @return true if the session exists
-     */
-    public boolean isSessionActive(UUID sessionId) {
-        return activeConnections.containsKey(sessionId);
-    }
-
-    /**
-     * Broadcast a message to all connected players
-     *
-     * @param message The message to broadcast
-     */
-    public void broadcastToAll(Object message) {
-        activeConnections.values().forEach(player -> player.sendMessage(message));
-    }
-
-    /**
-     * Send a message to a specific player
-     *
-     * @param sessionId The session identifier
-     * @param message   The message to send
-     * @return true if message was sent
-     */
-    public boolean sendToPlayer(UUID sessionId, Object message) {
-        Player player = activeConnections.get(sessionId);
-        if (player != null && player.isConnected()) {
-            player.sendMessage(message);
-            return true;
-        }
-        return false;
     }
 }

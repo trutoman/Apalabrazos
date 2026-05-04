@@ -2,7 +2,8 @@ package Apalabrazos.backend.network;
 
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.Player;
-import Apalabrazos.backend.service.MatchesManager;
+import Apalabrazos.backend.service.MatchManager;
+import Apalabrazos.backend.service.ConnectionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +27,8 @@ public abstract class ConnectionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ConnectionHandler.class);
 
-    protected final MatchesManager sessionManager = MatchesManager.getInstance();
+    protected final MatchManager matchManager = MatchManager.getInstance();
+    protected final ConnectionRegistry connectionRegistry = ConnectionRegistry.getInstance();
 
     /**
      * Se invoca cuando un cliente se conecta.
@@ -60,9 +62,9 @@ public abstract class ConnectionHandler {
             log.debug("[CLIENT-CONNECT] Creando Player para usuario: {} (CosmosUserId: {})", username, cosmosUserId);
             Player player = new Player(sessionId, username, cosmosUserId, messageSender);
 
-            // 3. Registrar en GameSessionManager
-            log.debug("[CLIENT-CONNECT] Registrando conexión en GameSessionManager");
-            boolean registered = sessionManager.registerConnection(player);
+            // 3. Registrar en ConnectionRegistry
+            log.debug("[CLIENT-CONNECT] Registrando conexión en ConnectionRegistry");
+            boolean registered = connectionRegistry.registerConnection(player);
 
             if (registered) {
                 log.info("[CLIENT-CONNECT] ✓ Cliente conectado exitosamente: {} (SessionID: {})", username, sessionId);
@@ -95,7 +97,7 @@ public abstract class ConnectionHandler {
     public void onClientMessage(UUID sessionId, String messageContent) {
         try {
             log.debug("[CLIENT-MESSAGE] Buscando player para sesión: {}", sessionId);
-            Player player = sessionManager.getPlayerBySessionId(sessionId);
+            Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
             if (player == null) {
                 log.error("[CLIENT-MESSAGE] ❌ Sesión no encontrada: {}", sessionId);
@@ -121,12 +123,19 @@ public abstract class ConnectionHandler {
     public void onClientDisconnect(UUID sessionId) {
         try {
             log.info("[CLIENT-DISCONNECT] 🔌 Procesando desconexión para sesión: {}", sessionId);
-            Player player = sessionManager.unregisterConnection(sessionId);
+            Player player = connectionRegistry.unregisterConnection(sessionId);
 
             // Always leave the lobby, regardless of whether the player was found
             LobbyRoom.getInstance().leave(sessionId);
 
+            // Remove player from any active match
             if (player != null) {
+                String leftMatchId = matchManager.leavePlayerFromCurrentMatch(player);
+                if (leftMatchId != null) {
+                    log.info("[CLIENT-DISCONNECT] Player {} removed from match {} during disconnect",
+                            player.getPlayerID(), leftMatchId);
+                }
+                
                 log.info("[CLIENT-DISCONNECT] ✓ Cliente desconectado exitosamente: {} (SessionID: {})",
                         player.getName(), sessionId);
                 log.debug("[CLIENT-DISCONNECT] Estado final del jugador: {}", player.getState());
@@ -148,7 +157,7 @@ public abstract class ConnectionHandler {
      */
     protected void onClientReconnect(UUID sessionId, Object newSession) {
         try {
-            Player player = sessionManager.getPlayerBySessionId(sessionId);
+            Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
             if (player == null) {
                 log.warn("Sesión a reconectar no encontrada: {}", sessionId);
@@ -182,7 +191,7 @@ public abstract class ConnectionHandler {
 
         try {
             java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
-            payload.put("matches", sessionManager.getActiveMatchesSummary());
+            payload.put("matches", matchManager.getActiveMatchesSummary());
 
             java.util.Map<String, Object> message = new java.util.LinkedHashMap<>();
             message.put("type", "LobbyMatchesSnapshot");
@@ -190,7 +199,7 @@ public abstract class ConnectionHandler {
 
             player.sendMessage(message);
             log.info("[CLIENT-CONNECT] 🧩 Snapshot del lobby enviado a {} con {} partidas activas",
-                    player.getName(), sessionManager.getActiveMatchCount());
+                    player.getName(), matchManager.getActiveMatchCount());
         } catch (Exception e) {
             log.error("[CLIENT-CONNECT] ❌ Error enviando snapshot del lobby a {}: {}",
                     player.getName(), e.getMessage(), e);
@@ -203,7 +212,7 @@ public abstract class ConnectionHandler {
      * @param message El mensaje a enviar
      */
     public void broadcastToAll(Object message) {
-        sessionManager.broadcastToAll(message);
+        connectionRegistry.broadcastToAll(message);
     }
 
     /**
@@ -213,13 +222,13 @@ public abstract class ConnectionHandler {
      * @param message   El mensaje a enviar
      */
     public boolean sendToClient(UUID sessionId, Object message) {
-        return sessionManager.sendToPlayer(sessionId, message);
+        return connectionRegistry.sendToPlayer(sessionId, message);
     }
 
     /**
      * Obtener el número de clientes conectados.
      */
     public int getConnectedClientsCount() {
-        return sessionManager.getActiveConnectionCount();
+        return connectionRegistry.getActiveConnectionCount();
     }
 }

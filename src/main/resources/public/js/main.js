@@ -123,7 +123,7 @@ function syncStartMatchButtonState() {
     if (!startBtn) return;
 
     const ownsCurrentRoom = Boolean(currentOwnedRoomId) && currentOwnedRoomId === currentJoinedRoomId;
-    const enoughPlayers = currentJoinedRoomPlayers >= 2;
+    const enoughPlayers = currentJoinedRoomPlayers >= 1;
     const canStart = ownsCurrentRoom && enoughPlayers;
 
     startBtn.disabled = !canStart;
@@ -150,8 +150,8 @@ function bindStartMatchButton() {
             return;
         }
 
-        if (currentJoinedRoomPlayers < 2) {
-            showCreateGameErrors(['Necesitas al menos 2 jugadores para iniciar la partida.']);
+        if (currentJoinedRoomPlayers < 1) {
+            showCreateGameErrors(['Necesitas al menos 1 jugador para iniciar la partida.']);
             return;
         }
 

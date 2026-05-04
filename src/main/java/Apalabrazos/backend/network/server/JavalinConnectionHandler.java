@@ -92,7 +92,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                 // ── CHAT ────────────────────────────────────────────────────
                 if ("chat".equalsIgnoreCase(type)) {
                     String username = "Unknown";
-                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                     if (player != null)
                         username = player.getName();
 
@@ -112,14 +112,14 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     if (!text.isEmpty()) {
                         log.info("[CHAT] Message from '{}' (session {}): {}", username, sessionId, text);
-                        LobbyRoom.getInstance().broadcastChat(username, text, sessionManager);
+                        LobbyRoom.getInstance().broadcastChat(username, text, matchManager);
                     } else {
                         log.warn("[CHAT] Empty text received from '{}', ignoring", username);
                     }
 
                     // ── GAME CREATION REQUEST ────────────────────────────────────
                 } else if ("GameCreationRequest".equalsIgnoreCase(type)) {
-                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                     String username = player != null ? player.getName() : "Unknown";
 
                     com.fasterxml.jackson.databind.JsonNode data = node.get("data");
@@ -166,7 +166,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     // ── JOIN MATCH REQUEST ───────────────────────────────────────
                 } else if ("JoinMatchRequest".equalsIgnoreCase(type)) {
-                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                     String username = player != null ? player.getName() : "Unknown";
 
                     com.fasterxml.jackson.databind.JsonNode data = node.get("data");
@@ -183,10 +183,9 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                                         "cause", "No se ha indicado una sala válida.")));
                     } else {
                         log.info("[GAME-JOIN] 🚪 Solicitud de unión recibida de '{}' para la sala {}", username, roomId);
-                        boolean joined = sessionManager.joinPlayerToMatch(player, roomId);
-
+                        boolean joined = matchManager.joinPlayerToMatch(player, roomId);
                         if (joined) {
-                            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>(sessionManager.getMatchSummary(roomId));
+                            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>(matchManager.getMatchSummary(roomId));
                             payload.put("roomId", roomId);
                             payload.put("joined", true);
                             player.sendMessage(java.util.Map.of(
@@ -203,7 +202,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     // ── LEAVE MATCH REQUEST ──────────────────────────────────────
                 } else if ("LeaveMatchRequest".equalsIgnoreCase(type)) {
-                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                     String username = player != null ? player.getName() : "Unknown";
 
                     if (player == null) {
@@ -212,7 +211,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     }
 
                     log.info("[GAME-LEAVE] 🚪 Solicitud de salida recibida de '{}'", username);
-                    String leftRoomId = sessionManager.leavePlayerFromCurrentMatch(player);
+                    String leftRoomId = matchManager.leavePlayerFromCurrentMatch(player);
 
                     if (leftRoomId != null && !leftRoomId.isBlank()) {
                         player.sendMessage(java.util.Map.of(
@@ -229,7 +228,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     // ── START MATCH REQUEST ─────────────────────────────────────
                 } else if ("StartMatchRequest".equalsIgnoreCase(type)) {
-                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
                     if (player == null) {
                         log.warn("[GAME-START] ⚠️ StartMatchRequest received but player was not found for session {}", sessionId);
@@ -255,7 +254,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     // ── GAME CONTROLLER READY ───────────────────────────────────
                 } else if ("GameControllerReady".equalsIgnoreCase(type)) {
-                    Apalabrazos.backend.model.Player player = sessionManager.getPlayerBySessionId(sessionId);
+                    Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
                     if (player == null) {
                         log.warn("[GAME-READY] ⚠️ GameControllerReady received but player was not found for session {}", sessionId);
@@ -270,7 +269,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         return;
                     }
 
-                    boolean readyAccepted = sessionManager.markMatchControllerReady(roomId, player.getPlayerID());
+                    boolean readyAccepted = matchManager.markMatchControllerReady(roomId, player.getPlayerID());
                     log.info("[GAME-READY] 🎛️ Controller ready de '{}' para sala {} => {}",
                             player.getName(), roomId, readyAccepted ? "accepted" : "ignored");
 
