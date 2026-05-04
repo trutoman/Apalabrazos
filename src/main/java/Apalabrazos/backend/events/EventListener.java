@@ -1,9 +1,9 @@
 package Apalabrazos.backend.events;
 
 /**
- * Interfaz para objetos que quieren recibir eventos del EventBus.
+ * Interfaz para objetos que quieren recibir eventos del bus asíncrono.
  * Cualquier clase que implemente esta interfaz puede registrarse
- * en el EventBus y recibir notificaciones de eventos.
+ * en el bus de eventos y recibir notificaciones cuando ocurren.
  */
 public interface EventListener {
 

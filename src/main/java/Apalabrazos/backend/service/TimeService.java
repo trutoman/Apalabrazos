@@ -1,8 +1,8 @@
 package Apalabrazos.backend.service;
 
-import Apalabrazos.backend.events.GlobalEventBus;
+import Apalabrazos.backend.events.GlobalAsyncEventBus;
 import Apalabrazos.backend.events.TimerTickEvent;
-import Apalabrazos.backend.events.EventBus;
+import Apalabrazos.backend.events.AsyncEventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,12 +13,12 @@ public class TimeService {
 
     private static final Logger log = LoggerFactory.getLogger(TimeService.class);
 
-    private final EventBus eventBus;
+    private final AsyncEventBus eventBus;
     private Thread worker;
     private volatile boolean running = false;
 
     public TimeService() {
-        this.eventBus = GlobalEventBus.getInstance();
+        this.eventBus = GlobalAsyncEventBus.getInstance();
     }
 
     // Inicia el hilo si aún no está iniciado

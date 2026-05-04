@@ -22,8 +22,8 @@ public class GameService implements EventListener {
 
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
-    private final EventBus eventBus;
-    private final EventBus externalBus;
+    private final AsyncEventBus eventBus;
+    private final AsyncEventBus externalBus;
     private GameGlobal GlobalGameInstance;
 
     // Controla que el evento de inicio para el controlador se publique una sola vez
@@ -45,8 +45,8 @@ public class GameService implements EventListener {
 
     public GameService() {
         this.GlobalGameInstance = new GameGlobal();
-        this.eventBus = GlobalEventBus.getInstance();
-        this.externalBus = new EventBus();
+        this.eventBus = GlobalAsyncEventBus.getInstance();
+        this.externalBus = new AsyncEventBus();
         this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
         eventBus.addListener(globalListener);
@@ -56,8 +56,8 @@ public class GameService implements EventListener {
     public GameService(GamePlayerConfig playerConfig) {
         // Configurar la instancia global del juego para multijugador
         this.GlobalGameInstance = new GameGlobal(playerConfig);
-        this.eventBus = GlobalEventBus.getInstance();
-        this.externalBus = new EventBus();
+        this.eventBus = GlobalAsyncEventBus.getInstance();
+        this.externalBus = new AsyncEventBus();
         this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
         eventBus.addListener(globalListener);
@@ -334,12 +334,12 @@ public class GameService implements EventListener {
     }
 
     /**
-     * Get the external EventBus instance for this GameService.
+     * Get the external AsyncEventBus instance for this GameService.
      * Controllers can use this bus to publish events and receive game updates.
      *
-     * @return EventBus instance for external communication
+     * @return AsyncEventBus instance for external communication
      */
-    public EventBus getExternalBus() {
+    public AsyncEventBus getExternalBus() {
         return externalBus;
     }
 
