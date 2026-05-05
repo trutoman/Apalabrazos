@@ -11,7 +11,7 @@
 // `actions` — plain object with callback functions provided by main.js
 
 import { SocketClient } from './socket-client.js';
-import { PhaserEventBus } from '../phaser_src/phaserEventBus.js';
+import { PhaserEventBus, emitSticky } from '../phaser_src/phaserEventBus.js';
 
 /**
  * Registers the central inbound message handler on SocketClient.
@@ -40,6 +40,11 @@ function _route(data, state, actions) {
     if (data.type === 'TimerTick') {
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
+
+    } else if (data.type === 'QuestionChanged') {
+        const payload = data?.payload || {};
+        emitSticky('net:questionChanged', payload);
+        console.log('[GAME] QuestionChanged received:', payload);
 
     } else if (data.type === 'LobbyMatchesSnapshot') {
         const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];

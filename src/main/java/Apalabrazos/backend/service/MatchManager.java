@@ -324,6 +324,37 @@ public class MatchManager implements EventListener {
                         p.sendMessage(msg);
                     }
                 }
+            } else if (gameEvent instanceof QuestionChangedEvent questionChanged) {
+                GameGlobal gi = service.getGameInstance();
+                if (gi == null) return;
+
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("questionIndex", questionChanged.getQuestionIndex());
+                payload.put("status", questionChanged.getStatus() != null ? questionChanged.getStatus().name() : null);
+                payload.put("nextQuestion", questionChanged.getNextQuestion());
+                payload.put("totalCorrect", questionChanged.getTotalCorrect());
+                payload.put("totalIncorrect", questionChanged.getTotalIncorrect());
+
+                String targetPlayerId = questionChanged.getPlayerId();
+                if (targetPlayerId != null && !targetPlayerId.isBlank()) {
+                    Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
+                    if (target != null && target.isConnected()) {
+                        target.sendMessage(Map.of(
+                                "type", "QuestionChanged",
+                                "payload", payload));
+                    }
+                    return;
+                }
+
+                Map<String, Object> msg = Map.of(
+                        "type", "QuestionChanged",
+                        "payload", payload);
+                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+                    if (p != null && p.isConnected()) {
+                        p.sendMessage(msg);
+                    }
+                }
             }
         });
         log.info("Network bridge registrado para partida {}", matchId);
@@ -650,10 +681,10 @@ public class MatchManager implements EventListener {
                 return;
             }
 
-            service.GameStartedValid();
-            broadcastMatchStarted(roomId, service);
             registerMatchNetworkBridge(roomId, service);
-            log.info("Validación exitosa. Juego iniciado por {} en sala {} con {} jugadores", 
+                service.GameStartedValid();
+                broadcastMatchStarted(roomId, service);
+            log.info("Validación exitosa. Juego iniciado por {} en sala {} con {} jugadores",
                     requesterName, roomId, gameInstance.getPlayerCount());
         } else {
             log.error("Room with ID {} not found", roomId);

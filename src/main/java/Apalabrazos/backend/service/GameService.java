@@ -154,9 +154,9 @@ public class GameService implements EventListener {
             this.GlobalGameInstance.setState(GameGlobal.GameGlobalState.PLAYING);
         }
 
-        // Cargar preguntas para todos y publicar la primera
+        // Cargar preguntas para todos y publicar la primera (letra A)
         loadQuestionsForAllPlayers();
-        publishQuestionForAllPlayers(-1, QuestionStatus.INIT);
+        publishQuestionForAllPlayers(0, QuestionStatus.INIT);
 
         log.info("Juego iniciado. TimeService iniciado");
     }

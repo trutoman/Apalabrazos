@@ -24,6 +24,28 @@ export class Question {
         this._drawAll();
     }
 
+    setContent(questionText, responses = []) {
+        this.questionText = String(questionText || '').trim() || 'Pregunta no disponible';
+
+        const normalizedResponses = Array.isArray(responses) ? responses : [];
+        for (let i = 0; i < 4; i++) {
+            const responseText = String(normalizedResponses[i] ?? '').trim() || `Respuesta ${i + 1}`;
+            if (this.answers[i]) {
+                this.answers[i].text = responseText;
+            }
+            if (this.answerTextLabels[i]) {
+                this.answerTextLabels[i].setText(responseText);
+            }
+        }
+
+        if (this.questionBox?.text) {
+            this.questionBox.text.setText(this.questionText);
+            this.questionBox.text.setWordWrapWidth(this.questionBox.width - 40, true);
+            this.questionBox.text.setAlign('center');
+            this.questionBox.text.setOrigin(0.5);
+        }
+    }
+
     _buildSidePositionMap(options = {}) {
         const horizontalGapFromRosco = options.horizontalGapFromRosco || 130;
         const verticalOffset = Math.round(this.roscoRadius * 0.40);

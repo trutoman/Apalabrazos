@@ -4,7 +4,7 @@ import { Counter } from '../ui/counter.js';
 import { InteractiveButton } from '../ui/interactiveButton.js';
 import { Scoreboard } from '../ui/scoreboard.js';
 import { Standings } from '../ui/standings.js';
-import { PhaserEventBus } from '../phaserEventBus.js';
+import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -16,6 +16,7 @@ export class MainScene extends Phaser.Scene {
         this.scoreboard  = null;
         this.standings   = null;
         this._resizeTimer = null;
+        this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
     }
 
     preload() {
@@ -28,6 +29,30 @@ export class MainScene extends Phaser.Scene {
     create() {
         this._buildLayout(this.scale.width, this.scale.height);
         this.scale.on('resize', this._onResize, this);
+        PhaserEventBus.on('net:questionChanged', this._onNetQuestionChanged);
+
+        const initialQuestionPayload = getSticky('net:questionChanged');
+        if (initialQuestionPayload) {
+            this._handleQuestionChanged(initialQuestionPayload);
+        }
+    }
+
+    _handleQuestionChanged(payload = {}) {
+        const questionData = payload?.nextQuestion;
+        if (!questionData || !this.question) {
+            return;
+        }
+
+        const questionText = String(questionData?.questionText || '').trim();
+        const responses = Array.isArray(questionData?.questionResponsesList)
+            ? questionData.questionResponsesList
+            : [];
+
+        if (!questionText || responses.length < 4) {
+            return;
+        }
+
+        this.question.setContent(questionText, responses);
     }
 
     _onResize(gameSize) {
@@ -118,6 +143,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     shutdown() {
+        PhaserEventBus.off('net:questionChanged', this._onNetQuestionChanged);
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
         this._destroyLayout();

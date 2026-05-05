@@ -15,3 +15,18 @@
 //   game:*  — internal game-state transitions
 
 export const PhaserEventBus = new Phaser.Events.EventEmitter();
+
+const stickyEvents = new Map();
+
+export function emitSticky(eventName, payload) {
+	stickyEvents.set(eventName, payload);
+	PhaserEventBus.emit(eventName, payload);
+}
+
+export function getSticky(eventName) {
+	return stickyEvents.get(eventName);
+}
+
+export function clearSticky(eventName) {
+	stickyEvents.delete(eventName);
+}
