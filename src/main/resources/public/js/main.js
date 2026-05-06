@@ -119,49 +119,25 @@ function showMatchStartView(payload = {}) {
 }
 
 function syncStartMatchButtonState() {
-    const startBtn = document.getElementById('btn-start-match');
-    if (!startBtn) return;
-
-    const ownsCurrentRoom = Boolean(currentOwnedRoomId) && currentOwnedRoomId === currentJoinedRoomId;
-    const enoughPlayers = currentJoinedRoomPlayers >= 1;
-    const canStart = ownsCurrentRoom && enoughPlayers;
-
-    startBtn.disabled = !canStart;
-
-    if (!ownsCurrentRoom) {
-        startBtn.textContent = 'Start Match';
-    } else if (!enoughPlayers) {
-        startBtn.textContent = 'Waiting Players';
-    } else {
-        startBtn.textContent = 'Start Match';
-    }
+    document.querySelectorAll('.btn-start-game').forEach(button => applyStartMatchButtonState(button));
 }
 
-function bindStartMatchButton() {
-    const startBtn = document.getElementById('btn-start-match');
-    if (!startBtn) return;
-    if (startBtn.dataset.boundStartMatch === '1') return;
+function applyStartMatchButtonState(button) {
+    if (!button) return;
 
-    startBtn.addEventListener('click', (event) => {
-        event.preventDefault();
+    const roomId = String(button.dataset.roomId || '').trim();
+    const ownsThisRoom = Boolean(currentOwnedRoomId) && currentOwnedRoomId === roomId;
+    const joinedThisRoom = Boolean(currentJoinedRoomId) && currentJoinedRoomId === roomId;
+    const enoughPlayers = joinedThisRoom ? currentJoinedRoomPlayers >= 1 : false;
+    const canStart = ownsThisRoom && joinedThisRoom && enoughPlayers;
 
-        if (!currentOwnedRoomId || currentOwnedRoomId !== currentJoinedRoomId) {
-            showCreateGameErrors(['Solo el creador de la partida puede iniciarla.']);
-            return;
-        }
+    button.disabled = !canStart;
 
-        if (currentJoinedRoomPlayers < 1) {
-            showCreateGameErrors(['Necesitas al menos 1 jugador para iniciar la partida.']);
-            return;
-        }
-
-        SocketClient.send('StartMatchRequest', {
-            roomId: currentOwnedRoomId,
-            requestedAt: Math.floor(Date.now() / 1000),
-        });
-    });
-
-    startBtn.dataset.boundStartMatch = '1';
+    if (ownsThisRoom && joinedThisRoom && !enoughPlayers) {
+        button.textContent = 'WAITING PLAYERS';
+    } else {
+        button.textContent = 'START';
+    }
 }
 
 function updateCurrentRoomState(roomId, players = null) {
@@ -378,10 +354,13 @@ function syncJoinButtonState(roomId) {
     if (!roomId) return;
     const joinButton = document.querySelector(`.btn-join-game[data-room-id="${roomId}"]`);
     applyJoinButtonState(joinButton);
+    const startButton = document.querySelector(`.btn-start-game[data-room-id="${roomId}"]`);
+    applyStartMatchButtonState(startButton);
 }
 
 function syncAllJoinButtonsState() {
     document.querySelectorAll('.btn-join-game').forEach(button => applyJoinButtonState(button));
+    syncStartMatchButtonState();
     syncCreateGameControlsState();
 }
 
@@ -520,7 +499,10 @@ function addOnlineGameCard(gameData, cardColors = null) {
                 <span class="game-card-field-value"></span>
             </div>
         </div>
-        <button class="btn-join-game" data-room-id="${roomId}">Join</button>
+        <div class="game-card-actions-row">
+            <button class="btn-start-game" data-room-id="${roomId}" disabled>START</button>
+            <button class="btn-join-game" data-room-id="${roomId}">Join</button>
+        </div>
     `;
 
     const values = card.querySelectorAll('.game-card-field-value');
@@ -611,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
     populateGameSelects();
     syncCreateGameControlsState();
     bindLogoutButton();
-    bindStartMatchButton();
 
     // --- Create Game button validation ---
     const btnConfirm = document.getElementById('btn-confirm-create');
@@ -665,6 +646,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('click', (event) => {
+        const startButton = event.target.closest('.btn-start-game');
+        if (startButton) {
+            const roomId = String(startButton.dataset.roomId || '').trim();
+
+            if (!roomId || !currentOwnedRoomId || currentOwnedRoomId !== currentJoinedRoomId || currentOwnedRoomId !== roomId) {
+                showCreateGameErrors(['Solo el creador de la partida puede iniciarla.']);
+                return;
+            }
+
+            if (currentJoinedRoomPlayers < 1) {
+                showCreateGameErrors(['Necesitas al menos 1 jugador para iniciar la partida.']);
+                return;
+            }
+
+            SocketClient.send('StartMatchRequest', {
+                roomId,
+                requestedAt: Math.floor(Date.now() / 1000),
+            });
+            return;
+        }
+
         const joinButton = event.target.closest('.btn-join-game');
         if (!joinButton) {
             return;

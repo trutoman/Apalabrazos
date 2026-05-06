@@ -408,6 +408,50 @@
     cursor: not-allowed;
 }
 
+.game-card-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-start-game,
+.btn-join-game {
+    padding: 7px 10px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: 'Archivo', sans-serif;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    cursor: pointer;
+    box-shadow: 4px 4px 0px var(--primary);
+    transform: translate(-4px, -4px);
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn-start-game {
+    background-color: var(--third);
+}
+
+.btn-start-game:hover,
+.btn-join-game:hover {
+    box-shadow: none;
+    transform: translate(0, 0);
+}
+
+.btn-start-game:disabled {
+    background-color: #c4c4c4;
+    color: #5f5f5f;
+    border-color: #5f5f5f;
+    box-shadow: 4px 4px 0px #5f5f5f;
+    cursor: not-allowed;
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: grayscale(0.35);
+}
+
 /* ROW 3, COL 0: Actions (only in col 0) */
 .lobby-actions {
     flex-shrink: 0;
