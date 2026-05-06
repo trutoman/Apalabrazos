@@ -14,7 +14,8 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
             shadowColor = 0x000000,
             shadowAlpha = 1,
             useHandCursor = true,
-            shadowDepth = 4
+            shadowDepth = 4,
+            reactive = true
         } = options;
 
         this.buttonName = buttonName;
@@ -23,6 +24,7 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
         this.baseOffset = 0;
         this.hoverOffset = -shadowDepth;
         this.shadowOffset = shadowDepth;
+        this.reactive = Boolean(reactive);
         this._cx = 0;
         this._cy = 0;
 
@@ -100,15 +102,19 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
     }
 
     handlePointerOver() {
+        if (!this.reactive) return;
         this._moveContent(this.hoverOffset, this.hoverOffset);
     }
 
     handlePointerOut() {
+        if (!this.reactive) return;
         this._moveContent(this.baseOffset, this.baseOffset);
     }
 
     handlePointerDown() {
-        this._moveContent(this.shadowOffset, this.shadowOffset);
+        if (this.reactive) {
+            this._moveContent(this.shadowOffset, this.shadowOffset);
+        }
         console.log(`pointerdown on button: ${this.buttonName}`);
 
         if (typeof this.onPointerDown === 'function') {

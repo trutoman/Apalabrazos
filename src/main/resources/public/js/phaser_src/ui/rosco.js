@@ -34,7 +34,11 @@ export class Rosco {
                 buttonY,
                 this.buttonRadius * 2,
                 this.buttonRadius * 2,
-                char
+                char,
+                null,
+                {
+                    reactive: false
+                }
             );
 
             this.buttonsGroup.add(button);

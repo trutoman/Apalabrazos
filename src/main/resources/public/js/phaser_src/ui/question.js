@@ -158,6 +158,7 @@ export class Question {
                 shadowAlpha: 1,
                 shadowDepth: 9,
                 useHandCursor: false,
+                reactive: false,
             }
         );
 
