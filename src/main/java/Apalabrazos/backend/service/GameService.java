@@ -523,9 +523,6 @@ public class GameService implements EventListener {
             return;
         }
 
-        // Actualizar índice actual de la pregunta en la instancia del jugador
-        playerInstance.setNextCurrentQuestionIndex(questionIndex);
-
         // Obtener la pregunta
         QuestionList questionList = playerInstance.getQuestionList();
         if (questionList == null || questionIndex < 0 || questionIndex >= questionList.getCurrentLength()) {
@@ -558,7 +555,12 @@ public class GameService implements EventListener {
             nextQuestion = questionList.getQuestionAt(nextQuestionIndex);
         }
 
-        publishQuestionForPlayer(playerId, questionIndex, newStatus, nextQuestion);
+        // Si existe siguiente pregunta, avanzar el índice del jugador.
+        // Si no existe, mantener el índice actual (última pregunta respondida).
+        int publishQuestionIndex = nextQuestion != null ? nextQuestionIndex : questionIndex;
+        playerInstance.setNextCurrentQuestionIndex(publishQuestionIndex);
+
+        publishQuestionForPlayer(playerId, publishQuestionIndex, newStatus, nextQuestion);
     }
 
 }
