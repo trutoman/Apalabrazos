@@ -5,6 +5,7 @@ import { InteractiveButton } from '../ui/interactiveButton.js';
 import { Scoreboard } from '../ui/scoreboard.js';
 import { Standings } from '../ui/standings.js';
 import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
+import { SocketClient } from '../../network/socket-client.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -17,6 +18,8 @@ export class MainScene extends Phaser.Scene {
         this.standings   = null;
         this._resizeTimer = null;
         this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
+        this.currentQuestionIndex = null;
+        this.lastSubmittedQuestionIndex = null;
     }
 
     preload() {
@@ -39,6 +42,15 @@ export class MainScene extends Phaser.Scene {
 
     _handleQuestionChanged(payload = {}) {
         const questionData = payload?.nextQuestion;
+        const questionIndex = Number.isInteger(payload?.questionIndex)
+            ? payload.questionIndex
+            : Number(payload?.questionIndex);
+
+        if (Number.isFinite(questionIndex)) {
+            this.currentQuestionIndex = questionIndex;
+            this.lastSubmittedQuestionIndex = null;
+        }
+
         if (!questionData || !this.question) {
             return;
         }
@@ -95,7 +107,8 @@ export class MainScene extends Phaser.Scene {
                 centerY: layoutCenter.y,
                 roscoRadius: roscoConfig.roscoRadius,
                 roscoButtonRadius: roscoConfig.buttonRadius,
-                questionBottomOffset: 45
+                questionBottomOffset: 45,
+                onAnswerSelected: (optionIndex) => this._submitAnswer(optionIndex)
             }
         );
 
@@ -127,6 +140,36 @@ export class MainScene extends Phaser.Scene {
             timeValue: '180',
             correctValue: 0,
             wrongValue: 0
+        });
+    }
+
+    _submitAnswer(optionIndex) {
+        const selectedOptionOneBased = Number(optionIndex);
+        if (!Number.isFinite(selectedOptionOneBased)) {
+            return;
+        }
+
+        const selectedOption = selectedOptionOneBased - 1;
+        if (selectedOption < 0 || selectedOption > 3) {
+            console.warn('[GAME] Ignorando respuesta: opción fuera de rango', selectedOptionOneBased);
+            return;
+        }
+
+        const questionIndex = Number(this.currentQuestionIndex);
+        if (!Number.isFinite(questionIndex) || questionIndex < 0) {
+            console.warn('[GAME] Ignorando respuesta: no hay pregunta activa');
+            return;
+        }
+
+        if (this.lastSubmittedQuestionIndex === questionIndex) {
+            return;
+        }
+
+        this.lastSubmittedQuestionIndex = questionIndex;
+        SocketClient.send('AnswerSubmitted', {
+            questionIndex,
+            selectedOption,
+            submittedAt: Math.floor(Date.now() / 1000),
         });
     }
 

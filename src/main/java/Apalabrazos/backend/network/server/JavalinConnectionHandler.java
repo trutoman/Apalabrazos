@@ -82,12 +82,14 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             }
 
             String message = ctx.message();
+            log.info("[WS-INBOUND] session={} raw={}", sessionId, message);
             log.debug("[MESSAGE] 📨 Mensaje recibido de sesión {}: {}", sessionId, message);
 
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(message);
                 String type = node.has("type") ? node.get("type").asText() : "";
+                log.info("[WS-INBOUND] session={} parsedType={}", sessionId, type);
 
                 // ── CHAT ────────────────────────────────────────────────────
                 if ("chat".equalsIgnoreCase(type)) {
@@ -272,6 +274,37 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     boolean readyAccepted = matchManager.markMatchControllerReady(roomId, player.getPlayerID());
                     log.info("[GAME-READY] 🎛️ Controller ready de '{}' para sala {} => {}",
                             player.getName(), roomId, readyAccepted ? "accepted" : "ignored");
+
+                    // ── ANSWER SUBMITTED ───────────────────────────────────────
+                } else if ("AnswerSubmitted".equalsIgnoreCase(type)) {
+                    Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
+
+                    if (player == null) {
+                        log.warn("[GAME-ANSWER] ⚠️ AnswerSubmitted received but player was not found for session {}", sessionId);
+                        return;
+                    }
+
+                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
+                    int questionIndex = data != null ? data.path("questionIndex").asInt(-1) : -1;
+                    int selectedOption = data != null ? data.path("selectedOption").asInt(-999) : -999;
+                    long submittedAt = data != null ? data.path("submittedAt").asLong(0) : 0;
+
+                    log.info("[WS-INBOUND][ANSWER] player={} playerId={} session={} qIndex={} option={} submittedAt={}",
+                            player.getName(), player.getPlayerID(), sessionId, questionIndex, selectedOption, submittedAt);
+
+                    if (questionIndex < 0) {
+                        log.warn("[GAME-ANSWER] ⚠️ AnswerSubmitted with invalid questionIndex from '{}': {}", player.getName(), questionIndex);
+                        return;
+                    }
+
+                    if (selectedOption < 1 || selectedOption > 4) {
+                        log.warn("[GAME-ANSWER] ⚠️ AnswerSubmitted with invalid selectedOption from '{}': {}", player.getName(), selectedOption);
+                        return;
+                    }
+
+                    boolean accepted = matchManager.submitAnswerForPlayer(player.getPlayerID(), questionIndex, selectedOption);
+                    log.info("[GAME-ANSWER] 🧠 AnswerSubmitted from '{}' q={} option={} => {}",
+                            player.getName(), questionIndex, selectedOption, accepted ? "accepted" : "ignored");
 
                     // ── UNKNOWN ──────────────────────────────────────────────────
                 } else if (!type.isEmpty() && !"PING".equalsIgnoreCase(type)) {

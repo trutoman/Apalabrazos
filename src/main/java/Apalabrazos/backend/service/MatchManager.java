@@ -472,6 +472,31 @@ public class MatchManager implements EventListener {
         return true;
     }
 
+    public boolean submitAnswerForPlayer(String playerId, int questionIndex, int selectedOption) {
+        if (playerId == null || playerId.isBlank()) {
+            log.warn("[ANSWER-ROUTE] playerId vacío. qIndex={}, option={}", questionIndex, selectedOption);
+            return false;
+        }
+
+        String currentMatchId = findJoinedMatchIdForPlayer(playerId);
+        if (currentMatchId == null || currentMatchId.isBlank()) {
+            log.warn("[ANSWER-ROUTE] Jugador {} no está unido a ninguna partida. qIndex={}, option={}",
+                    playerId, questionIndex, selectedOption);
+            return false;
+        }
+
+        GameService service = getMatchById(currentMatchId);
+        if (service == null) {
+            log.warn("[ANSWER-ROUTE] Partida {} no encontrada para jugador {}", currentMatchId, playerId);
+            return false;
+        }
+
+        log.info("[ANSWER-ROUTE] Enviando respuesta al GameService. matchId={}, playerId={}, qIndex={}, option={}",
+                currentMatchId, playerId, questionIndex, selectedOption);
+        service.publishExternal(new AnswerSubmittedEvent(playerId, questionIndex, selectedOption));
+        return true;
+    }
+
     /**
      * Punto único de entrada para unir un jugador a una partida usando el flujo
      * estándar basado en `PlayerJoinedEvent`.

@@ -15,6 +15,7 @@ export class Question {
         this.questionBottomOffset = options.questionBottomOffset || 140;
         this.answerRadius = options.answerRadius || 50;
         this.answerTextMaxWidth = options.answerTextMaxWidth || 200;
+        this.onAnswerSelected = typeof options.onAnswerSelected === 'function' ? options.onAnswerSelected : null;
         this.labelMap = { 1: '1', 2: '2', 3: '3', 4: '4' };
         this.answerButtons = new Map();
         this.answerTextLabels = [];
@@ -103,7 +104,11 @@ export class Question {
             r * 2,
             r * 2,
             label,
-            null,
+            () => {
+                if (this.onAnswerSelected) {
+                    this.onAnswerSelected(answer.index);
+                }
+            },
             {
                 type: 'irregular',
                 circleColor: 0xff00f4,
