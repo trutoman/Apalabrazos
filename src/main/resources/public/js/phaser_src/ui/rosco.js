@@ -1,6 +1,13 @@
 import { InteractiveButton } from './interactiveButton.js';
 
 export class Rosco {
+    static LETTER_COLORS = {
+        CORRECT: 0xa2ff00,
+        WRONG: 0xff4911,
+        STROKE: 0x000000,
+        TEXT: '#000000'
+    };
+
     constructor(scene, options = {}) {
         this.scene = scene;
         this.letters = (options.letters || "ABCDEFGHIJLMNÑOPQRSTUVXYZ").split("");
@@ -102,5 +109,24 @@ export class Rosco {
 
     getAllButtons() {
         return this.buttonsGroup ? this.buttonsGroup.getChildren() : [];
+    }
+
+    setLetterResult(letter, isCorrect) {
+        const normalizedLetter = String(letter || '').trim().toUpperCase();
+        if (!normalizedLetter) {
+            return;
+        }
+
+        const button = this.getButtonByLetter(normalizedLetter);
+        if (!button) {
+            return;
+        }
+
+        button.setVisualStyle({
+            circleColor: isCorrect ? Rosco.LETTER_COLORS.CORRECT : Rosco.LETTER_COLORS.WRONG,
+            strokeColor: Rosco.LETTER_COLORS.STROKE,
+            textColor: Rosco.LETTER_COLORS.TEXT,
+        });
+        button.setPressedState(true);
     }
 }

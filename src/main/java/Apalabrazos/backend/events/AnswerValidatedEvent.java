@@ -6,32 +6,43 @@ import Apalabrazos.backend.model.QuestionStatus;
  * Event fired when an answer is validated.
  */
 public class AnswerValidatedEvent extends GameEvent {
-    private final int playerIndex;
-    private final char letter;
-    private final String answer;
+    private final String playerId;
+    private final int questionIndex;
+    private final String questionLetter;
+    private final String selectedAnswer;
     private final QuestionStatus status;
     private final String correctAnswer;
+    private final int totalCorrect;
+    private final int totalIncorrect;
 
-    public AnswerValidatedEvent(int playerIndex, char letter, String answer,
-                                QuestionStatus status, String correctAnswer) {
+    public AnswerValidatedEvent(String playerId, int questionIndex, String questionLetter,
+                                String selectedAnswer, QuestionStatus status,
+                                String correctAnswer, int totalCorrect, int totalIncorrect) {
         super();
-        this.playerIndex = playerIndex;
-        this.letter = letter;
-        this.answer = answer;
+        this.playerId = playerId;
+        this.questionIndex = questionIndex;
+        this.questionLetter = questionLetter;
+        this.selectedAnswer = selectedAnswer;
         this.status = status;
         this.correctAnswer = correctAnswer;
+        this.totalCorrect = totalCorrect;
+        this.totalIncorrect = totalIncorrect;
     }
 
-    public int getPlayerIndex() {
-        return playerIndex;
+    public String getPlayerId() {
+        return playerId;
     }
 
-    public char getLetter() {
-        return letter;
+    public int getQuestionIndex() {
+        return questionIndex;
     }
 
-    public String getAnswer() {
-        return answer;
+    public String getQuestionLetter() {
+        return questionLetter;
+    }
+
+    public String getSelectedAnswer() {
+        return selectedAnswer;
     }
 
     public QuestionStatus getStatus() {
@@ -40,6 +51,14 @@ public class AnswerValidatedEvent extends GameEvent {
 
     public String getCorrectAnswer() {
         return correctAnswer;
+    }
+
+    public int getTotalCorrect() {
+        return totalCorrect;
+    }
+
+    public int getTotalIncorrect() {
+        return totalIncorrect;
     }
 
     public boolean isCorrect() {

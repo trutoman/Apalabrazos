@@ -18,6 +18,7 @@ export class MainScene extends Phaser.Scene {
         this.standings   = null;
         this._resizeTimer = null;
         this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
+        this._onNetAnswerValidated = this._handleAnswerValidated.bind(this);
         this.currentQuestionIndex = null;
         this.lastSubmittedQuestionIndex = null;
     }
@@ -33,10 +34,16 @@ export class MainScene extends Phaser.Scene {
         this._buildLayout(this.scale.width, this.scale.height);
         this.scale.on('resize', this._onResize, this);
         PhaserEventBus.on('net:questionChanged', this._onNetQuestionChanged);
+        PhaserEventBus.on('net:answerValidated', this._onNetAnswerValidated);
 
         const initialQuestionPayload = getSticky('net:questionChanged');
         if (initialQuestionPayload) {
             this._handleQuestionChanged(initialQuestionPayload);
+        }
+
+        const initialAnswerResult = getSticky('net:answerValidated');
+        if (initialAnswerResult) {
+            this._handleAnswerValidated(initialAnswerResult);
         }
     }
 
@@ -50,6 +57,8 @@ export class MainScene extends Phaser.Scene {
             this.currentQuestionIndex = questionIndex;
             this.lastSubmittedQuestionIndex = null;
         }
+
+        this._syncCounter(payload?.totalCorrect, payload?.totalIncorrect);
 
         if (!questionData || !this.question) {
             console.warn('[GAME][SCENE] Ignorando QuestionChanged por falta de datos o UI no lista', {
@@ -82,6 +91,38 @@ export class MainScene extends Phaser.Scene {
         });
 
         this.question.setContent(questionText, responses);
+    }
+
+    _handleAnswerValidated(answerResult = {}) {
+        this._syncCounter(answerResult?.totalCorrect, answerResult?.totalIncorrect);
+        const status = String(answerResult?.status || '').trim().toUpperCase();
+        const letter = String(answerResult?.questionLetter || '').trim().toUpperCase();
+
+        if (this.rosco && letter) {
+            if (status === 'RESPONDED_OK') {
+                this.rosco.setLetterResult(letter, true);
+            } else if (status === 'RESPONDED_FAIL') {
+                this.rosco.setLetterResult(letter, false);
+            }
+        }
+
+        console.log('[GAME][SCENE] Resultado de respuesta recibido', answerResult);
+    }
+
+    _syncCounter(totalCorrect, totalIncorrect) {
+        if (!this.counter) {
+            return;
+        }
+
+        const correct = Number(totalCorrect);
+        if (Number.isFinite(correct) && correct >= 0) {
+            this.counter.setCorrect(correct);
+        }
+
+        const wrong = Number(totalIncorrect);
+        if (Number.isFinite(wrong) && wrong >= 0) {
+            this.counter.setWrong(wrong);
+        }
     }
 
     _onResize(gameSize) {
@@ -209,6 +250,7 @@ export class MainScene extends Phaser.Scene {
 
     shutdown() {
         PhaserEventBus.off('net:questionChanged', this._onNetQuestionChanged);
+        PhaserEventBus.off('net:answerValidated', this._onNetAnswerValidated);
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
         this._destroyLayout();

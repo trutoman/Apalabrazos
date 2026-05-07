@@ -25,6 +25,13 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
         this.hoverOffset = -shadowDepth;
         this.shadowOffset = shadowDepth;
         this.reactive = Boolean(reactive);
+        this._lockedPressed = false;
+        this._shapeType = type;
+        this._circleColor = circleColor;
+        this._strokeColor = strokeColor;
+        this._strokeWidth = strokeWidth;
+        this._textColor = textColor;
+        this._irregularPoints = null;
         this._cx = 0;
         this._cy = 0;
 
@@ -41,6 +48,7 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
                 { x:  w - Math.abs(r()), y:  h + Math.abs(r()) },   // bottom-right
                 { x: -w - Math.abs(r()), y:  h + r() },              // bottom-left
             ];
+            this._irregularPoints = pts;
 
             this.shadow = scene.add.graphics();
             this.shadow.fillStyle(shadowColor, shadowAlpha);
@@ -102,12 +110,12 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
     }
 
     handlePointerOver() {
-        if (!this.reactive) return;
+        if (!this.reactive || this._lockedPressed) return;
         this._moveContent(this.hoverOffset, this.hoverOffset);
     }
 
     handlePointerOut() {
-        if (!this.reactive) return;
+        if (!this.reactive || this._lockedPressed) return;
         this._moveContent(this.baseOffset, this.baseOffset);
     }
 
@@ -125,6 +133,54 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
                 buttonName: this.buttonName,
                 button: this
             });
+        }
+    }
+
+    setVisualStyle({ circleColor, strokeColor, textColor } = {}) {
+        if (typeof circleColor === 'number') {
+            this._circleColor = circleColor;
+        }
+        if (typeof strokeColor === 'number') {
+            this._strokeColor = strokeColor;
+        }
+        if (typeof textColor === 'string') {
+            this._textColor = textColor;
+            this.text.setColor(textColor);
+        }
+
+        if (this._shapeType === 'irregular') {
+            if (!this._irregularPoints) {
+                return;
+            }
+            this.circle.clear();
+            this.circle.fillStyle(this._circleColor, 1);
+            this.circle.fillPoints(this._irregularPoints, true, true);
+            this.circle.lineStyle(this._strokeWidth, this._strokeColor, 1);
+            this.circle.strokePoints(this._irregularPoints, true, true);
+            return;
+        }
+
+        if (this.circle?.setFillStyle) {
+            this.circle.setFillStyle(this._circleColor);
+        }
+        if (this.circle?.setStrokeStyle) {
+            this.circle.setStrokeStyle(this._strokeWidth, this._strokeColor);
+        }
+    }
+
+    setPressedState(pressed) {
+        this._lockedPressed = Boolean(pressed);
+        if (this._lockedPressed) {
+            this._moveContent(this.shadowOffset, this.shadowOffset);
+            if (this.shadow) {
+                this.shadow.setVisible(false);
+            }
+            return;
+        }
+
+        this._moveContent(this.baseOffset, this.baseOffset);
+        if (this.shadow) {
+            this.shadow.setVisible(true);
         }
     }
 }

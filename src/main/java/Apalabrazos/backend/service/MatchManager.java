@@ -338,6 +338,29 @@ public class MatchManager implements EventListener {
                         p.sendMessage(msg);
                     }
                 }
+            } else if (gameEvent instanceof AnswerValidatedEvent answerValidated) {
+                String targetPlayerId = answerValidated.getPlayerId();
+                if (targetPlayerId == null || targetPlayerId.isBlank()) {
+                    return;
+                }
+
+                Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
+                if (target == null || !target.isConnected()) {
+                    return;
+                }
+
+                Map<String, Object> answerResult = new LinkedHashMap<>();
+                answerResult.put("questionIndex", answerValidated.getQuestionIndex());
+                answerResult.put("questionLetter", answerValidated.getQuestionLetter());
+                answerResult.put("selectedAnswer", answerValidated.getSelectedAnswer());
+                answerResult.put("status", answerValidated.getStatus() != null ? answerValidated.getStatus().name() : null);
+                answerResult.put("correctAnswer", answerValidated.getCorrectAnswer());
+                answerResult.put("totalCorrect", answerValidated.getTotalCorrect());
+                answerResult.put("totalIncorrect", answerValidated.getTotalIncorrect());
+
+                target.sendMessage(Map.of(
+                        "type", "AnswerValidated",
+                        "payload", Map.of("answerResult", answerResult)));
             } else if (gameEvent instanceof QuestionChangedEvent questionChanged) {
                 GameGlobal gi = service.getGameInstance();
                 if (gi == null) return;

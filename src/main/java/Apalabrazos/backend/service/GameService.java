@@ -348,6 +348,14 @@ public class GameService implements EventListener {
     }
 
     /**
+     * Publicar un evento y esperar a que los listeners externos lo procesen.
+     * Se usa en flujos donde el orden observable por el cliente importa.
+     */
+    public void publishExternalAndWait(GameEvent event) {
+        externalBus.publishAndWait(event);
+    }
+
+    /**
      * Get the external AsyncEventBus instance for this GameService.
      * Controllers can use this bus to publish events and receive game updates.
      *
@@ -548,6 +556,28 @@ public class GameService implements EventListener {
         // Registrar el resultado de la respuesta en la Question dentro de la QuestionList
         question.setUserResponseRecorded(newStatus.getValue());
 
+    int[] totals = playerInstance.getCorrectIncorrectTotals();
+    int totalCorrect = totals[0];
+    int totalIncorrect = totals[1];
+
+    String selectedAnswer = null;
+    if (selectedOption >= 0 && selectedOption < question.getQuestionResponsesList().size()) {
+        selectedAnswer = question.getQuestionResponsesList().get(selectedOption);
+    }
+
+    String questionLetter = question.getQuestionLetter();
+    String correctAnswer = question.getCorrectResponse();
+
+    publishExternalAndWait(new AnswerValidatedEvent(
+        playerId,
+        questionIndex,
+        questionLetter,
+        selectedAnswer,
+        newStatus,
+        correctAnswer,
+        totalCorrect,
+        totalIncorrect));
+
         // Calcular la siguiente pregunta (si existe)
         Question nextQuestion = null;
         int nextQuestionIndex = questionIndex + 1;
@@ -560,7 +590,8 @@ public class GameService implements EventListener {
         int publishQuestionIndex = nextQuestion != null ? nextQuestionIndex : questionIndex;
         playerInstance.setNextCurrentQuestionIndex(publishQuestionIndex);
 
-        publishQuestionForPlayer(playerId, publishQuestionIndex, newStatus, nextQuestion);
+        QuestionStatus nextQuestionStatus = nextQuestion != null ? QuestionStatus.INIT : null;
+        publishQuestionForPlayer(playerId, publishQuestionIndex, nextQuestionStatus, nextQuestion);
     }
 
 }

@@ -41,6 +41,12 @@ function _route(data, state, actions) {
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
 
+    } else if (data.type === 'AnswerValidated') {
+        const answerResult = data?.payload?.answerResult || null;
+        if (answerResult) {
+            emitSticky('net:answerValidated', answerResult);
+        }
+
     } else if (data.type === 'QuestionChanged') {
         const payload = data?.payload || {};
         const nextQuestion = payload?.nextQuestion || null;
