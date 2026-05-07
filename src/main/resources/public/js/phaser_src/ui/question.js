@@ -1,7 +1,7 @@
 import { InteractiveButton } from './interactiveButton.js';
 
 export class Question {
-    // answer1..4 = { text: string, index: 1|2|3|4 }
+    // answer1..4 = { text: string, index: 0|1|2|3 }
     // question   = string
     constructor(scene, answer1, answer2, answer3, answer4, question, options = {}) {
         this.scene = scene;
@@ -16,7 +16,7 @@ export class Question {
         this.answerRadius = options.answerRadius || 50;
         this.answerTextMaxWidth = options.answerTextMaxWidth || 200;
         this.onAnswerSelected = typeof options.onAnswerSelected === 'function' ? options.onAnswerSelected : null;
-        this.labelMap = { 1: '1', 2: '2', 3: '3', 4: '4' };
+        this.labelMap = { 0: '1', 1: '2', 2: '3', 3: '4' };
         this.answerButtons = new Map();
         this.answerTextLabels = [];
 
@@ -79,10 +79,10 @@ export class Question {
         );
 
         return {
-            1: { x: leftX,  y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'right' },
-            2: { x: rightX, y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'left'  },
-            3: { x: leftX,  y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'right' },
-            4: { x: rightX, y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'left'  },
+            0: { x: leftX,  y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'right' },
+            1: { x: rightX, y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'left'  },
+            2: { x: leftX,  y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'right' },
+            3: { x: rightX, y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'left'  },
         };
     }
 
@@ -95,6 +95,11 @@ export class Question {
         const pos   = this.positionMap[answer.index];
         const label = this.labelMap[answer.index];
         const r     = this.answerRadius;
+
+        if (!pos) {
+            console.warn('[GAME][QUESTION] Índice de respuesta sin posición:', answer.index, answer);
+            return;
+        }
 
         const button = new InteractiveButton(
             this.scene,

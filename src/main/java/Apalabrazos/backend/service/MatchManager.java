@@ -293,6 +293,7 @@ public class MatchManager implements EventListener {
 
         GameGlobal gameInstance = gameService.getGameInstance();
         if (gameInstance == null) {
+            log.warn("[BROADCAST] gameInstance is null for matchId={}", matchId);
             return;
         }
 
@@ -300,12 +301,25 @@ public class MatchManager implements EventListener {
         payload.put("roomId", matchId);
         payload.put("started", true);
 
-        for (String playerId : new ArrayList<>(gameInstance.getAllPlayerIds())) {
+        java.util.Set<String> allPlayerIds = gameInstance.getAllPlayerIds();
+        log.info("[BROADCAST-START] 📢 Broadcasting MatchStarted para matchId={}, totalPlayers={}",
+                matchId, allPlayerIds != null ? allPlayerIds.size() : 0);
+
+        if (allPlayerIds == null || allPlayerIds.isEmpty()) {
+            log.warn("[BROADCAST-START] ⚠️ No hay jugadores en la partida {}", matchId);
+            return;
+        }
+
+        for (String playerId : new ArrayList<>(allPlayerIds)) {
             Player player = connectionRegistry.findConnectedPlayerByPlayerId(playerId);
+            log.info("[BROADCAST-START] 🎮 Jugador {} - conectado: {}", playerId, player != null && player.isConnected());
             if (player != null && player.isConnected()) {
                 player.sendMessage(Map.of(
                         "type", "MatchStarted",
                         "payload", payload));
+                log.info("[BROADCAST-START] ✅ MatchStarted enviado a jugador {}", playerId);
+            } else {
+                log.warn("[BROADCAST-START] ❌ No se pudo enviar MatchStarted a jugador {}", playerId);
             }
         }
     }
@@ -740,18 +754,38 @@ public class MatchManager implements EventListener {
 
             if (alreadyInRoom) {
                 refreshMatchPlayerNames(roomId, service);
-                log.info("Player {} already in room {}", playerId, roomId);
+                log.info("[PLAYER-JOIN] Player {} already in room {}", playerId, roomId);
                 return;
             }
 
-            log.info("Player {} joined room {}", playerId, roomId);
+            log.info("[PLAYER-JOIN] 🎮 Player {} joined room {} (total players before: {})",
+                    playerId, roomId, gameInstance != null ? gameInstance.getPlayerCount() : 0);
             // Agregar jugador a la partida
             boolean added = service.addPlayerToGame(playerId, event.getPlayerName());
             if (!added) {
-                log.error("No se pudo agregar el jugador {} a la sala {}", playerId, roomId);
+                log.error("[PLAYER-JOIN] ❌ No se pudo agregar el jugador {} a la sala {}", playerId, roomId);
             } else {
+                log.info("[PLAYER-JOIN] ✅ Jugador agregado {}. Total en sala: {}",
+                        playerId, gameInstance != null ? gameInstance.getPlayerCount() : 0);
                 refreshMatchPlayerNames(roomId, service);
                 LobbyRoom.getInstance().broadcastMatchUpdated(buildMatchSummary(service), this);
+
+                // Si la partida ya fue iniciada, enviar MatchStarted al nuevo jugador
+                GameGlobal.GameGlobalState state = gameInstance != null ? gameInstance.getState() : null;
+                if (state != null && (state == GameGlobal.GameGlobalState.START_VALIDATED ||
+                                       state == GameGlobal.GameGlobalState.PLAYING)) {
+                    log.info("[PLAYER-JOIN] 📢 Partido ya iniciado. Enviando MatchStarted al nuevo jugador {}", playerId);
+                    Player joiningPlayer = connectionRegistry.findConnectedPlayerByPlayerId(playerId);
+                    if (joiningPlayer != null && joiningPlayer.isConnected()) {
+                        Map<String, Object> payload = new LinkedHashMap<>(buildMatchSummary(service));
+                        payload.put("roomId", roomId);
+                        payload.put("started", true);
+                        joiningPlayer.sendMessage(Map.of(
+                                "type", "MatchStarted",
+                                "payload", payload));
+                        log.info("[PLAYER-JOIN] ✅ MatchStarted enviado a jugador que se unió tarde: {}", playerId);
+                    }
+                }
             }
             // Aquí podríamos añadir la instancia del jugador si existe lógica para ello
             // service.onEvent(event); // reenviar al GameService si debe manejar la
@@ -778,11 +812,6 @@ public class MatchManager implements EventListener {
         return null;
     }
 
-    /**
-     * Remove a match from the active registry by GameService instance
-     *
-     * @param gameService The GameService instance to remove
-     */
     public void removeMatch(GameService gameService) {
         if (gameService != null) {
             String matchId = gameService.getMatchId();

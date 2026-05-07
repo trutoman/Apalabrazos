@@ -52,6 +52,11 @@ export class MainScene extends Phaser.Scene {
         }
 
         if (!questionData || !this.question) {
+            console.warn('[GAME][SCENE] Ignorando QuestionChanged por falta de datos o UI no lista', {
+                hasQuestionData: Boolean(questionData),
+                hasQuestionUI: Boolean(this.question),
+                questionIndex: this.currentQuestionIndex,
+            });
             return;
         }
 
@@ -61,8 +66,20 @@ export class MainScene extends Phaser.Scene {
             : [];
 
         if (!questionText || responses.length < 4) {
+            console.warn('[GAME][SCENE] QuestionChanged inválido para render', {
+                questionIndex: this.currentQuestionIndex,
+                questionText,
+                responsesLength: responses.length,
+                raw: questionData,
+            });
             return;
         }
+
+        console.log('[GAME][SCENE] Renderizando pregunta', {
+            questionIndex: this.currentQuestionIndex,
+            questionText,
+            responsesLength: responses.length,
+        });
 
         this.question.setContent(questionText, responses);
     }
@@ -97,10 +114,10 @@ export class MainScene extends Phaser.Scene {
 
         this.question = new Question(
             this,
-            { text: 'Respuesta A', index: 1 },
-            { text: 'Respuesta B', index: 2 },
-            { text: 'Respuesta C', index: 3 },
-            { text: 'Respuesta D', index: 4 },
+            { text: 'Respuesta A', index: 0 },
+            { text: 'Respuesta B', index: 1 },
+            { text: 'Respuesta C', index: 2 },
+            { text: 'Respuesta D', index: 3 },
             'Escribe aquí el enunciado de la pregunta?',
             {
                 centerX: layoutCenter.x,
@@ -115,20 +132,26 @@ export class MainScene extends Phaser.Scene {
         const counterHeight = 110;
         const counterTopY   = this.question.questionBox.y + (this.question.questionBox.height / 2) + 24;
 
-        const leftAnswerEdgeX  = this.question.positionMap[1].x - this.question.answerRadius;
-        const rightAnswerEdgeX = this.question.positionMap[2].x + this.question.answerRadius;
+        const leftAnswerEdgeX  = this.question.positionMap[0].x - this.question.answerRadius;
+        const rightAnswerEdgeX = this.question.positionMap[1].x + this.question.answerRadius;
+        const panelWidth = 310;
+
+        // Posiciones (izquierda): su arista izquierda coincide con respuestas 1 y 3.
+        const standingsRightEdgeX = leftAnswerEdgeX + panelWidth;
+        // Puntos (derecha): su arista derecha coincide con respuestas 2 y 4.
+        const scoreboardLeftEdgeX = rightAnswerEdgeX - panelWidth;
 
         this.scoreboard = new Scoreboard(this, {
-            leftEdgeX: leftAnswerEdgeX,
+            leftEdgeX: scoreboardLeftEdgeX,
             topY: 20,
-            width: 310,
+            width: panelWidth,
             height: 130
         });
 
         this.standings = new Standings(this, {
-            rightEdgeX: rightAnswerEdgeX,
+            rightEdgeX: standingsRightEdgeX,
             topY: 20,
-            width: 310,
+            width: panelWidth,
             height: 130
         });
 
@@ -144,14 +167,13 @@ export class MainScene extends Phaser.Scene {
     }
 
     _submitAnswer(optionIndex) {
-        const selectedOptionOneBased = Number(optionIndex);
-        if (!Number.isFinite(selectedOptionOneBased)) {
+        const selectedOption = Number(optionIndex);
+        if (!Number.isFinite(selectedOption)) {
             return;
         }
 
-        const selectedOption = selectedOptionOneBased - 1;
         if (selectedOption < 0 || selectedOption > 3) {
-            console.warn('[GAME] Ignorando respuesta: opción fuera de rango', selectedOptionOneBased);
+            console.warn('[GAME] Ignorando respuesta: opción fuera de rango', selectedOption);
             return;
         }
 

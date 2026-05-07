@@ -297,7 +297,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         return;
                     }
 
-                    if (selectedOption < 1 || selectedOption > 4) {
+                    if (selectedOption < 0 || selectedOption > 3) {
                         log.warn("[GAME-ANSWER] ⚠️ AnswerSubmitted with invalid selectedOption from '{}': {}", player.getName(), selectedOption);
                         return;
                     }

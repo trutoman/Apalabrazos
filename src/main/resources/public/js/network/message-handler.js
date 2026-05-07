@@ -43,6 +43,16 @@ function _route(data, state, actions) {
 
     } else if (data.type === 'QuestionChanged') {
         const payload = data?.payload || {};
+        const nextQuestion = payload?.nextQuestion || null;
+        const responsesCount = Array.isArray(nextQuestion?.questionResponsesList)
+            ? nextQuestion.questionResponsesList.length
+            : 0;
+        console.log('[GAME][NET] QuestionChanged payload summary:', {
+            questionIndex: payload?.questionIndex,
+            hasNextQuestion: Boolean(nextQuestion),
+            questionText: nextQuestion?.questionText || null,
+            responsesCount,
+        });
         emitSticky('net:questionChanged', payload);
         console.log('[GAME] QuestionChanged received:', payload);
 

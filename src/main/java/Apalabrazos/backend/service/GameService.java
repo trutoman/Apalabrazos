@@ -224,6 +224,20 @@ public class GameService implements EventListener {
         QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion, totalCorrect, totalIncorrect);
         log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {}, correct: {}, incorrect: {})",
             questionIndex, playerId, nextQuestion != null ? "sí" : "no", totalCorrect, totalIncorrect);
+        if (nextQuestion == null) {
+            log.warn("[QUESTION-PUBLISH] nextQuestion is null for playerId={}, questionIndex={}, status={}",
+                    playerId, questionIndex, status);
+        } else {
+            int responsesCount = nextQuestion.getQuestionResponsesList() != null
+                    ? nextQuestion.getQuestionResponsesList().size()
+                    : 0;
+            log.info("[QUESTION-PUBLISH] playerId={}, questionIndex={}, status={}, question='{}', responsesCount={}",
+                    playerId,
+                    questionIndex,
+                    status,
+                    nextQuestion.getQuestionText(),
+                    responsesCount);
+        }
         externalBus.publish(event);
     }
 
@@ -440,15 +454,55 @@ public class GameService implements EventListener {
         if (GlobalGameInstance != null) {
             java.util.List<GameInstance> instances = new java.util.ArrayList<>(GlobalGameInstance.getAllPlayerInstances());
             if (instances.size() > 0) {
-                playerOneRecord = instances.get(0).getGameResult();
+                playerOneRecord = buildFinalRecord(instances.get(0));
             }
             if (instances.size() > 1) {
-                playerTwoRecord = instances.get(1).getGameResult();
+                playerTwoRecord = buildFinalRecord(instances.get(1));
             }
         }
 
         publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord));
         log.info("Juego finalizado");
+    }
+
+    private GameRecord buildFinalRecord(GameInstance instance) {
+        if (instance == null) {
+            return null;
+        }
+
+        GameRecord record = instance.getGameResult();
+        if (record == null) {
+            record = new GameRecord();
+            instance.setGameResult(record);
+        }
+
+        int[] totals = instance.getCorrectIncorrectTotals();
+        int correctAnswers = totals[0];
+        int incorrectAnswers = totals[1];
+
+        int passedQuestions = 0;
+        QuestionList questionList = instance.getQuestionList();
+        if (questionList != null) {
+            for (int i = 0; i < questionList.getCurrentLength(); i++) {
+                Question q = questionList.getQuestionAt(i);
+                if (q != null && "passed".equals(q.getUserResponseRecorded())) {
+                    passedQuestions++;
+                }
+            }
+        }
+
+        int totalTime = 0;
+        if (GlobalGameInstance != null) {
+            totalTime = Math.max(0, GlobalGameInstance.getGameDuration() - GlobalGameInstance.getRemainingSeconds());
+        }
+
+        record.setCorrectAnswers(correctAnswers);
+        record.setIncorrectAnswers(incorrectAnswers);
+        record.setPassedQuestions(passedQuestions);
+        record.setTotalTime(totalTime);
+        record.setScore((int) Math.round(record.getScorePercentage()));
+
+        return record;
     }
 
     /**
