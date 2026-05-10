@@ -4,7 +4,8 @@ import { Counter } from '../ui/counter.js';
 import { InteractiveButton } from '../ui/interactiveButton.js';
 import { Scoreboard } from '../ui/scoreboard.js';
 import { Standings } from '../ui/standings.js';
-import { PhaserEventBus } from '../phaserEventBus.js';
+import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
+import { SocketClient } from '../../network/socket-client.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -16,13 +17,10 @@ export class MainScene extends Phaser.Scene {
         this.scoreboard  = null;
         this.standings   = null;
         this._resizeTimer = null;
-
-        // Letra del rosco que está activa en este momento
-        this._activeLetter = null;
-        // Índice de la pregunta que el jugador está viendo ahora
-        this._currentQuestionIndex = -1;
-        // Referencia al handler del bus para poder quitarlo al destruir la escena
-        this._onQuestionChanged = null;
+        this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
+        this._onNetAnswerValidated = this._handleAnswerValidated.bind(this);
+        this.currentQuestionIndex = null;
+        this.lastSubmittedQuestionIndex = null;
     }
 
     preload() {
@@ -35,49 +33,109 @@ export class MainScene extends Phaser.Scene {
     create() {
         this._buildLayout(this.scale.width, this.scale.height);
         this.scale.on('resize', this._onResize, this);
+        PhaserEventBus.on('net:questionChanged', this._onNetQuestionChanged);
+        PhaserEventBus.on('net:answerValidated', this._onNetAnswerValidated);
 
-        // Escuchar cuando el servidor manda una nueva pregunta o el resultado de la respondida
-        this._onQuestionChanged = (data) => this._handleQuestionChanged(data);
-        PhaserEventBus.on('net:questionChanged', this._onQuestionChanged);
+        const initialQuestionPayload = getSticky('net:questionChanged');
+        if (initialQuestionPayload) {
+            this._handleQuestionChanged(initialQuestionPayload);
+        }
+
+        const initialAnswerResult = getSticky('net:answerValidated');
+        if (initialAnswerResult) {
+            this._handleAnswerValidated(initialAnswerResult);
+        }
     }
 
-    // Procesa el evento que llega desde el servidor con el resultado de la pregunta anterior
-    // y los datos de la siguiente pregunta que hay que mostrar
-    _handleQuestionChanged({ questionIndex, status, nextQuestion, totalCorrect, totalIncorrect }) {
-        // Marcar la letra del rosco que acaba de responderse con el color del resultado
-        if (this._activeLetter && questionIndex >= 0) {
-            const colorByStatus = {
-                'responsed_ok':   'correct',
-                'responsed_fail': 'incorrect',
-                'passed':         'passed'
-            };
-            if (this.rosco) {
-                this.rosco.setLetterState(this._activeLetter, colorByStatus[status] || 'pending');
+    _handleQuestionChanged(payload = {}) {
+        const questionData = payload?.nextQuestion;
+        const questionIndex = Number.isInteger(payload?.questionIndex)
+            ? payload.questionIndex
+            : Number(payload?.questionIndex);
+
+        if (Number.isFinite(questionIndex)) {
+            this.currentQuestionIndex = questionIndex;
+            this.lastSubmittedQuestionIndex = null;
+        }
+
+        this._syncCounter(payload?.totalCorrect, payload?.totalIncorrect);
+
+        if (!questionData || !this.question) {
+            console.warn('[GAME][SCENE] Ignorando QuestionChanged por falta de datos o UI no lista', {
+                hasQuestionData: Boolean(questionData),
+                hasQuestionUI: Boolean(this.question),
+                questionIndex: this.currentQuestionIndex,
+            });
+            return;
+        }
+
+        const questionText = String(questionData?.questionText || '').trim();
+        const responses = Array.isArray(questionData?.questionResponsesList)
+            ? questionData.questionResponsesList
+            : [];
+
+        if (!questionText || responses.length < 4) {
+            console.warn('[GAME][SCENE] QuestionChanged inválido para render', {
+                questionIndex: this.currentQuestionIndex,
+                questionText,
+                responsesLength: responses.length,
+                raw: questionData,
+            });
+            return;
+        }
+
+        console.log('[GAME][SCENE] Renderizando pregunta', {
+            questionIndex: this.currentQuestionIndex,
+            questionText,
+            responsesLength: responses.length,
+        });
+
+        this.question.setContent(questionText, responses);
+    }
+
+    _handleAnswerValidated(answerResult = {}) {
+        this._syncCounter(answerResult?.totalCorrect, answerResult?.totalIncorrect);
+        this._syncTotalScore(answerResult?.totalScore);
+        const status = String(answerResult?.status || '').trim().toUpperCase();
+        const letter = String(answerResult?.questionLetter || '').trim().toUpperCase();
+
+        if (this.rosco && letter) {
+            if (status === 'RESPONDED_OK') {
+                this.rosco.setLetterResult(letter, true);
+            } else if (status === 'RESPONDED_FAIL') {
+                this.rosco.setLetterResult(letter, false);
+            } else if (status === 'PASSED') {
+                this.rosco.setLetterPassed(letter);
             }
         }
 
-        // Mostrar la siguiente pregunta si el servidor la mandó
-        if (nextQuestion) {
-            const letter = nextQuestion.questionLetter.toUpperCase();
-            this._activeLetter = letter;
-            this._currentQuestionIndex = questionIndex + 1;
+        console.log('[GAME][SCENE] Resultado de respuesta recibido', answerResult);
+    }
 
-            if (this.question) {
-                this.question.update({
-                    questionText: nextQuestion.questionText,
-                    questionResponsesList: nextQuestion.questionResponsesList,
-                    questionIndex: questionIndex + 1
-                });
-            }
-
-            // Resaltar en azul la letra del rosco que toca responder ahora
-            if (this.rosco) this.rosco.setLetterState(letter, 'active');
+    _syncCounter(totalCorrect, totalIncorrect) {
+        if (!this.counter) {
+            return;
         }
 
-        // Actualizar el marcador de aciertos y fallos en el contador
-        if (this.counter) {
-            this.counter.setCorrect(totalCorrect);
-            this.counter.setWrong(totalIncorrect);
+        const correct = Number(totalCorrect);
+        if (Number.isFinite(correct) && correct >= 0) {
+            this.counter.setCorrect(correct);
+        }
+
+        const wrong = Number(totalIncorrect);
+        if (Number.isFinite(wrong) && wrong >= 0) {
+            this.counter.setWrong(wrong);
+        }
+    }
+
+    _syncTotalScore(totalScore) {
+        if (!this.scoreboard) {
+            return;
+        }
+
+        const score = Number(totalScore);
+        if (Number.isFinite(score) && score >= 0) {
+            this.scoreboard.setScore(score);
         }
     }
 
@@ -105,54 +163,50 @@ export class MainScene extends Phaser.Scene {
             centerY: layoutCenter.y - roscoVerticalOffset,
             roscoRadius,
             buttonRadius: 20,
-            backgroundColor: '#F0F0F0',
-            // Al pulsar PASAR, emitir selectedOption -1 para que main.js lo envíe al servidor
-            onPassSelected: () => {
-                PhaserEventBus.emit('ui:answerSelected', {
-                    questionIndex: this._currentQuestionIndex,
-                    selectedOption: -1
-                });
-            }
+            backgroundColor: '#F0F0F0'
         };
-        this.rosco = new Rosco(this, roscoConfig);
+        this.rosco = new Rosco(this, { ...roscoConfig, onPassPressed: () => this._submitPass() });
 
         this.question = new Question(
             this,
-            { text: '...', index: 1 },
-            { text: '...', index: 2 },
-            { text: '...', index: 3 },
-            { text: '...', index: 4 },
-            'Esperando la primera pregunta...',
+            { text: 'Respuesta A', index: 0 },
+            { text: 'Respuesta B', index: 1 },
+            { text: 'Respuesta C', index: 2 },
+            { text: 'Respuesta D', index: 3 },
+            'Escribe aquí el enunciado de la pregunta?',
             {
                 centerX: layoutCenter.x,
                 centerY: layoutCenter.y,
                 roscoRadius: roscoConfig.roscoRadius,
                 roscoButtonRadius: roscoConfig.buttonRadius,
                 questionBottomOffset: 45,
-                // Al pulsar una opción de respuesta, emitir el evento hacia main.js
-                onAnswerSelected: (questionIndex, selectedOption) => {
-                    PhaserEventBus.emit('ui:answerSelected', { questionIndex, selectedOption });
-                }
+                onAnswerSelected: (optionIndex) => this._submitAnswer(optionIndex)
             }
         );
 
         const counterHeight = 110;
         const counterTopY   = this.question.questionBox.y + (this.question.questionBox.height / 2) + 24;
 
-        const leftAnswerEdgeX  = this.question.positionMap[1].x - this.question.answerRadius;
-        const rightAnswerEdgeX = this.question.positionMap[2].x + this.question.answerRadius;
+        const leftAnswerEdgeX  = this.question.positionMap[0].x - this.question.answerRadius;
+        const rightAnswerEdgeX = this.question.positionMap[1].x + this.question.answerRadius;
+        const panelWidth = 310;
+
+        // Posiciones (izquierda): su arista izquierda coincide con respuestas 1 y 3.
+        const standingsRightEdgeX = leftAnswerEdgeX + panelWidth;
+        // Puntos (derecha): su arista derecha coincide con respuestas 2 y 4.
+        const scoreboardLeftEdgeX = rightAnswerEdgeX - panelWidth;
 
         this.scoreboard = new Scoreboard(this, {
-            leftEdgeX: leftAnswerEdgeX,
+            leftEdgeX: scoreboardLeftEdgeX,
             topY: 20,
-            width: 310,
+            width: panelWidth,
             height: 130
         });
 
         this.standings = new Standings(this, {
-            rightEdgeX: rightAnswerEdgeX,
+            rightEdgeX: standingsRightEdgeX,
             topY: 20,
-            width: 310,
+            width: panelWidth,
             height: 130
         });
 
@@ -165,11 +219,49 @@ export class MainScene extends Phaser.Scene {
             correctValue: 0,
             wrongValue: 0
         });
+    }
 
-        // Si ya había una pregunta activa antes del resize, restaurar su estado visual
-        if (this._activeLetter) {
-            this.rosco.setLetterState(this._activeLetter, 'active');
+    _submitPass() {
+        const questionIndex = Number(this.currentQuestionIndex);
+        if (!Number.isFinite(questionIndex) || questionIndex < 0) {
+            console.warn('[GAME] Ignorando pasar: no hay pregunta activa');
+            return;
         }
+
+        SocketClient.send('AnswerSubmitted', {
+            questionIndex,
+            selectedOption: -1,
+            submittedAt: Math.floor(Date.now() / 1000),
+        });
+    }
+
+    _submitAnswer(optionIndex) {
+        const selectedOption = Number(optionIndex);
+        if (!Number.isFinite(selectedOption)) {
+            return;
+        }
+
+        if (selectedOption < 0 || selectedOption > 3) {
+            console.warn('[GAME] Ignorando respuesta: opción fuera de rango', selectedOption);
+            return;
+        }
+
+        const questionIndex = Number(this.currentQuestionIndex);
+        if (!Number.isFinite(questionIndex) || questionIndex < 0) {
+            console.warn('[GAME] Ignorando respuesta: no hay pregunta activa');
+            return;
+        }
+
+        if (this.lastSubmittedQuestionIndex === questionIndex) {
+            return;
+        }
+
+        this.lastSubmittedQuestionIndex = questionIndex;
+        SocketClient.send('AnswerSubmitted', {
+            questionIndex,
+            selectedOption,
+            submittedAt: Math.floor(Date.now() / 1000),
+        });
     }
 
     _destroyLayout() {
@@ -185,13 +277,10 @@ export class MainScene extends Phaser.Scene {
     }
 
     shutdown() {
+        PhaserEventBus.off('net:questionChanged', this._onNetQuestionChanged);
+        PhaserEventBus.off('net:answerValidated', this._onNetAnswerValidated);
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
-        // Quitar el listener de preguntas al salir de la escena para no dejar fugas
-        if (this._onQuestionChanged) {
-            PhaserEventBus.off('net:questionChanged', this._onQuestionChanged);
-            this._onQuestionChanged = null;
-        }
         this._destroyLayout();
     }
 

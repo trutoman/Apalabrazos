@@ -15,8 +15,7 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
             shadowAlpha = 1,
             useHandCursor = true,
             shadowDepth = 4,
-            // si es false, el botón es solo visual y no reacciona al mouse
-            interactive = true
+            reactive = true
         } = options;
 
         this.buttonName = buttonName;
@@ -25,6 +24,14 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
         this.baseOffset = 0;
         this.hoverOffset = -shadowDepth;
         this.shadowOffset = shadowDepth;
+        this.reactive = Boolean(reactive);
+        this._lockedPressed = false;
+        this._shapeType = type;
+        this._circleColor = circleColor;
+        this._strokeColor = strokeColor;
+        this._strokeWidth = strokeWidth;
+        this._textColor = textColor;
+        this._irregularPoints = null;
         this._cx = 0;
         this._cy = 0;
 
@@ -41,6 +48,7 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
                 { x:  w - Math.abs(r()), y:  h + Math.abs(r()) },   // bottom-right
                 { x: -w - Math.abs(r()), y:  h + r() },              // bottom-left
             ];
+            this._irregularPoints = pts;
 
             this.shadow = scene.add.graphics();
             this.shadow.fillStyle(shadowColor, shadowAlpha);
@@ -54,23 +62,21 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
             this.circle.strokePoints(pts, true, true);
 
             const polygon = new Phaser.Geom.Polygon(pts.flatMap(p => [p.x, p.y]));
-            if (interactive) {
-                this.circle.setInteractive(polygon, Phaser.Geom.Polygon.Contains);
-                if (useHandCursor) this.circle.input.cursor = 'pointer';
-            }
+            this.circle.setInteractive(polygon, Phaser.Geom.Polygon.Contains);
+            if (useHandCursor) this.circle.input.cursor = 'pointer';
 
         } else if (type === 'square') {
             this.shadow = scene.add.rectangle(this.shadowOffset, this.shadowOffset, displayWidth, displayHeight, shadowColor, shadowAlpha);
             this.circle = scene.add.rectangle(0, 0, displayWidth, displayHeight, circleColor);
             this.circle.setStrokeStyle(strokeWidth, strokeColor);
-            if (interactive) this.circle.setInteractive({ useHandCursor });
+            this.circle.setInteractive({ useHandCursor });
 
         } else {
             // default: circle
             this.shadow = scene.add.circle(this.shadowOffset, this.shadowOffset, radius, shadowColor, shadowAlpha);
             this.circle = scene.add.circle(0, 0, radius, circleColor);
             this.circle.setStrokeStyle(strokeWidth, strokeColor);
-            if (interactive) this.circle.setInteractive({ useHandCursor });
+            this.circle.setInteractive({ useHandCursor });
         }
 
         this.text = scene.add.text(0, 0, label, {
@@ -83,12 +89,9 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
         this.setSize(displayWidth, displayHeight);
         this.setName(buttonName);
 
-        // solo registrar eventos de puntero si el botón es interactivo
-        if (interactive) {
-            this.circle.on('pointerover', this.handlePointerOver, this);
-            this.circle.on('pointerout', this.handlePointerOut, this);
-            this.circle.on('pointerdown', this.handlePointerDown, this);
-        }
+        this.circle.on('pointerover', this.handlePointerOver, this);
+        this.circle.on('pointerout', this.handlePointerOut, this);
+        this.circle.on('pointerdown', this.handlePointerDown, this);
 
         scene.add.existing(this);
     }
@@ -107,15 +110,19 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
     }
 
     handlePointerOver() {
+        if (!this.reactive || this._lockedPressed) return;
         this._moveContent(this.hoverOffset, this.hoverOffset);
     }
 
     handlePointerOut() {
+        if (!this.reactive || this._lockedPressed) return;
         this._moveContent(this.baseOffset, this.baseOffset);
     }
 
     handlePointerDown() {
-        this._moveContent(this.shadowOffset, this.shadowOffset);
+        if (this.reactive) {
+            this._moveContent(this.shadowOffset, this.shadowOffset);
+        }
         console.log(`pointerdown on button: ${this.buttonName}`);
 
         if (typeof this.onPointerDown === 'function') {
@@ -126,6 +133,54 @@ export class InteractiveButton extends Phaser.GameObjects.Container {
                 buttonName: this.buttonName,
                 button: this
             });
+        }
+    }
+
+    setVisualStyle({ circleColor, strokeColor, textColor } = {}) {
+        if (typeof circleColor === 'number') {
+            this._circleColor = circleColor;
+        }
+        if (typeof strokeColor === 'number') {
+            this._strokeColor = strokeColor;
+        }
+        if (typeof textColor === 'string') {
+            this._textColor = textColor;
+            this.text.setColor(textColor);
+        }
+
+        if (this._shapeType === 'irregular') {
+            if (!this._irregularPoints) {
+                return;
+            }
+            this.circle.clear();
+            this.circle.fillStyle(this._circleColor, 1);
+            this.circle.fillPoints(this._irregularPoints, true, true);
+            this.circle.lineStyle(this._strokeWidth, this._strokeColor, 1);
+            this.circle.strokePoints(this._irregularPoints, true, true);
+            return;
+        }
+
+        if (this.circle?.setFillStyle) {
+            this.circle.setFillStyle(this._circleColor);
+        }
+        if (this.circle?.setStrokeStyle) {
+            this.circle.setStrokeStyle(this._strokeWidth, this._strokeColor);
+        }
+    }
+
+    setPressedState(pressed) {
+        this._lockedPressed = Boolean(pressed);
+        if (this._lockedPressed) {
+            this._moveContent(this.shadowOffset, this.shadowOffset);
+            if (this.shadow) {
+                this.shadow.setVisible(false);
+            }
+            return;
+        }
+
+        this._moveContent(this.baseOffset, this.baseOffset);
+        if (this.shadow) {
+            this.shadow.setVisible(true);
         }
     }
 }

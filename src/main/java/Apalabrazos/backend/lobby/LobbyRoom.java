@@ -1,7 +1,8 @@
 package Apalabrazos.backend.lobby;
 
 import Apalabrazos.backend.model.Player;
-import Apalabrazos.backend.service.MatchesManager;
+import Apalabrazos.backend.service.MatchManager;
+import Apalabrazos.backend.service.ConnectionRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
@@ -61,11 +62,12 @@ public class LobbyRoom {
      *
      * @param usernameOriginator The username of the player who sent the message.
      * @param text               The message text.
-     * @param sessionManager     The GameSessionManager used to resolve sessions →
-     *                           Players.
+     * @param matchManager     The MatchManager (not used, kept for compatibility)
      */
-    public void broadcastChat(String usernameOriginator, String text, MatchesManager sessionManager) {
+    public void broadcastChat(String usernameOriginator, String text, MatchManager matchManager) {
         try {
+            ConnectionRegistry connectionRegistry = ConnectionRegistry.getInstance();
+            
             // Build: { "type": "chat_message", "payload": { "text": "...",
             // "username_originator": "..." } }
             ObjectNode payload = mapper.createObjectNode();
@@ -81,7 +83,7 @@ public class LobbyRoom {
                     sessions.size());
 
             for (UUID sessionId : sessions) {
-                Player player = sessionManager.getPlayerBySessionId(sessionId);
+                Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                 if (player != null && player.isConnected()) {
                     player.sendMessage(json);
                 } else {
@@ -97,32 +99,34 @@ public class LobbyRoom {
      * Broadcasts a newly created match to all players currently in the lobby.
      *
      * @param matchSummary   Serialized summary of the created match.
-     * @param sessionManager The MatchesManager used to resolve sessions -> Players.
+     * @param sessionManager The MatchManager used to resolve sessions -> Players.
      */
-    public void broadcastMatchCreated(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+    public void broadcastMatchCreated(Map<String, Object> matchSummary, MatchManager sessionManager) {
         broadcastMatchEvent("LobbyMatchCreated", matchSummary, sessionManager);
     }
 
     /**
      * Broadcasts an updated match summary to all players currently in the lobby.
      */
-    public void broadcastMatchUpdated(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+    public void broadcastMatchUpdated(Map<String, Object> matchSummary, MatchManager sessionManager) {
         broadcastMatchEvent("LobbyMatchUpdated", matchSummary, sessionManager);
     }
 
     /**
      * Broadcasts that a match was removed from the lobby.
      */
-    public void broadcastMatchRemoved(Map<String, Object> matchSummary, MatchesManager sessionManager) {
+    public void broadcastMatchRemoved(Map<String, Object> matchSummary, MatchManager sessionManager) {
         broadcastMatchEvent("LobbyMatchRemoved", matchSummary, sessionManager);
     }
 
-    private void broadcastMatchEvent(String type, Map<String, Object> matchSummary, MatchesManager sessionManager) {
+    private void broadcastMatchEvent(String type, Map<String, Object> matchSummary, MatchManager sessionManager) {
         if (matchSummary == null || matchSummary.isEmpty()) {
             return;
         }
 
         try {
+            ConnectionRegistry connectionRegistry = ConnectionRegistry.getInstance();
+            
             ObjectNode message = mapper.createObjectNode();
             message.put("type", type);
             message.set("payload", mapper.valueToTree(matchSummary));
@@ -132,7 +136,7 @@ public class LobbyRoom {
                     type, matchSummary.getOrDefault("roomId", "unknown"), sessions.size());
 
             for (UUID sessionId : sessions) {
-                Player player = sessionManager.getPlayerBySessionId(sessionId);
+                Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                 if (player != null && player.isConnected()) {
                     player.sendMessage(json);
                 } else {

@@ -33,7 +33,8 @@ export class Standings {
                 shadowColor: 0x000000,
                 shadowAlpha: 1,
                 shadowDepth: 6,
-                useHandCursor: false
+                useHandCursor: false,
+                reactive: false
             }
         );
 

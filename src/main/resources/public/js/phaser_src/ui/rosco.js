@@ -1,15 +1,14 @@
 import { InteractiveButton } from './interactiveButton.js';
 
-// Color de cada estado posible de una letra en el rosco
-const LETTER_COLORS = {
-    pending:   0xFADF09,  // amarillo — todavía sin responder
-    active:    0x00b4ff,  // azul     — es la letra en juego ahora mismo
-    correct:   0x6dd44a,  // verde    — respondida correctamente
-    incorrect: 0xe05050,  // rojo     — respondida de forma incorrecta
-    passed:    0xffa94d   // naranja  — el jugador decidió pasar esta pregunta
-};
-
 export class Rosco {
+    static LETTER_COLORS = {
+        CORRECT: 0xa2ff00,
+        WRONG: 0xff4911,
+        PASSED: 0x00f0ff,
+        STROKE: 0x000000,
+        TEXT: '#000000'
+    };
+
     constructor(scene, options = {}) {
         this.scene = scene;
         this.letters = (options.letters || "ABCDEFGHIJLMNÑOPQRSTUVXYZ").split("");
@@ -18,9 +17,7 @@ export class Rosco {
         this.roscoRadius = options.roscoRadius || 220;
         this.buttonRadius = options.buttonRadius || 22;
         this.backgroundColor = options.backgroundColor || '#F0F0F0';
-
-        // Callback que se ejecuta cuando el jugador pulsa el botón PASAR
-        this._onPassSelected = options.onPassSelected || null;
+        this.onPassPressed = typeof options.onPassPressed === 'function' ? options.onPassPressed : null;
 
         this.letterButtons = new Map();
         this.buttonsByName = new Map();
@@ -39,7 +36,6 @@ export class Rosco {
             const buttonY = this.centerY + Math.sin(angle) * this.roscoRadius;
             const buttonName = `${char}_button`;
 
-            // Las letras del rosco son solo indicadores visuales, no se pueden pulsar
             const button = new InteractiveButton(
                 this.scene,
                 buttonName,
@@ -49,7 +45,9 @@ export class Rosco {
                 this.buttonRadius * 2,
                 char,
                 null,
-                { interactive: false }
+                {
+                    reactive: false
+                }
             );
 
             this.buttonsGroup.add(button);
@@ -63,7 +61,6 @@ export class Rosco {
         const maxCenterRadius = this.roscoRadius - this.buttonRadius - marginToLetters;
         const centerRadius = Math.max(60, maxCenterRadius);
 
-        // Al pulsar PASAR se notifica a la escena para enviar selectedOption -1 al servidor
         this.centerButton = new InteractiveButton(
             this.scene,
             'pass_button',
@@ -72,7 +69,7 @@ export class Rosco {
             centerRadius * 2,
             centerRadius * 2,
             'PASAR',
-            () => { if (this._onPassSelected) this._onPassSelected(); },
+            this.onPassPressed,
             {
                 circleColor: 0x00f0ff,
                 strokeColor: 0x000000,
@@ -82,13 +79,6 @@ export class Rosco {
                 shadowDepth: 8
             }
         );
-    }
-
-    // Cambia el color de una letra del rosco según su estado en la partida
-    setLetterState(letter, state) {
-        const btn = this.letterButtons.get(letter.toUpperCase());
-        if (!btn) return;
-        btn.circle.setFillStyle(LETTER_COLORS[state] ?? LETTER_COLORS.pending);
     }
 
     destroy() {
@@ -121,5 +111,43 @@ export class Rosco {
 
     getAllButtons() {
         return this.buttonsGroup ? this.buttonsGroup.getChildren() : [];
+    }
+
+    setLetterResult(letter, isCorrect) {
+        const normalizedLetter = String(letter || '').trim().toUpperCase();
+        if (!normalizedLetter) {
+            return;
+        }
+
+        const button = this.getButtonByLetter(normalizedLetter);
+        if (!button) {
+            return;
+        }
+
+        button.setVisualStyle({
+            circleColor: isCorrect ? Rosco.LETTER_COLORS.CORRECT : Rosco.LETTER_COLORS.WRONG,
+            strokeColor: Rosco.LETTER_COLORS.STROKE,
+            textColor: Rosco.LETTER_COLORS.TEXT,
+        });
+        button.setPressedState(true);
+    }
+
+    setLetterPassed(letter) {
+        const normalizedLetter = String(letter || '').trim().toUpperCase();
+        if (!normalizedLetter) {
+            return;
+        }
+
+        const button = this.getButtonByLetter(normalizedLetter);
+        if (!button) {
+            return;
+        }
+
+        button.setVisualStyle({
+            circleColor: Rosco.LETTER_COLORS.PASSED,
+            strokeColor: Rosco.LETTER_COLORS.STROKE,
+            textColor: Rosco.LETTER_COLORS.TEXT,
+        });
+        // Do NOT call setPressedState(true) — keep the shadow so it looks unpressed
     }
 }

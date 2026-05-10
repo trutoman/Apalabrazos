@@ -11,7 +11,7 @@
 // `actions` — plain object with callback functions provided by main.js
 
 import { SocketClient } from './socket-client.js';
-import { PhaserEventBus } from '../phaser_src/phaserEventBus.js';
+import { PhaserEventBus, emitSticky } from '../phaser_src/phaserEventBus.js';
 
 /**
  * Registers the central inbound message handler on SocketClient.
@@ -41,20 +41,26 @@ function _route(data, state, actions) {
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
 
-    } else if (data.type === 'QuestionChanged') {
-        // El servidor manda el resultado de la pregunta anterior y la siguiente a mostrar
-        const p = data?.payload || {};
-        PhaserEventBus.emit('net:questionChanged', {
-            questionIndex:  p.questionIndex  ?? -1,
-            status:         p.status         ?? 'init',
-            nextQuestion:   p.nextQuestion   || null,
-            totalCorrect:   p.totalCorrect   ?? 0,
-            totalIncorrect: p.totalIncorrect ?? 0,
-        });
+    } else if (data.type === 'AnswerValidated') {
+        const answerResult = data?.payload?.answerResult || null;
+        if (answerResult) {
+            emitSticky('net:answerValidated', answerResult);
+        }
 
-    } else if (data.type === 'GameFinished') {
-        // La partida terminó, notificar a Phaser para mostrar resultados finales
-        PhaserEventBus.emit('net:gameFinished', data?.payload || {});
+    } else if (data.type === 'QuestionChanged') {
+        const payload = data?.payload || {};
+        const nextQuestion = payload?.nextQuestion || null;
+        const responsesCount = Array.isArray(nextQuestion?.questionResponsesList)
+            ? nextQuestion.questionResponsesList.length
+            : 0;
+        console.log('[GAME][NET] QuestionChanged payload summary:', {
+            questionIndex: payload?.questionIndex,
+            hasNextQuestion: Boolean(nextQuestion),
+            questionText: nextQuestion?.questionText || null,
+            responsesCount,
+        });
+        emitSticky('net:questionChanged', payload);
+        console.log('[GAME] QuestionChanged received:', payload);
 
     } else if (data.type === 'LobbyMatchesSnapshot') {
         const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];

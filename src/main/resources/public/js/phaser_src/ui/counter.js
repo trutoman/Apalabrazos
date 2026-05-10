@@ -70,7 +70,8 @@ export class Counter {
                 strokeColor: 0x000000,
                 strokeWidth: 2,
                 shadowDepth,
-                useHandCursor: false
+                useHandCursor: false,
+                reactive: false
             }
         );
         this._correctCount = this.correctButton.text;
@@ -88,7 +89,8 @@ export class Counter {
                 strokeColor: 0x000000,
                 strokeWidth: 2,
                 shadowDepth,
-                useHandCursor: false
+                useHandCursor: false,
+                reactive: false
             }
         );
         this._wrongCount = this.wrongButton.text;

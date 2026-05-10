@@ -1,7 +1,7 @@
 import { InteractiveButton } from './interactiveButton.js';
 
 export class Question {
-    // answer1..4 = { text: string, index: 1|2|3|4 }
+    // answer1..4 = { text: string, index: 0|1|2|3 }
     // question   = string
     constructor(scene, answer1, answer2, answer3, answer4, question, options = {}) {
         this.scene = scene;
@@ -15,18 +15,36 @@ export class Question {
         this.questionBottomOffset = options.questionBottomOffset || 140;
         this.answerRadius = options.answerRadius || 50;
         this.answerTextMaxWidth = options.answerTextMaxWidth || 200;
-        this.labelMap = { 1: '1', 2: '2', 3: '3', 4: '4' };
+        this.onAnswerSelected = typeof options.onAnswerSelected === 'function' ? options.onAnswerSelected : null;
+        this.labelMap = { 0: '1', 1: '2', 2: '3', 3: '4' };
         this.answerButtons = new Map();
         this.answerTextLabels = [];
-
-        // Callback que se dispara cuando el jugador elige una de las 4 opciones
-        this._onAnswerSelected = options.onAnswerSelected || null;
-        // Índice de la pregunta que está en pantalla en este momento
-        this._currentQuestionIndex = -1;
 
         this.positionMap = this._buildSidePositionMap(options);
 
         this._drawAll();
+    }
+
+    setContent(questionText, responses = []) {
+        this.questionText = String(questionText || '').trim() || 'Pregunta no disponible';
+
+        const normalizedResponses = Array.isArray(responses) ? responses : [];
+        for (let i = 0; i < 4; i++) {
+            const responseText = String(normalizedResponses[i] ?? '').trim() || `Respuesta ${i + 1}`;
+            if (this.answers[i]) {
+                this.answers[i].text = responseText;
+            }
+            if (this.answerTextLabels[i]) {
+                this.answerTextLabels[i].setText(responseText);
+            }
+        }
+
+        if (this.questionBox?.text) {
+            this.questionBox.text.setText(this.questionText);
+            this.questionBox.text.setWordWrapWidth(this.questionBox.width - 40, true);
+            this.questionBox.text.setAlign('center');
+            this.questionBox.text.setOrigin(0.5);
+        }
     }
 
     _buildSidePositionMap(options = {}) {
@@ -61,22 +79,11 @@ export class Question {
         );
 
         return {
-            1: { x: leftX,  y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'right' },
-            2: { x: rightX, y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'left'  },
-            3: { x: leftX,  y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'right' },
-            4: { x: rightX, y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'left'  },
+            0: { x: leftX,  y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'right' },
+            1: { x: rightX, y: this.centerY - verticalOffset + answersVerticalOffset, textSide: 'left'  },
+            2: { x: leftX,  y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'right' },
+            3: { x: rightX, y: this.centerY + verticalOffset + answersVerticalOffset, textSide: 'left'  },
         };
-    }
-
-    // Reemplaza el enunciado y las opciones con los datos de la siguiente pregunta
-    update({ questionText, questionResponsesList, questionIndex }) {
-        this._currentQuestionIndex = questionIndex;
-        this.questionBox.text.setText(questionText);
-        // answerTextLabels[0] = texto de opción 1, [1] = opción 2, etc.
-        questionResponsesList.forEach((text, i) => {
-            const label = this.answerTextLabels[i];
-            if (label) label.setText(text);
-        });
     }
 
     _drawAll() {
@@ -89,7 +96,11 @@ export class Question {
         const label = this.labelMap[answer.index];
         const r     = this.answerRadius;
 
-        // Al pulsar una opción se envía el índice de pregunta y la opción elegida (0-3) al servidor
+        if (!pos) {
+            console.warn('[GAME][QUESTION] Índice de respuesta sin posición:', answer.index, answer);
+            return;
+        }
+
         const button = new InteractiveButton(
             this.scene,
             `answer_${answer.index}_button`,
@@ -99,9 +110,8 @@ export class Question {
             r * 2,
             label,
             () => {
-                if (this._onAnswerSelected) {
-                    // answer.index va de 1 a 4, el servidor espera 0 a 3
-                    this._onAnswerSelected(this._currentQuestionIndex, answer.index - 1);
+                if (this.onAnswerSelected) {
+                    this.onAnswerSelected(answer.index);
                 }
             },
             {
@@ -158,6 +168,7 @@ export class Question {
                 shadowAlpha: 1,
                 shadowDepth: 9,
                 useHandCursor: false,
+                reactive: false,
             }
         );
 
