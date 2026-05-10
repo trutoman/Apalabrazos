@@ -1,11 +1,10 @@
-import { InteractiveButton } from './interactiveButton.js';
-
 export class GameOverPopup {
     constructor(scene, options = {}) {
         this.scene = scene;
         this.centerX = options.centerX ?? (this.scene.scale.width / 2);
         this.centerY = options.centerY ?? (this.scene.scale.height / 2);
         this.isVisible = false;
+        this.overlay = null;
         this.container = null;
         this.gameOverText = null;
         this.winnerText = null;
@@ -24,9 +23,13 @@ export class GameOverPopup {
         if (this.container) {
             this.container.destroy();
         }
+        if (this.overlay) {
+            this.overlay.destroy();
+            this.overlay = null;
+        }
 
         // Create background (semi-transparent black rectangle)
-        const bg = this.scene.add.rectangle(
+        this.overlay = this.scene.add.rectangle(
             this.centerX,
             this.centerY,
             this.scene.scale.width,
@@ -34,7 +37,7 @@ export class GameOverPopup {
             0x000000,
             0.5
         );
-        bg.setDepth(1000);
+        this.overlay.setDepth(1000);
 
         // Create main popup container
         this.container = this.scene.add.container(this.centerX, this.centerY);
@@ -73,8 +76,6 @@ export class GameOverPopup {
         }).setOrigin(0.5);
         this.gameOverText.setStroke('#ff0000', 3); // Red outline
         this.container.add(this.gameOverText);
-
-        this.container.add(bg);
 
         // Set timer to show winner after 5 seconds
         this.showWinnerTimer = this.scene.time.delayedCall(5000, () => {
@@ -156,6 +157,21 @@ export class GameOverPopup {
                 }
             });
         }
+
+        if (this.overlay) {
+            this.scene.tweens.add({
+                targets: this.overlay,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2.In',
+                onComplete: () => {
+                    if (this.overlay) {
+                        this.overlay.destroy();
+                        this.overlay = null;
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -173,6 +189,10 @@ export class GameOverPopup {
         if (this.container) {
             this.container.destroy();
             this.container = null;
+        }
+        if (this.overlay) {
+            this.overlay.destroy();
+            this.overlay = null;
         }
     }
 }

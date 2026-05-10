@@ -24,6 +24,15 @@ export class MainScene extends Phaser.Scene {
         this._onNetGameFinished = this._handleGameFinished.bind(this);
         this.currentQuestionIndex = null;
         this.lastSubmittedQuestionIndex = null;
+
+        // Estado guardado para preservar durante resize
+        this._savedState = {
+            letterStates: new Map(), // Map<letter, 'CORRECT'|'WRONG'|'PASSED'>
+            correct: 0,
+            wrong: 0,
+            score: 0,
+            questionData: null
+        };
     }
 
     preload() {
@@ -164,11 +173,79 @@ export class MainScene extends Phaser.Scene {
     _onResize(gameSize) {
         // Debounce: wait 80 ms after the last resize event before rebuilding
         if (this._resizeTimer) clearTimeout(this._resizeTimer);
+
+        // Guardar estado antes de destruir
+        this._saveGameState();
+
         this._resizeTimer = setTimeout(() => {
             this._resizeTimer = null;
             this._destroyLayout();
             this._buildLayout(gameSize.width, gameSize.height);
+            // Restaurar estado después de reconstruir
+            this._restoreGameState();
         }, 80);
+    }
+
+    _saveGameState() {
+        // Guardar estados de las letras
+        if (this.rosco && this.rosco.letterButtons) {
+            this._savedState.letterStates.clear();
+            this.rosco.letterButtons.forEach((button, letter) => {
+                // Detectar estado por el color del botón (accediendo a _circleColor)
+                if (button && button._circleColor !== undefined) {
+                    const color = button._circleColor;
+                    if (color === 0xa2ff00) { // CORRECT
+                        this._savedState.letterStates.set(letter, 'CORRECT');
+                    } else if (color === 0xff4911) { // WRONG
+                        this._savedState.letterStates.set(letter, 'WRONG');
+                    } else if (color === 0x00f0ff) { // PASSED
+                        this._savedState.letterStates.set(letter, 'PASSED');
+                    }
+                }
+            });
+        }
+
+        // Guardar counter
+        if (this.counter) {
+            this._savedState.correct = this.counter.correctValue || 0;
+            this._savedState.wrong = this.counter.wrongValue || 0;
+        }
+
+        // Guardar score (accediendo a través del texto)
+        if (this.scoreboard && this.scoreboard.scoreValueText) {
+            const scoreText = this.scoreboard.scoreValueText.text;
+            this._savedState.score = Number(scoreText) || 0;
+        }
+    }
+
+    _restoreGameState() {
+        // Restaurar estados de las letras
+        if (this.rosco) {
+            this._savedState.letterStates.forEach((state, letter) => {
+                if (state === 'CORRECT') {
+                    this.rosco.setLetterResult(letter, true);
+                } else if (state === 'WRONG') {
+                    this.rosco.setLetterResult(letter, false);
+                } else if (state === 'PASSED') {
+                    this.rosco.setLetterPassed(letter);
+                }
+            });
+        }
+
+        // Restaurar counter
+        if (this.counter) {
+            if (this._savedState.correct > 0) {
+                this.counter.setCorrect(this._savedState.correct);
+            }
+            if (this._savedState.wrong > 0) {
+                this.counter.setWrong(this._savedState.wrong);
+            }
+        }
+
+        // Restaurar score
+        if (this.scoreboard && this._savedState.score > 0) {
+            this.scoreboard.setScore(this._savedState.score);
+        }
     }
 
     _buildLayout(w, h) {
