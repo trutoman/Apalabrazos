@@ -104,6 +104,8 @@ export class MainScene extends Phaser.Scene {
                 this.rosco.setLetterResult(letter, true);
             } else if (status === 'RESPONDED_FAIL') {
                 this.rosco.setLetterResult(letter, false);
+            } else if (status === 'PASSED') {
+                this.rosco.setLetterPassed(letter);
             }
         }
 
@@ -163,7 +165,7 @@ export class MainScene extends Phaser.Scene {
             buttonRadius: 20,
             backgroundColor: '#F0F0F0'
         };
-        this.rosco = new Rosco(this, roscoConfig);
+        this.rosco = new Rosco(this, { ...roscoConfig, onPassPressed: () => this._submitPass() });
 
         this.question = new Question(
             this,
@@ -216,6 +218,20 @@ export class MainScene extends Phaser.Scene {
             timeValue: '180',
             correctValue: 0,
             wrongValue: 0
+        });
+    }
+
+    _submitPass() {
+        const questionIndex = Number(this.currentQuestionIndex);
+        if (!Number.isFinite(questionIndex) || questionIndex < 0) {
+            console.warn('[GAME] Ignorando pasar: no hay pregunta activa');
+            return;
+        }
+
+        SocketClient.send('AnswerSubmitted', {
+            questionIndex,
+            selectedOption: -1,
+            submittedAt: Math.floor(Date.now() / 1000),
         });
     }
 

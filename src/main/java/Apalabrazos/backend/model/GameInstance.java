@@ -100,7 +100,7 @@ public class GameInstance {
      * @param currentQuestionIndex The index of the question to set as current
      */
     public void setNextCurrentQuestionIndex(int currentQuestionIndex) {
-        this.currentQuestionIndex = currentQuestionIndex + 1;
+        this.currentQuestionIndex = Math.max(0, currentQuestionIndex);
     }
 
     /**

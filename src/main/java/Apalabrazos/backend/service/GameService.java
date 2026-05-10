@@ -172,11 +172,12 @@ public class GameService implements EventListener {
             int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
 
             // Cargar y limitar la lista de preguntas
-            QuestionList questionList = loader.loadQuestions(numberOfQuestions);
+            QuestionList baseQuestionList = loader.loadQuestions(numberOfQuestions);
 
             // Asignar a cada instancia de jugador
             for (GameInstance instance : GlobalGameInstance.getAllPlayerInstances()) {
-                instance.setQuestionList(questionList);
+                // Cada jugador debe tener su propia copia para que su progreso sea independiente.
+                instance.setQuestionList(cloneQuestionList(baseQuestionList));
                 instance.start();
             }
         } catch (IOException e) {
@@ -495,8 +496,8 @@ public class GameService implements EventListener {
         if (questionList != null) {
             for (int i = 0; i < questionList.getCurrentLength(); i++) {
                 Question q = questionList.getQuestionAt(i);
-                if (q != null && "passed".equals(q.getUserResponseRecorded())) {
-                    passedQuestions++;
+                if (q != null) {
+                    passedQuestions += q.getPassedCount();
                 }
             }
         }
@@ -556,8 +557,14 @@ public class GameService implements EventListener {
             newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
         }
 
-        // Registrar el resultado de la respuesta en la Question dentro de la QuestionList
-        question.setUserResponseRecorded(newStatus.getValue());
+        // Registrar estado: PASSED conserva la pregunta como no respondida (INIT) para el recorrido circular.
+        if (newStatus == QuestionStatus.PASSED) {
+            question.setQuestionStatus(QuestionStatus.INIT);
+            question.setUserResponseRecorded(QuestionStatus.INIT.getValue());
+        } else {
+            question.setQuestionStatus(newStatus);
+            question.setUserResponseRecorded(newStatus.getValue());
+        }
         int questionScore = calculateAnswerScore(question, newStatus);
         playerInstance.addToTotalScore(questionScore);
         int totalScore = playerInstance.getTotalScore();
@@ -586,20 +593,76 @@ public class GameService implements EventListener {
             totalCorrect,
             totalIncorrect));
 
-        // Calcular la siguiente pregunta (si existe)
-        Question nextQuestion = null;
-        int nextQuestionIndex = questionIndex + 1;
-        if (nextQuestionIndex < questionList.getCurrentLength()) {
-            nextQuestion = questionList.getQuestionAt(nextQuestionIndex);
-        }
-
-        // Si existe siguiente pregunta, avanzar el índice del jugador.
-        // Si no existe, mantener el índice actual (última pregunta respondida).
-        int publishQuestionIndex = nextQuestion != null ? nextQuestionIndex : questionIndex;
+        // Siguiente pregunta circular: buscar siempre la siguiente NO respondida.
+        int nextQuestionIndex = findNextUnansweredIndexCircular(questionList, questionIndex);
+        Question nextQuestion = nextQuestionIndex >= 0 ? questionList.getQuestionAt(nextQuestionIndex) : null;
+        int publishQuestionIndex = nextQuestionIndex >= 0 ? nextQuestionIndex : questionIndex;
         playerInstance.setNextCurrentQuestionIndex(publishQuestionIndex);
 
         QuestionStatus nextQuestionStatus = nextQuestion != null ? QuestionStatus.INIT : null;
         publishQuestionForPlayer(playerId, publishQuestionIndex, nextQuestionStatus, nextQuestion);
+    }
+
+    private QuestionList cloneQuestionList(QuestionList source) {
+        QuestionList clone = new QuestionList();
+        if (source == null) {
+            return clone;
+        }
+
+        for (int i = 0; i < source.getCurrentLength(); i++) {
+            Question q = source.getQuestionAt(i);
+            if (q == null) {
+                continue;
+            }
+            Question copy = new Question(
+                q.getQuestionText(),
+                q.getQuestionResponsesList(),
+                q.getCorrectQuestionIndex(),
+                QuestionStatus.INIT,
+                q.getQuestionLevel(),
+                q.getQuestionLetter(),
+                QuestionStatus.INIT.getValue());
+            clone.addQuestion(copy);
+        }
+        return clone;
+    }
+
+    /**
+     * Busca la siguiente pregunta no respondida en una lista circular.
+     * Una pregunta se considera respondida si su estado es RESPONDED_OK o RESPONDED_FAIL.
+     * PASSED se almacena como INIT, por lo tanto sigue siendo candidata.
+     *
+     * @return índice de la siguiente no respondida, o -1 si no quedan.
+     */
+    private int findNextUnansweredIndexCircular(QuestionList questionList, int currentIndex) {
+        if (questionList == null) {
+            return -1;
+        }
+
+        int size = questionList.getCurrentLength();
+        if (size <= 0) {
+            return -1;
+        }
+
+        int normalizedCurrent = currentIndex;
+        if (normalizedCurrent < 0 || normalizedCurrent >= size) {
+            normalizedCurrent = 0;
+        }
+
+        for (int step = 1; step <= size; step++) {
+            int candidateIndex = (normalizedCurrent + step) % size;
+            Question candidate = questionList.getQuestionAt(candidateIndex);
+            if (candidate == null) {
+                continue;
+            }
+            String response = candidate.getUserResponseRecorded();
+            boolean answered = "responsed_ok".equals(response) || "responsed_fail".equals(response);
+            if (!answered) {
+                return candidateIndex;
+            }
+        }
+
+        return -1;
     }
 
     /**

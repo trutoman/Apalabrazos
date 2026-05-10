@@ -4,6 +4,7 @@ export class Rosco {
     static LETTER_COLORS = {
         CORRECT: 0xa2ff00,
         WRONG: 0xff4911,
+        PASSED: 0x00f0ff,
         STROKE: 0x000000,
         TEXT: '#000000'
     };
@@ -16,6 +17,7 @@ export class Rosco {
         this.roscoRadius = options.roscoRadius || 220;
         this.buttonRadius = options.buttonRadius || 22;
         this.backgroundColor = options.backgroundColor || '#F0F0F0';
+        this.onPassPressed = typeof options.onPassPressed === 'function' ? options.onPassPressed : null;
 
         this.letterButtons = new Map();
         this.buttonsByName = new Map();
@@ -67,7 +69,7 @@ export class Rosco {
             centerRadius * 2,
             centerRadius * 2,
             'PASAR',
-            null,
+            this.onPassPressed,
             {
                 circleColor: 0x00f0ff,
                 strokeColor: 0x000000,
@@ -128,5 +130,24 @@ export class Rosco {
             textColor: Rosco.LETTER_COLORS.TEXT,
         });
         button.setPressedState(true);
+    }
+
+    setLetterPassed(letter) {
+        const normalizedLetter = String(letter || '').trim().toUpperCase();
+        if (!normalizedLetter) {
+            return;
+        }
+
+        const button = this.getButtonByLetter(normalizedLetter);
+        if (!button) {
+            return;
+        }
+
+        button.setVisualStyle({
+            circleColor: Rosco.LETTER_COLORS.PASSED,
+            strokeColor: Rosco.LETTER_COLORS.STROKE,
+            textColor: Rosco.LETTER_COLORS.TEXT,
+        });
+        // Do NOT call setPressedState(true) — keep the shadow so it looks unpressed
     }
 }
