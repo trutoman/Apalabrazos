@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 public class GameService implements EventListener {
 
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
+    private static final int BASE_QUESTION_SCORE = 100;
+    private static final int SCORE_PENALTY_PER_PASS = 10;
 
     private final AsyncEventBus eventBus;
     private final AsyncEventBus externalBus;
@@ -508,7 +510,7 @@ public class GameService implements EventListener {
         record.setIncorrectAnswers(incorrectAnswers);
         record.setPassedQuestions(passedQuestions);
         record.setTotalTime(totalTime);
-        record.setScore((int) Math.round(record.getScorePercentage()));
+        record.setScore(instance.getTotalScore());
 
         return record;
     }
@@ -544,6 +546,7 @@ public class GameService implements EventListener {
 
         if (selectedOption == -1) {
             newStatus = QuestionStatus.PASSED;
+            question.incrementPassedCount();
             log.info("Jugador {} pasó la pregunta {}", playerId, questionIndex);
         } else {
             boolean isCorrect = question.isCorrectIndex(selectedOption);
@@ -555,28 +558,33 @@ public class GameService implements EventListener {
 
         // Registrar el resultado de la respuesta en la Question dentro de la QuestionList
         question.setUserResponseRecorded(newStatus.getValue());
+        int questionScore = calculateAnswerScore(question, newStatus);
+        playerInstance.addToTotalScore(questionScore);
+        int totalScore = playerInstance.getTotalScore();
 
-    int[] totals = playerInstance.getCorrectIncorrectTotals();
-    int totalCorrect = totals[0];
-    int totalIncorrect = totals[1];
+        int[] totals = playerInstance.getCorrectIncorrectTotals();
+        int totalCorrect = totals[0];
+        int totalIncorrect = totals[1];
 
-    String selectedAnswer = null;
-    if (selectedOption >= 0 && selectedOption < question.getQuestionResponsesList().size()) {
-        selectedAnswer = question.getQuestionResponsesList().get(selectedOption);
-    }
+        String selectedAnswer = null;
+        if (selectedOption >= 0 && selectedOption < question.getQuestionResponsesList().size()) {
+            selectedAnswer = question.getQuestionResponsesList().get(selectedOption);
+        }
 
-    String questionLetter = question.getQuestionLetter();
-    String correctAnswer = question.getCorrectResponse();
+        String questionLetter = question.getQuestionLetter();
+        String correctAnswer = question.getCorrectResponse();
 
-    publishExternalAndWait(new AnswerValidatedEvent(
-        playerId,
-        questionIndex,
-        questionLetter,
-        selectedAnswer,
-        newStatus,
-        correctAnswer,
-        totalCorrect,
-        totalIncorrect));
+        publishExternalAndWait(new AnswerValidatedEvent(
+            playerId,
+            questionIndex,
+            questionLetter,
+            selectedAnswer,
+            newStatus,
+            correctAnswer,
+            questionScore,
+            totalScore,
+            totalCorrect,
+            totalIncorrect));
 
         // Calcular la siguiente pregunta (si existe)
         Question nextQuestion = null;
@@ -592,6 +600,20 @@ public class GameService implements EventListener {
 
         QuestionStatus nextQuestionStatus = nextQuestion != null ? QuestionStatus.INIT : null;
         publishQuestionForPlayer(playerId, publishQuestionIndex, nextQuestionStatus, nextQuestion);
+    }
+
+    /**
+     * Calcula la puntuacion de la respuesta actual para una pregunta concreta.
+     * RESPONDED_OK: 100 - (10 * passedCount), acotado a 0.
+     * RESPONDED_FAIL/PASSED: 0.
+     */
+    private int calculateAnswerScore(Question question, QuestionStatus status) {
+        if (question == null || status != QuestionStatus.RESPONDED_OK) {
+            return 0;
+        }
+
+        int score = BASE_QUESTION_SCORE - (SCORE_PENALTY_PER_PASS * question.getPassedCount());
+        return Math.max(0, score);
     }
 
 }

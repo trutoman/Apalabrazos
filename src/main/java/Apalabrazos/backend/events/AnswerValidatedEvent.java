@@ -12,12 +12,15 @@ public class AnswerValidatedEvent extends GameEvent {
     private final String selectedAnswer;
     private final QuestionStatus status;
     private final String correctAnswer;
+    private final int score;
+    private final int totalScore;
     private final int totalCorrect;
     private final int totalIncorrect;
 
     public AnswerValidatedEvent(String playerId, int questionIndex, String questionLetter,
                                 String selectedAnswer, QuestionStatus status,
-                                String correctAnswer, int totalCorrect, int totalIncorrect) {
+                                String correctAnswer, int score, int totalScore,
+                                int totalCorrect, int totalIncorrect) {
         super();
         this.playerId = playerId;
         this.questionIndex = questionIndex;
@@ -25,6 +28,8 @@ public class AnswerValidatedEvent extends GameEvent {
         this.selectedAnswer = selectedAnswer;
         this.status = status;
         this.correctAnswer = correctAnswer;
+        this.score = score;
+        this.totalScore = totalScore;
         this.totalCorrect = totalCorrect;
         this.totalIncorrect = totalIncorrect;
     }
@@ -51,6 +56,14 @@ public class AnswerValidatedEvent extends GameEvent {
 
     public String getCorrectAnswer() {
         return correctAnswer;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public int getTotalScore() {
+        return totalScore;
     }
 
     public int getTotalCorrect() {

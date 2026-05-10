@@ -46,6 +46,20 @@ export class Scoreboard {
             color: '#000000'
         }).setOrigin(0.5, 0);
         this.panel.add(this.titleText);
+
+        this.scoreValueText = scene.add.text(0, 24, '0', {
+            fontSize: '48px',
+            fontFamily: 'Archivo Black',
+            color: '#000000'
+        }).setOrigin(0.5, 0.5);
+        this.panel.add(this.scoreValueText);
+    }
+
+    setScore(totalScore) {
+        if (!this.scoreValueText) return;
+        const score = Number(totalScore);
+        const safeScore = Number.isFinite(score) && score >= 0 ? Math.round(score) : 0;
+        this.scoreValueText.setText(String(safeScore));
     }
 
     destroy() {

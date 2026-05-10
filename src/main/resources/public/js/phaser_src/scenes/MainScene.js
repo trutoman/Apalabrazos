@@ -95,6 +95,7 @@ export class MainScene extends Phaser.Scene {
 
     _handleAnswerValidated(answerResult = {}) {
         this._syncCounter(answerResult?.totalCorrect, answerResult?.totalIncorrect);
+        this._syncTotalScore(answerResult?.totalScore);
         const status = String(answerResult?.status || '').trim().toUpperCase();
         const letter = String(answerResult?.questionLetter || '').trim().toUpperCase();
 
@@ -122,6 +123,17 @@ export class MainScene extends Phaser.Scene {
         const wrong = Number(totalIncorrect);
         if (Number.isFinite(wrong) && wrong >= 0) {
             this.counter.setWrong(wrong);
+        }
+    }
+
+    _syncTotalScore(totalScore) {
+        if (!this.scoreboard) {
+            return;
+        }
+
+        const score = Number(totalScore);
+        if (Number.isFinite(score) && score >= 0) {
+            this.scoreboard.setScore(score);
         }
     }
 

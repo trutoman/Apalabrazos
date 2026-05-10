@@ -25,6 +25,8 @@ public class Question implements Serializable {
     private QuestionLevel questionLevel = QuestionLevel.MEDIUM;
     private String questionLetter = "a";
     private String userResponseRecorded = "init";
+    @JsonIgnore
+    private int passedCount = 0;
 
     /**
      * Default constructor
@@ -34,7 +36,7 @@ public class Question implements Serializable {
 
     /**
      * Constructor with all fields
-     * 
+     *
      * @param questionText The question text (max 128 characters)
      * @param responses    List of 4 possible answers
      * @param correctIndex Index of the correct answer (0-3)
@@ -62,11 +64,12 @@ public class Question implements Serializable {
         this.questionLevel = level;
         this.questionLetter = questionLetter;
         this.userResponseRecorded = (userResponseRecorded != null) ? userResponseRecorded : "init";
+        this.passedCount = 0;
     }
 
     /**
      * Constructor without status or level (defaults to INIT and EASY)
-     * 
+     *
      * @param questionText The question text
      * @param responses    List of 4 possible answers
      * @param correctIndex Index of the correct answer (0-3)
@@ -77,7 +80,7 @@ public class Question implements Serializable {
 
     /**
      * Get the question text
-     * 
+     *
      * @return The question text
      */
     @JsonProperty("questionText")
@@ -87,7 +90,7 @@ public class Question implements Serializable {
 
     /**
      * Set the question text
-     * 
+     *
      * @param questionText The question text (max 128 characters)
      */
     @JsonProperty("questionText")
@@ -103,7 +106,7 @@ public class Question implements Serializable {
 
     /**
      * Get the list of possible answers
-     * 
+     *
      * @return Unmodifiable list of answers
      */
     @JsonProperty("questionResponsesList")
@@ -113,7 +116,7 @@ public class Question implements Serializable {
 
     /**
      * Set the list of possible answers
-     * 
+     *
      * @param responses List of exactly 4 answers (max 128 characters each)
      */
     @JsonProperty("questionResponsesList")
@@ -139,7 +142,7 @@ public class Question implements Serializable {
 
     /**
      * Get the index of the correct answer
-     * 
+     *
      * @return The correct answer index (0-3)
      */
     @JsonProperty("correctQuestionIndex")
@@ -149,7 +152,7 @@ public class Question implements Serializable {
 
     /**
      * Set the index of the correct answer
-     * 
+     *
      * @param correctQuestionIndex The correct answer index (0-3)
      */
     @JsonProperty("correctQuestionIndex")
@@ -162,7 +165,7 @@ public class Question implements Serializable {
 
     /**
      * Get the question status
-     * 
+     *
      * @return The current status
      */
     @JsonProperty("questionStatus")
@@ -172,7 +175,7 @@ public class Question implements Serializable {
 
     /**
      * Set the question status
-     * 
+     *
      * @param questionStatus The new status
      */
     @JsonProperty("questionStatus")
@@ -185,7 +188,7 @@ public class Question implements Serializable {
 
     /**
      * Get the question difficulty level
-     * 
+     *
      * @return The difficulty level
      */
     @JsonProperty("questionLevel")
@@ -195,7 +198,7 @@ public class Question implements Serializable {
 
     /**
      * Set the question difficulty level
-     * 
+     *
      * @param questionLevel The new difficulty level
      */
     @JsonProperty("questionLevel")
@@ -208,7 +211,7 @@ public class Question implements Serializable {
 
     /**
      * Get the question letter
-     * 
+     *
      * @return The question letter
      */
     @JsonProperty("questionLetter")
@@ -218,7 +221,7 @@ public class Question implements Serializable {
 
     /**
      * Set the question letter
-     * 
+     *
      * @param questionLetter The letter associated with the question
      */
     @JsonProperty("questionLetter")
@@ -232,7 +235,7 @@ public class Question implements Serializable {
     /**
      * Get the user response recorded status.
      * Values: "init", "responsed_ok", "responsed_fail", "passed"
-     * 
+     *
      * @return The user response status
      */
     @JsonProperty("userResponseRecorded")
@@ -243,12 +246,37 @@ public class Question implements Serializable {
     /**
      * Set the user response recorded status.
      * Values: "init", "responsed_ok", "responsed_fail", "passed"
-     * 
+     *
      * @param userResponseRecorded The user response status
      */
     @JsonProperty("userResponseRecorded")
     public void setUserResponseRecorded(String userResponseRecorded) {
         this.userResponseRecorded = (userResponseRecorded != null) ? userResponseRecorded : "init";
+    }
+
+    /**
+     * Number of times this question has been passed by the player.
+     *
+     * @return pass count (0 or more)
+     */
+    public int getPassedCount() {
+        return passedCount;
+    }
+
+    /**
+     * Set pass count, clamped to 0 if a negative value is provided.
+     *
+     * @param passedCount pass count value
+     */
+    public void setPassedCount(int passedCount) {
+        this.passedCount = Math.max(0, passedCount);
+    }
+
+    /**
+     * Register a pass action for this question.
+     */
+    public void incrementPassedCount() {
+        this.passedCount++;
     }
 
     /**
@@ -260,7 +288,7 @@ public class Question implements Serializable {
 
     /**
      * Get the correct answer text
-     * 
+     *
      * @return The correct answer or null if not set
      */
     @JsonIgnore
@@ -284,6 +312,7 @@ public class Question implements Serializable {
             return false;
         Question question = (Question) o;
         return correctQuestionIndex == question.correctQuestionIndex &&
+            passedCount == question.passedCount &&
                 Objects.equals(questionText, question.questionText) &&
                 Objects.equals(questionResponsesList, question.questionResponsesList) &&
                 questionStatus == question.questionStatus &&
@@ -292,7 +321,8 @@ public class Question implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(questionText, questionResponsesList, correctQuestionIndex, questionStatus, questionLevel);
+        return Objects.hash(questionText, questionResponsesList, correctQuestionIndex, questionStatus, questionLevel,
+                passedCount);
     }
 
     // El metodo toString lo utilizaremos durante el desarrollo y depuracion del
@@ -305,6 +335,7 @@ public class Question implements Serializable {
                 ", correctIndex=" + correctQuestionIndex +
                 ", status=" + questionStatus +
                 ", level=" + questionLevel +
+                ", passedCount=" + passedCount +
                 '}';
     }
 }

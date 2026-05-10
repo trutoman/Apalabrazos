@@ -4,8 +4,6 @@ import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.Player;
-import Apalabrazos.backend.service.ConnectionRegistry;
-import Apalabrazos.backend.service.GameService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -355,6 +353,8 @@ public class MatchManager implements EventListener {
                 answerResult.put("selectedAnswer", answerValidated.getSelectedAnswer());
                 answerResult.put("status", answerValidated.getStatus() != null ? answerValidated.getStatus().name() : null);
                 answerResult.put("correctAnswer", answerValidated.getCorrectAnswer());
+                answerResult.put("score", answerValidated.getScore());
+                answerResult.put("totalScore", answerValidated.getTotalScore());
                 answerResult.put("totalCorrect", answerValidated.getTotalCorrect());
                 answerResult.put("totalIncorrect", answerValidated.getTotalIncorrect());
 
