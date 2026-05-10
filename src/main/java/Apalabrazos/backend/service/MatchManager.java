@@ -400,22 +400,52 @@ public class MatchManager implements EventListener {
                 GameRecord playerOneRecord = gameFinished.getPlayerOneRecord();
                 GameRecord playerTwoRecord = gameFinished.getPlayerTwoRecord();
 
-                // Determine winner (player with highest score)
+                // Determine winner by iterating all participants in the match.
+                String winnerPlayerId = null;
                 String winnerName = "Empate";
-                if (playerOneRecord != null && playerTwoRecord != null) {
-                    if (playerOneRecord.getScore() > playerTwoRecord.getScore()) {
-                        winnerName = "Jugador 1";
-                    } else if (playerTwoRecord.getScore() > playerOneRecord.getScore()) {
-                        winnerName = "Jugador 2";
+                int winnerScore = 0;
+                boolean tie = false;
+
+                Map<String, Apalabrazos.backend.model.GameInstance> instances = gi.getPlayerInstancesMap();
+                if (instances != null && !instances.isEmpty()) {
+                    int bestScore = Integer.MIN_VALUE;
+
+                    for (Map.Entry<String, Apalabrazos.backend.model.GameInstance> entry : instances.entrySet()) {
+                        String playerId = entry.getKey();
+                        Apalabrazos.backend.model.GameInstance instance = entry.getValue();
+                        if (playerId == null || instance == null) {
+                            continue;
+                        }
+
+                        int score = instance.getTotalScore();
+                        if (score > bestScore) {
+                            bestScore = score;
+                            winnerPlayerId = playerId;
+                            winnerScore = score;
+                            tie = false;
+                        } else if (score == bestScore) {
+                            tie = true;
+                        }
                     }
-                } else if (playerOneRecord != null) {
-                    winnerName = "Jugador 1";
+
+                    if (!tie && winnerPlayerId != null) {
+                        String resolvedName = connectionRegistry.getPlayerNameByPlayerId(winnerPlayerId);
+                        if (resolvedName == null || resolvedName.isBlank()) {
+                            resolvedName = extractNameFromPlayerId(winnerPlayerId);
+                        }
+                        winnerName = (resolvedName == null || resolvedName.isBlank()) ? "Ganador" : resolvedName;
+                    } else {
+                        winnerPlayerId = null;
+                        winnerName = "Empate";
+                    }
                 }
 
                 Map<String, Object> gameFinishedPayload = new LinkedHashMap<>();
                 gameFinishedPayload.put("playerOneRecord", playerOneRecord);
                 gameFinishedPayload.put("playerTwoRecord", playerTwoRecord);
                 gameFinishedPayload.put("winnerName", winnerName);
+                gameFinishedPayload.put("winnerScore", winnerScore);
+                gameFinishedPayload.put("winnerPlayerId", winnerPlayerId);
 
                 for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
                     Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);

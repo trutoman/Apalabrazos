@@ -132,14 +132,9 @@ export class MainScene extends Phaser.Scene {
             this.gameOverPopup = new GameOverPopup(this);
         }
 
-        this.gameOverPopup.showGameOver();
-
-        const winnerName = gameFinishedPayload?.winnerName || 'Ganador';
-        // Update winner name in popup after 5 seconds (when showWinner is called internally)
-        this.time.delayedCall(5500, () => {
-            if (this.gameOverPopup && this.gameOverPopup.winnerText) {
-                this.gameOverPopup.winnerText.setText(winnerName);
-            }
+        this.gameOverPopup.showGameOver({
+            winnerName: gameFinishedPayload?.winnerName,
+            winnerScore: gameFinishedPayload?.winnerScore,
         });
     }
 

@@ -10,14 +10,23 @@ export class GameOverPopup {
         this.winnerText = null;
         this.showWinnerTimer = null;
         this.hideTimer = null;
+        this.winnerName = 'Ganador';
+        this.winnerScore = 0;
     }
 
     /**
      * Show the "Game Over" popup with large text
      */
-    showGameOver() {
+    showGameOver(winnerData = {}) {
         if (this.isVisible) return;
         this.isVisible = true;
+
+        const incomingWinnerName = String(winnerData?.winnerName || '').trim();
+        this.winnerName = incomingWinnerName || 'Ganador';
+        const incomingWinnerScore = Number(winnerData?.winnerScore);
+        this.winnerScore = Number.isFinite(incomingWinnerScore) && incomingWinnerScore >= 0
+            ? Math.round(incomingWinnerScore)
+            : 0;
 
         // Destroy any existing containers
         if (this.container) {
@@ -100,8 +109,12 @@ export class GameOverPopup {
 
         // Create winner text (after GAME OVER fades)
         this.scene.time.delayedCall(600, () => {
-            this.winnerText = this.scene.add.text(0, 0, 'GANADOR', {
-                fontSize: '48px',
+            const winnerLabel = this.winnerName.toUpperCase() === 'EMPATE'
+                ? 'EMPATE'
+                : `GANADOR\n${this.winnerName}\n${this.winnerScore} PTS`;
+
+            this.winnerText = this.scene.add.text(0, 0, winnerLabel, {
+                fontSize: '46px',
                 fontFamily: 'Archivo Black',
                 color: '#000000',
                 align: 'center'
