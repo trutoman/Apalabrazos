@@ -214,5 +214,10 @@ function _route(data, state, actions) {
         const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
         console.warn('[CREATE] Validation failed:', [cause]);
         actions.showCreateGameErrors([cause]);
+
+    } else if (data.type === 'GameFinished') {
+        const payload = data?.payload || {};
+        console.log('[GAME] GameFinished received:', payload);
+        emitSticky('net:gameFinished', payload);
     }
 }

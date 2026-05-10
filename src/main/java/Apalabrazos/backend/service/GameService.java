@@ -601,6 +601,12 @@ public class GameService implements EventListener {
 
         QuestionStatus nextQuestionStatus = nextQuestion != null ? QuestionStatus.INIT : null;
         publishQuestionForPlayer(playerId, publishQuestionIndex, nextQuestionStatus, nextQuestion);
+
+        // Check if all players have answered all questions
+        if (GlobalGameInstance != null && GlobalGameInstance.areAllPlayersQuestionsDone()) {
+            log.info("All players have answered all questions. Finishing game.");
+            finishGame();
+        }
     }
 
     private QuestionList cloneQuestionList(QuestionList source) {

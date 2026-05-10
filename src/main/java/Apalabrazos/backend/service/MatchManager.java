@@ -3,6 +3,7 @@ package Apalabrazos.backend.service;
 import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.GameGlobal;
+import Apalabrazos.backend.model.GameRecord;
 import Apalabrazos.backend.model.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -390,6 +391,38 @@ public class MatchManager implements EventListener {
                     Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
                     if (p != null && p.isConnected()) {
                         p.sendMessage(msg);
+                    }
+                }
+            } else if (gameEvent instanceof GameFinishedEvent gameFinished) {
+                GameGlobal gi = service.getGameInstance();
+                if (gi == null) return;
+
+                GameRecord playerOneRecord = gameFinished.getPlayerOneRecord();
+                GameRecord playerTwoRecord = gameFinished.getPlayerTwoRecord();
+
+                // Determine winner (player with highest score)
+                String winnerName = "Empate";
+                if (playerOneRecord != null && playerTwoRecord != null) {
+                    if (playerOneRecord.getScore() > playerTwoRecord.getScore()) {
+                        winnerName = "Jugador 1";
+                    } else if (playerTwoRecord.getScore() > playerOneRecord.getScore()) {
+                        winnerName = "Jugador 2";
+                    }
+                } else if (playerOneRecord != null) {
+                    winnerName = "Jugador 1";
+                }
+
+                Map<String, Object> gameFinishedPayload = new LinkedHashMap<>();
+                gameFinishedPayload.put("playerOneRecord", playerOneRecord);
+                gameFinishedPayload.put("playerTwoRecord", playerTwoRecord);
+                gameFinishedPayload.put("winnerName", winnerName);
+
+                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+                    if (p != null && p.isConnected()) {
+                        p.sendMessage(Map.of(
+                                "type", "GameFinished",
+                                "payload", gameFinishedPayload));
                     }
                 }
             }

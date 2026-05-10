@@ -4,6 +4,7 @@ import { Counter } from '../ui/counter.js';
 import { InteractiveButton } from '../ui/interactiveButton.js';
 import { Scoreboard } from '../ui/scoreboard.js';
 import { Standings } from '../ui/standings.js';
+import { GameOverPopup } from '../ui/gameOverPopup.js';
 import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
 import { SocketClient } from '../../network/socket-client.js';
 
@@ -16,9 +17,11 @@ export class MainScene extends Phaser.Scene {
         this.counter   = null;
         this.scoreboard  = null;
         this.standings   = null;
+        this.gameOverPopup = null;
         this._resizeTimer = null;
         this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
         this._onNetAnswerValidated = this._handleAnswerValidated.bind(this);
+        this._onNetGameFinished = this._handleGameFinished.bind(this);
         this.currentQuestionIndex = null;
         this.lastSubmittedQuestionIndex = null;
     }
@@ -35,6 +38,7 @@ export class MainScene extends Phaser.Scene {
         this.scale.on('resize', this._onResize, this);
         PhaserEventBus.on('net:questionChanged', this._onNetQuestionChanged);
         PhaserEventBus.on('net:answerValidated', this._onNetAnswerValidated);
+        PhaserEventBus.on('net:gameFinished', this._onNetGameFinished);
 
         const initialQuestionPayload = getSticky('net:questionChanged');
         if (initialQuestionPayload) {
@@ -110,6 +114,24 @@ export class MainScene extends Phaser.Scene {
         }
 
         console.log('[GAME][SCENE] Resultado de respuesta recibido', answerResult);
+    }
+
+    _handleGameFinished(gameFinishedPayload = {}) {
+        console.log('[GAME][SCENE] Game finished received', gameFinishedPayload);
+
+        if (!this.gameOverPopup) {
+            this.gameOverPopup = new GameOverPopup(this);
+        }
+
+        this.gameOverPopup.showGameOver();
+
+        const winnerName = gameFinishedPayload?.winnerName || 'Ganador';
+        // Update winner name in popup after 5 seconds (when showWinner is called internally)
+        this.time.delayedCall(5500, () => {
+            if (this.gameOverPopup && this.gameOverPopup.winnerText) {
+                this.gameOverPopup.winnerText.setText(winnerName);
+            }
+        });
     }
 
     _syncCounter(totalCorrect, totalIncorrect) {
@@ -270,6 +292,7 @@ export class MainScene extends Phaser.Scene {
         if (this.question)   { this.question.destroy();   this.question   = null; }
         if (this.scoreboard) { this.scoreboard.destroy(); this.scoreboard = null; }
         if (this.standings)  { this.standings.destroy();  this.standings  = null; }
+        if (this.gameOverPopup) { this.gameOverPopup.destroy(); this.gameOverPopup = null; }
         if (this.bg)         { this.bg.destroy();         this.bg         = null; }
     }
 
@@ -279,6 +302,7 @@ export class MainScene extends Phaser.Scene {
     shutdown() {
         PhaserEventBus.off('net:questionChanged', this._onNetQuestionChanged);
         PhaserEventBus.off('net:answerValidated', this._onNetAnswerValidated);
+        PhaserEventBus.off('net:gameFinished', this._onNetGameFinished);
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
         this._destroyLayout();

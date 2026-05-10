@@ -204,4 +204,23 @@ public class GameInstance {
         return new int[]{totalCorrect, totalIncorrect};
     }
 
+    /**
+     * Check if all questions in the list have been answered (not in 'init' state)
+     * @return true if all questions are answered, false otherwise
+     */
+    public boolean areAllQuestionsAnswered() {
+        if (questionList == null || questionList.getCurrentLength() == 0) {
+            return true; // No questions = trivially answered
+        }
+
+        for (int i = 0; i < questionList.getCurrentLength(); i++) {
+            Question q = questionList.getQuestionAt(i);
+            String userResponse = q.getUserResponseRecorded();
+            if ("init".equals(userResponse)) {
+                return false; // Found an unanswered question
+            }
+        }
+        return true; // All questions answered
+    }
+
 }
