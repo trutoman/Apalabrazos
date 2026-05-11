@@ -244,6 +244,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         player.sendMessage(java.util.Map.of(
                                 "type", "StartMatchRequestInvalid",
                                 "payload", java.util.Map.of(
+                                        "roomId", roomId,
                                         "cause", "No se ha indicado una sala válida para iniciar la partida.")));
                         return;
                     }

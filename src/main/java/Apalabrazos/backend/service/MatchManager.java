@@ -363,12 +363,15 @@ public class MatchManager implements EventListener {
 
                 target.sendMessage(Map.of(
                         "type", "AnswerValidated",
-                        "payload", Map.of("answerResult", answerResult)));
+                    "payload", Map.of(
+                        "roomId", matchId,
+                        "answerResult", answerResult)));
             } else if (gameEvent instanceof QuestionChangedEvent questionChanged) {
                 GameGlobal gi = service.getGameInstance();
                 if (gi == null) return;
 
                 Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("roomId", matchId);
                 payload.put("questionIndex", questionChanged.getQuestionIndex());
                 payload.put("status", questionChanged.getStatus() != null ? questionChanged.getStatus().name() : null);
                 payload.put("nextQuestion", questionChanged.getNextQuestion());
@@ -398,6 +401,14 @@ public class MatchManager implements EventListener {
             } else if (gameEvent instanceof GameFinishedEvent gameFinished) {
                 GameGlobal gi = service.getGameInstance();
                 if (gi == null) return;
+
+                String eventMatchId = gameFinished.getMatchId();
+                if (eventMatchId != null && !eventMatchId.isBlank() && !eventMatchId.equals(matchId)) {
+                    return;
+                }
+                if (eventMatchId == null || eventMatchId.isBlank()) {
+                    eventMatchId = matchId;
+                }
 
                 GameRecord playerOneRecord = gameFinished.getPlayerOneRecord();
                 GameRecord playerTwoRecord = gameFinished.getPlayerTwoRecord();
@@ -443,7 +454,7 @@ public class MatchManager implements EventListener {
                 }
 
                 Map<String, Object> gameFinishedPayload = new LinkedHashMap<>();
-                gameFinishedPayload.put("roomId", matchId);
+                gameFinishedPayload.put("roomId", eventMatchId);
                 gameFinishedPayload.put("playerOneRecord", playerOneRecord);
                 gameFinishedPayload.put("playerTwoRecord", playerTwoRecord);
                 gameFinishedPayload.put("winnerName", winnerName);
@@ -781,7 +792,9 @@ public class MatchManager implements EventListener {
             if (requester != null) {
                 requester.sendMessage(Map.of(
                         "type", "StartMatchRequestInvalid",
-                        "payload", Map.of("cause", "No se ha encontrado el creador de la partida.")));
+                        "payload", Map.of(
+                                "roomId", roomId,
+                                "cause", "No se ha encontrado el creador de la partida.")));
             }
             return;
         }
@@ -791,7 +804,9 @@ public class MatchManager implements EventListener {
             if (requester != null) {
                 requester.sendMessage(Map.of(
                         "type", "StartMatchRequestInvalid",
-                        "payload", Map.of("cause", "Solo el creador puede iniciar la partida.")));
+                        "payload", Map.of(
+                                "roomId", roomId,
+                                "cause", "Solo el creador puede iniciar la partida.")));
             }
             return;
         }
@@ -804,7 +819,9 @@ public class MatchManager implements EventListener {
                 if (requester != null) {
                     requester.sendMessage(Map.of(
                             "type", "StartMatchRequestInvalid",
-                            "payload", Map.of("cause", "Se necesita al menos 1 jugador para iniciar la partida.")));
+                            "payload", Map.of(
+                                    "roomId", roomId,
+                                    "cause", "Se necesita al menos 1 jugador para iniciar la partida.")));
                 }
                 return;
             }
@@ -819,7 +836,9 @@ public class MatchManager implements EventListener {
             if (requester != null) {
                 requester.sendMessage(Map.of(
                         "type", "StartMatchRequestInvalid",
-                        "payload", Map.of("cause", "La partida ya no existe.")));
+                        "payload", Map.of(
+                                "roomId", roomId,
+                                "cause", "La partida ya no existe.")));
             }
         }
     }

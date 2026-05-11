@@ -41,7 +41,7 @@ function _route(data, state, actions) {
         const roomId = String(data?.payload?.roomId || '').trim();
         const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
 
-        if (roomId && activeRoomId && roomId !== activeRoomId) {
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
             return;
         }
 
@@ -49,6 +49,13 @@ function _route(data, state, actions) {
         PhaserEventBus.emit('net:timerTick', { remaining });
 
     } else if (data.type === 'AnswerValidated') {
+        const roomId = String(data?.payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const answerResult = data?.payload?.answerResult || null;
         if (answerResult) {
             emitSticky('net:answerValidated', answerResult);
@@ -56,6 +63,13 @@ function _route(data, state, actions) {
 
     } else if (data.type === 'QuestionChanged') {
         const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const nextQuestion = payload?.nextQuestion || null;
         const responsesCount = Array.isArray(nextQuestion?.questionResponsesList)
             ? nextQuestion.questionResponsesList.length
@@ -122,6 +136,11 @@ function _route(data, state, actions) {
     } else if (data.type === 'MatchStarted') {
         const payload = data?.payload || {};
         const roomId = String(payload?.roomId || '').trim();
+        const joinedRoomId = String(state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || !joinedRoomId || roomId !== joinedRoomId) {
+            return;
+        }
 
         if (roomId) {
             state.currentJoinedRoomId = roomId;
@@ -227,7 +246,7 @@ function _route(data, state, actions) {
         const roomId = String(payload?.roomId || '').trim();
         const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
 
-        if (roomId && activeRoomId && roomId !== activeRoomId) {
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
             return;
         }
 

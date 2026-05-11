@@ -137,7 +137,7 @@ public class GameService implements EventListener {
 
     private void cancelGameDueToTimeout() {
         GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
-        externalBus.publish(new GameFinishedEvent(null, null));
+        externalBus.publish(new GameFinishedEvent(null, null, matchId));
         log.info("Partida {} cancelada por timeout de GameControllerReady.", matchId);
     }
 
@@ -400,7 +400,9 @@ public class GameService implements EventListener {
     private void onGlobalEvent(GameEvent event) {
         if (event instanceof PlayerJoinedEvent) {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
-            addPlayerToGame(join.getPlayerID(), join.getPlayerName());
+            if (matchId != null && matchId.equals(join.getRoomCode())) {
+                addPlayerToGame(join.getPlayerID(), join.getPlayerName());
+            }
         } else if (event instanceof TimerTickEvent) {
             TimerTickEvent tick = (TimerTickEvent) event;
             if (matchId != null && matchId.equals(tick.getMatchId())) {
@@ -475,7 +477,7 @@ public class GameService implements EventListener {
             }
         }
 
-        publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord));
+        publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord, matchId));
         log.info("Juego finalizado");
     }
 
