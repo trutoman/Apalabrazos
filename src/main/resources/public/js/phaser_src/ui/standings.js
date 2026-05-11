@@ -46,9 +46,43 @@ export class Standings {
             color: '#000000'
         }).setOrigin(0.5, 0);
         this.panel.add(this.titleText);
+
+        this.entriesText = scene.add.text(0, -this.height / 2 + 56, '', {
+            fontSize: '16px',
+            fontFamily: 'Archivo Black',
+            color: '#000000',
+            align: 'center',
+            lineSpacing: 8
+        }).setOrigin(0.5, 0);
+        this.panel.add(this.entriesText);
+
+        this.setEntries([]);
+    }
+
+    setEntries(entries = []) {
+        const normalized = Array.isArray(entries) ? entries.slice(0, 3) : [];
+        if (normalized.length === 0) {
+            this.entriesText.setText('Sin datos');
+            return;
+        }
+
+        const lines = [];
+        normalized.forEach((entry, idx) => {
+            const name = String(entry?.playerName || entry?.playerId || `Jugador ${idx + 1}`).trim();
+            const score = Number(entry?.score);
+            const safeScore = Number.isFinite(score) ? score : 0;
+            lines.push(`${idx + 1}. ${name} - ${safeScore}`);
+        });
+
+        this.entriesText.setText(lines.join('\n'));
     }
 
     destroy() {
+        if (this.entriesText) {
+            this.entriesText.destroy();
+            this.entriesText = null;
+        }
+
         if (this.panel) {
             this.panel.destroy();
             this.panel = null;

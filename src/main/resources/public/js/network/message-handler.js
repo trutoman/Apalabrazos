@@ -38,10 +38,24 @@ export function bindSocketMessageHandlers({ state, actions }) {
 
 function _route(data, state, actions) {
     if (data.type === 'TimerTick') {
+        const roomId = String(data?.payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
 
     } else if (data.type === 'AnswerValidated') {
+        const roomId = String(data?.payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const answerResult = data?.payload?.answerResult || null;
         if (answerResult) {
             emitSticky('net:answerValidated', answerResult);
@@ -49,6 +63,13 @@ function _route(data, state, actions) {
 
     } else if (data.type === 'QuestionChanged') {
         const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const nextQuestion = payload?.nextQuestion || null;
         const responsesCount = Array.isArray(nextQuestion?.questionResponsesList)
             ? nextQuestion.questionResponsesList.length
@@ -61,6 +82,18 @@ function _route(data, state, actions) {
         });
         emitSticky('net:questionChanged', payload);
         console.log('[GAME] QuestionChanged received:', payload);
+
+    } else if (data.type === 'Standings') {
+        const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
+        const standings = Array.isArray(payload?.standings) ? payload.standings : [];
+        emitSticky('net:standings', standings);
 
     } else if (data.type === 'LobbyMatchesSnapshot') {
         const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
@@ -115,6 +148,11 @@ function _route(data, state, actions) {
     } else if (data.type === 'MatchStarted') {
         const payload = data?.payload || {};
         const roomId = String(payload?.roomId || '').trim();
+        const joinedRoomId = String(state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || !joinedRoomId || roomId !== joinedRoomId) {
+            return;
+        }
 
         if (roomId) {
             state.currentJoinedRoomId = roomId;
@@ -217,6 +255,13 @@ function _route(data, state, actions) {
 
     } else if (data.type === 'GameFinished') {
         const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         console.log('[GAME] GameFinished received:', payload);
         emitSticky('net:gameFinished', payload);
     }

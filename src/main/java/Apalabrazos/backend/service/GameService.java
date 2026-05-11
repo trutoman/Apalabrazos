@@ -7,6 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -137,7 +141,7 @@ public class GameService implements EventListener {
 
     private void cancelGameDueToTimeout() {
         GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
-        externalBus.publish(new GameFinishedEvent(null, null));
+        externalBus.publish(new GameFinishedEvent(null, null, matchId));
         log.info("Partida {} cancelada por timeout de GameControllerReady.", matchId);
     }
 
@@ -147,7 +151,7 @@ public class GameService implements EventListener {
     public void initGame() {
         // Inicializar y arrancar el TimeService
         if (this.timeService == null) {
-            this.timeService = new TimeService();
+            this.timeService = new TimeService(matchId);
         }
         this.timeService.start();
 
@@ -400,9 +404,14 @@ public class GameService implements EventListener {
     private void onGlobalEvent(GameEvent event) {
         if (event instanceof PlayerJoinedEvent) {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
-            addPlayerToGame(join.getPlayerID(), join.getPlayerName());
+            if (matchId != null && matchId.equals(join.getRoomCode())) {
+                addPlayerToGame(join.getPlayerID(), join.getPlayerName());
+            }
         } else if (event instanceof TimerTickEvent) {
-            handleTimerTick((TimerTickEvent) event);
+            TimerTickEvent tick = (TimerTickEvent) event;
+            if (matchId != null && matchId.equals(tick.getMatchId())) {
+                handleTimerTick(tick);
+            }
         } else if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
@@ -437,7 +446,8 @@ public class GameService implements EventListener {
 
             // Publicar evento actualizado con tiempo restante
             log.debug("Tiempo restante: {} segundos", remaining);
-            publishExternal(new TimerTickEvent(remaining));
+            publishExternal(new TimerTickEvent(remaining, matchId));
+            publishExternal(buildStandingsEvent());
 
             // Si el tiempo se agotó, finalizar juego
             if (GlobalGameInstance.isTimeUp()) {
@@ -445,6 +455,22 @@ public class GameService implements EventListener {
                 finishGame();
             }
         }
+    }
+
+    private StandingsEvent buildStandingsEvent() {
+        List<StandingsEvent.StandingEntry> topEntries = new ArrayList<>();
+        if (GlobalGameInstance != null) {
+            Map<String, GameInstance> instances = GlobalGameInstance.getPlayerInstancesMap();
+            if (instances != null && !instances.isEmpty()) {
+                topEntries = instances.entrySet().stream()
+                        .filter(entry -> entry.getKey() != null && entry.getValue() != null)
+                        .map(entry -> new StandingsEvent.StandingEntry(entry.getKey(), entry.getValue().getTotalScore()))
+                        .sorted(Comparator.comparingInt(StandingsEvent.StandingEntry::getScore).reversed())
+                        .limit(3)
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+            }
+        }
+        return new StandingsEvent(matchId, topEntries);
     }
 
     /**
@@ -472,7 +498,7 @@ public class GameService implements EventListener {
             }
         }
 
-        publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord));
+        publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord, matchId));
         log.info("Juego finalizado");
     }
 

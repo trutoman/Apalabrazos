@@ -21,6 +21,7 @@ export class MainScene extends Phaser.Scene {
         this._resizeTimer = null;
         this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
         this._onNetAnswerValidated = this._handleAnswerValidated.bind(this);
+        this._onNetStandings = this._handleStandings.bind(this);
         this._onNetGameFinished = this._handleGameFinished.bind(this);
         this.currentQuestionIndex = null;
         this.lastSubmittedQuestionIndex = null;
@@ -47,6 +48,7 @@ export class MainScene extends Phaser.Scene {
         this.scale.on('resize', this._onResize, this);
         PhaserEventBus.on('net:questionChanged', this._onNetQuestionChanged);
         PhaserEventBus.on('net:answerValidated', this._onNetAnswerValidated);
+        PhaserEventBus.on('net:standings', this._onNetStandings);
         PhaserEventBus.on('net:gameFinished', this._onNetGameFinished);
 
         const initialQuestionPayload = getSticky('net:questionChanged');
@@ -57,6 +59,11 @@ export class MainScene extends Phaser.Scene {
         const initialAnswerResult = getSticky('net:answerValidated');
         if (initialAnswerResult) {
             this._handleAnswerValidated(initialAnswerResult);
+        }
+
+        const initialStandings = getSticky('net:standings');
+        if (initialStandings) {
+            this._handleStandings(initialStandings);
         }
     }
 
@@ -136,6 +143,13 @@ export class MainScene extends Phaser.Scene {
             winnerName: gameFinishedPayload?.winnerName,
             winnerScore: gameFinishedPayload?.winnerScore,
         });
+    }
+
+    _handleStandings(standings = []) {
+        if (!this.standings) {
+            return;
+        }
+        this.standings.setEntries(Array.isArray(standings) ? standings : []);
     }
 
     _syncCounter(totalCorrect, totalIncorrect) {
@@ -374,6 +388,7 @@ export class MainScene extends Phaser.Scene {
     shutdown() {
         PhaserEventBus.off('net:questionChanged', this._onNetQuestionChanged);
         PhaserEventBus.off('net:answerValidated', this._onNetAnswerValidated);
+        PhaserEventBus.off('net:standings', this._onNetStandings);
         PhaserEventBus.off('net:gameFinished', this._onNetGameFinished);
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }

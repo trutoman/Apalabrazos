@@ -14,11 +14,17 @@ public class TimeService {
     private static final Logger log = LoggerFactory.getLogger(TimeService.class);
 
     private final AsyncEventBus eventBus;
+    private final String matchId;
     private Thread worker;
     private volatile boolean running = false;
 
     public TimeService() {
+        this(null);
+    }
+
+    public TimeService(String matchId) {
         this.eventBus = GlobalAsyncEventBus.getInstance();
+        this.matchId = matchId;
     }
 
     // Inicia el hilo si aún no está iniciado
@@ -38,7 +44,7 @@ public class TimeService {
                 if (!running)
                     break;
                 log.debug("TimerTickEvent emitido");
-                eventBus.publish(new TimerTickEvent(0)); // GameService gestionará el valor real
+                eventBus.publish(new TimerTickEvent(0, matchId)); // GameService gestionará el valor real
             }
         }, "TimeService_Thread");
         worker.setDaemon(true); // No bloquea salida de la app
