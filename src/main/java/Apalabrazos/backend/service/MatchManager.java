@@ -443,6 +443,7 @@ public class MatchManager implements EventListener {
                 }
 
                 Map<String, Object> gameFinishedPayload = new LinkedHashMap<>();
+                gameFinishedPayload.put("roomId", matchId);
                 gameFinishedPayload.put("playerOneRecord", playerOneRecord);
                 gameFinishedPayload.put("playerTwoRecord", playerTwoRecord);
                 gameFinishedPayload.put("winnerName", winnerName);

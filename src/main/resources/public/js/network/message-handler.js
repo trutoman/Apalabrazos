@@ -224,6 +224,13 @@ function _route(data, state, actions) {
 
     } else if (data.type === 'GameFinished') {
         const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (roomId && activeRoomId && roomId !== activeRoomId) {
+            return;
+        }
+
         console.log('[GAME] GameFinished received:', payload);
         emitSticky('net:gameFinished', payload);
     }
