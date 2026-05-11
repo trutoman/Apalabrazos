@@ -6,25 +6,50 @@ import { UIManager } from './ui/ui-manager.js';
 import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.js';
 import { GAME_OPTIONS } from './config/game-options.js';
 import { validate_game_creation } from './validation/game-validation.js';
+import { bindSocketMessageHandlers } from './network/message-handler.js';
 
 // Module-level session info — populated after a successful login
 let currentUsername = null;
+let currentToken = null;
 let isCreateGamePending = false;
 let createGamePendingTimeout = null;
 let hasClearedMockGames = false;
 let hasRegisteredSocketMessageHandler = false;
 let currentJoinedRoomId = null;
+let currentOwnedRoomId = null;
+let currentJoinedRoomPlayers = 0;
+let currentStartedRoomId = null;
+let phaserGame = null;
 const createdGameRoomIds = new Set();
 const pendingJoinRoomIds = new Set();
 const pendingLeaveRoomIds = new Set();
 
-// Assign a random accent colour to every card field-value badge
-const CARD_COLORS = ['--explode', '--third', '--green', '--orange'];
-function randomCardColors() {
-    document.querySelectorAll('.game-card-field-value, .game-card-players-list-trigger').forEach(el => {
+// Color palette used by lobby game cards.
+const CARD_COLORS = ['--explode', '--third', '--green', '--orange', '--accent'];
+
+function buildRandomCardColors(count) {
+    return Array.from({ length: count }, () => {
         const pick = CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)];
-        el.style.backgroundColor = `var(${pick})`;
+        return `var(${pick})`;
     });
+}
+
+function applyCardColors(card, cardColors = []) {
+    if (!card) return;
+
+    const badges = card.querySelectorAll('.game-card-field-value, .game-card-players-list-trigger');
+    if (!badges.length) return;
+
+    const resolvedColors = Array.isArray(cardColors) && cardColors.length
+        ? cardColors
+        : buildRandomCardColors(badges.length);
+
+    badges.forEach((el, index) => {
+        const fallback = buildRandomCardColors(1)[0];
+        el.style.backgroundColor = resolvedColors[index] || fallback;
+    });
+
+    card.dataset.cardColors = JSON.stringify(resolvedColors);
 }
 
 // Populate create-game selects from the central config
@@ -68,6 +93,116 @@ function renderLobbyUsername(username) {
     lobbyUsername.appendChild(lobbySuffix);
 }
 
+function destroyPhaserGame() {
+    if (phaserGame) {
+        phaserGame.destroy(true);
+        phaserGame = null;
+    }
+    const container = document.getElementById('phaser-game-container');
+    if (container) container.innerHTML = '';
+}
+
+function showMatchStartView(payload = {}) {
+    const roomId = String(payload?.roomId || currentJoinedRoomId || '').trim();
+
+    UIManager.switchView('view-match-start');
+
+    destroyPhaserGame();
+    import('/js/phaser_src/game-launcher.js').then((mod) => {
+        phaserGame = mod.startGame('phaser-game-container');
+    });
+
+    if (roomId && currentStartedRoomId !== roomId) {
+        currentStartedRoomId = roomId;
+        SocketClient.send('GameControllerReady', { roomId });
+    }
+}
+
+function syncStartMatchButtonState() {
+    document.querySelectorAll('.btn-start-game').forEach(button => applyStartMatchButtonState(button));
+}
+
+function applyStartMatchButtonState(button) {
+    if (!button) return;
+
+    const roomId = String(button.dataset.roomId || '').trim();
+    const ownsThisRoom = Boolean(currentOwnedRoomId) && currentOwnedRoomId === roomId;
+    const joinedThisRoom = Boolean(currentJoinedRoomId) && currentJoinedRoomId === roomId;
+    const enoughPlayers = joinedThisRoom ? currentJoinedRoomPlayers >= 1 : false;
+    const canStart = ownsThisRoom && joinedThisRoom && enoughPlayers;
+
+    button.disabled = !canStart;
+
+    if (ownsThisRoom && joinedThisRoom && !enoughPlayers) {
+        button.textContent = 'WAITING PLAYERS';
+    } else {
+        button.textContent = 'START';
+    }
+}
+
+function updateCurrentRoomState(roomId, players = null) {
+    const normalizedRoomId = String(roomId || '').trim();
+
+    if (!normalizedRoomId || currentJoinedRoomId !== normalizedRoomId) {
+        syncStartMatchButtonState();
+        return;
+    }
+
+    if (players != null && Number.isFinite(Number(players))) {
+        currentJoinedRoomPlayers = Number(players);
+    }
+
+    syncStartMatchButtonState();
+}
+
+function handleLogout() {
+    console.log('🚪 Logging out...');
+
+    // Disconnect WebSocket
+    SocketClient.disconnect();
+
+    // Clear session variables
+    currentUsername = null;
+    currentToken = null;
+    hasRegisteredSocketMessageHandler = false;
+    currentJoinedRoomId = null;
+    currentOwnedRoomId = null;
+    currentJoinedRoomPlayers = 0;
+    currentStartedRoomId = null;
+    isCreateGamePending = false;
+    createdGameRoomIds.clear();
+    pendingJoinRoomIds.clear();
+    pendingLeaveRoomIds.clear();
+
+    // Destroy Phaser game if running
+    destroyPhaserGame();
+
+    // Clear any pending timeouts
+    if (createGamePendingTimeout) {
+        clearTimeout(createGamePendingTimeout);
+        createGamePendingTimeout = null;
+    }
+
+    // Clear lobby UI
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+
+    const gamesList = document.getElementById('games-list');
+    if (gamesList) {
+        gamesList.innerHTML = '';
+    }
+
+    // Return to login screen
+    UIManager.switchView('view-login');
+    if (typeof LoginUI.focusUsernameInput === 'function') {
+        LoginUI.focusUsernameInput();
+    }
+
+    console.log('✅ Logged out successfully');
+}
+
 function setCreatePendingState(pending) {
     isCreateGamePending = pending;
     syncCreateGameControlsState();
@@ -92,6 +227,8 @@ function syncCreateGameControlsState() {
     if (joinedAnyMatch && createCard) {
         createCard.classList.add('hidden');
     }
+
+    syncStartMatchButtonState();
 }
 
 function toTitleCase(value) {
@@ -185,6 +322,18 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+function bindLogoutButton() {
+    const logoutBtn = document.getElementById('btn-logout');
+    if (!logoutBtn) return;
+    if (logoutBtn.dataset.boundLogout === '1') return;
+
+    logoutBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleLogout();
+    });
+    logoutBtn.dataset.boundLogout = '1';
+}
+
 function applyJoinButtonState(button) {
     if (!button) return;
 
@@ -205,10 +354,13 @@ function syncJoinButtonState(roomId) {
     if (!roomId) return;
     const joinButton = document.querySelector(`.btn-join-game[data-room-id="${roomId}"]`);
     applyJoinButtonState(joinButton);
+    const startButton = document.querySelector(`.btn-start-game[data-room-id="${roomId}"]`);
+    applyStartMatchButtonState(startButton);
 }
 
 function syncAllJoinButtonsState() {
     document.querySelectorAll('.btn-join-game').forEach(button => applyJoinButtonState(button));
+    syncStartMatchButtonState();
     syncCreateGameControlsState();
 }
 
@@ -227,12 +379,18 @@ function removeOnlineGameCard(roomId) {
 
     if (currentJoinedRoomId === normalizedRoomId) {
         currentJoinedRoomId = null;
+        currentJoinedRoomPlayers = 0;
+        currentStartedRoomId = null;
+    }
+
+    if (currentOwnedRoomId === normalizedRoomId) {
+        currentOwnedRoomId = null;
     }
 
     syncAllJoinButtonsState();
 }
 
-function updateOnlineGameCard(gameData) {
+function updateOnlineGameCard(gameData, cardColors = null) {
     const roomId = String(gameData?.roomId || '').trim();
     if (!roomId) return;
 
@@ -267,12 +425,16 @@ function updateOnlineGameCard(gameData) {
     const playerNames = Array.isArray(gameData?.playerNames) ? gameData.playerNames : [];
     card.dataset.playerNames = JSON.stringify(playerNames);
 
+    const colorsFromCard = card.dataset.cardColors ? JSON.parse(card.dataset.cardColors) : null;
+    const colorsFromPayload = Array.isArray(gameData?.cardColors) ? gameData.cardColors : null;
+
+    updateCurrentRoomState(roomId, currentPlayers);
     syncJoinButtonState(roomId);
     attachPlayerListClickHandler(card);
-    randomCardColors();
+    applyCardColors(card, cardColors || colorsFromPayload || colorsFromCard || []);
 }
 
-function addOnlineGameCard(gameData) {
+function addOnlineGameCard(gameData, cardColors = null) {
     const gamesList = document.getElementById('games-list');
     if (!gamesList) return;
 
@@ -283,7 +445,7 @@ function addOnlineGameCard(gameData) {
 
     const existingCard = gamesList.querySelector(`[data-room-id="${roomId}"]`);
     if (existingCard) {
-        updateOnlineGameCard(gameData);
+        updateOnlineGameCard(gameData, cardColors);
         return;
     }
 
@@ -337,7 +499,10 @@ function addOnlineGameCard(gameData) {
                 <span class="game-card-field-value"></span>
             </div>
         </div>
-        <button class="btn-join-game" data-room-id="${roomId}">Join</button>
+        <div class="game-card-actions-row">
+            <button class="btn-start-game" data-room-id="${roomId}" disabled>START</button>
+            <button class="btn-join-game" data-room-id="${roomId}">Join</button>
+        </div>
     `;
 
     const values = card.querySelectorAll('.game-card-field-value');
@@ -353,9 +518,12 @@ function addOnlineGameCard(gameData) {
 
     gamesList.prepend(card);
     createdGameRoomIds.add(roomId);
+    const colorsFromPayload = Array.isArray(gameData?.cardColors) ? gameData.cardColors : null;
+
+    updateCurrentRoomState(roomId, currentPlayers);
     syncJoinButtonState(roomId);
     attachPlayerListClickHandler(card);
-    randomCardColors();
+    applyCardColors(card, cardColors || colorsFromPayload || []);
 }
 
 function renderLobbyMatchesSnapshot(matches) {
@@ -367,6 +535,9 @@ function renderLobbyMatchesSnapshot(matches) {
     pendingJoinRoomIds.clear();
     pendingLeaveRoomIds.clear();
     currentJoinedRoomId = null;
+    currentOwnedRoomId = null;
+    currentJoinedRoomPlayers = 0;
+    currentStartedRoomId = null;
     hasClearedMockGames = true;
 
     if (!Array.isArray(matches) || matches.length === 0) {
@@ -381,113 +552,47 @@ function registerSocketMessageHandlers() {
     if (hasRegisteredSocketMessageHandler) {
         return;
     }
-
     hasRegisteredSocketMessageHandler = true;
-    SocketClient.onMessage((msg) => {
-        console.log('Message received:', msg);
-        try {
-            const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
 
-            if (data.type === 'LobbyMatchesSnapshot') {
-                const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
-                console.log(`[LOBBY] Snapshot received with ${matches.length} matches`);
-                renderLobbyMatchesSnapshot(matches);
-            } else if (data.type === 'LobbyMatchCreated') {
-                const payload = data?.payload || {};
-                console.log('[LOBBY] Real-time match broadcast received:', payload);
-                addOnlineGameCard(payload);
-            } else if (data.type === 'LobbyMatchUpdated') {
-                const payload = data?.payload || {};
-                console.log('[LOBBY] Match updated:', payload);
-                addOnlineGameCard(payload);
-            } else if (data.type === 'LobbyMatchRemoved') {
-                const roomId = String(data?.payload?.roomId || '').trim();
-                console.log('[LOBBY] Match removed:', roomId);
-                removeOnlineGameCard(roomId);
-            } else if (data.type === 'chat_message') {
-                const { text, username_originator } = data.payload || {};
-                if (text && username_originator) {
-                    const isOwn = username_originator === currentUsername;
-                    LobbyUI.addMessage(username_originator, text, isOwn);
-                }
-            } else if (data.type === 'GameCreationRequestValid') {
-                if (createGamePendingTimeout) {
-                    clearTimeout(createGamePendingTimeout);
-                    createGamePendingTimeout = null;
-                }
-                setCreatePendingState(false);
-                clearCreateGameErrors();
-                resetCreateGameForm();
-
-                if (_createCard) {
-                    _createCard.classList.add('hidden');
-                }
-
-                const payload = data?.payload || {};
-                const roomId = String(payload?.roomId || '').trim();
-                if (roomId) {
-                    currentJoinedRoomId = roomId;
-                    pendingJoinRoomIds.clear();
-                }
-                console.log('[CREATE] GameCreationRequestValid received:', payload);
-                addOnlineGameCard(payload);
-                syncAllJoinButtonsState();
-            } else if (data.type === 'JoinMatchRequestValid') {
-                const payload = data?.payload || {};
-                const roomId = String(payload?.roomId || '').trim();
-                if (roomId) {
-                    pendingJoinRoomIds.clear();
-                    currentJoinedRoomId = roomId;
-                }
-                console.log('[JOIN] JoinMatchRequestValid received:', payload);
-                addOnlineGameCard(payload);
-                syncAllJoinButtonsState();
-            } else if (data.type === 'JoinMatchRequestInvalid') {
-                const roomId = String(data?.payload?.roomId || '').trim();
-                if (roomId) {
-                    pendingJoinRoomIds.delete(roomId);
-                    syncAllJoinButtonsState();
-                }
-                const cause = data?.payload?.cause || 'No se ha podido unir a la partida.';
-                console.warn('[JOIN] Join failed:', cause);
-                showCreateGameErrors([cause]);
-            } else if (data.type === 'LeaveMatchRequestValid') {
-                const roomId = String(data?.payload?.roomId || '').trim();
-                pendingLeaveRoomIds.clear();
-                pendingJoinRoomIds.clear();
-                if (!roomId || currentJoinedRoomId === roomId) {
-                    currentJoinedRoomId = null;
-                }
-                console.log('[LEAVE] LeaveMatchRequestValid received:', data?.payload || {});
-                syncAllJoinButtonsState();
-            } else if (data.type === 'LeaveMatchRequestInvalid') {
-                pendingLeaveRoomIds.clear();
-                const cause = data?.payload?.cause || 'No se ha podido salir de la partida.';
-                console.warn('[LEAVE] Leave failed:', cause);
-                showCreateGameErrors([cause]);
-                syncAllJoinButtonsState();
-            } else if (data.type === 'GameCreationRequestInvalid') {
-                if (createGamePendingTimeout) {
-                    clearTimeout(createGamePendingTimeout);
-                    createGamePendingTimeout = null;
-                }
-                setCreatePendingState(false);
-
-                const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
-                const errors = [cause];
-                console.warn('[CREATE] Validation failed:', errors);
-                showCreateGameErrors(errors);
-            }
-        } catch (e) {
-            // Ignore parsing errors for non-JSON messages
-        }
+    bindSocketMessageHandlers({
+        state: {
+            get currentUsername()           { return currentUsername; },
+            get currentJoinedRoomId()       { return currentJoinedRoomId; },
+            set currentJoinedRoomId(v)      { currentJoinedRoomId = v; },
+            get currentOwnedRoomId()        { return currentOwnedRoomId; },
+            set currentOwnedRoomId(v)       { currentOwnedRoomId = v; },
+            get currentJoinedRoomPlayers()  { return currentJoinedRoomPlayers; },
+            set currentJoinedRoomPlayers(v) { currentJoinedRoomPlayers = v; },
+            get currentStartedRoomId()      { return currentStartedRoomId; },
+            set currentStartedRoomId(v)     { currentStartedRoomId = v; },
+            get pendingJoinRoomIds()        { return pendingJoinRoomIds; },
+            get pendingLeaveRoomIds()       { return pendingLeaveRoomIds; },
+            get createGamePendingTimeout()  { return createGamePendingTimeout; },
+            set createGamePendingTimeout(v) { createGamePendingTimeout = v; },
+            get createCard()                { return _createCard; },
+        },
+        actions: {
+            renderLobbyMatchesSnapshot,
+            addOnlineGameCard,
+            removeOnlineGameCard,
+            showMatchStartView,
+            showCreateGameErrors,
+            syncAllJoinButtonsState,
+            setCreatePendingState,
+            clearCreateGameErrors,
+            resetCreateGameForm,
+            destroyPhaserGame,
+            buildRandomCardColors,
+            switchView:      (id) => UIManager.switchView(id),
+            addLobbyMessage: (username, text, isOwn) => LobbyUI.addMessage(username, text, isOwn),
+        },
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    randomCardColors();
     populateGameSelects();
     syncCreateGameControlsState();
+    bindLogoutButton();
 
     // --- Create Game button validation ---
     const btnConfirm = document.getElementById('btn-confirm-create');
@@ -541,6 +646,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('click', (event) => {
+        const startButton = event.target.closest('.btn-start-game');
+        if (startButton) {
+            const roomId = String(startButton.dataset.roomId || '').trim();
+
+            if (!roomId || !currentOwnedRoomId || currentOwnedRoomId !== currentJoinedRoomId || currentOwnedRoomId !== roomId) {
+                showCreateGameErrors(['Solo el creador de la partida puede iniciarla.']);
+                return;
+            }
+
+            if (currentJoinedRoomPlayers < 1) {
+                showCreateGameErrors(['Necesitas al menos 1 jugador para iniciar la partida.']);
+                return;
+            }
+
+            SocketClient.send('StartMatchRequest', {
+                roomId,
+                requestedAt: Math.floor(Date.now() / 1000),
+            });
+            return;
+        }
+
         const joinButton = event.target.closest('.btn-join-game');
         if (!joinButton) {
             return;
@@ -715,6 +841,7 @@ LoginUI.init(
             // 3. Extract token from response
             const loginData = await loginResponse.json();
             const token = loginData.token;
+            currentToken = token;  // Store token for logout
 
             if (!token) {
                 LoginUI.showError("Error: No authentication token received");
@@ -730,7 +857,7 @@ LoginUI.init(
                 return;
             }
             currentUsername = username; // store for later use (e.g. game creation)
-            registerSocketMessageHandlers();
+            currentToken = token;  // store token for logout
 
             // 4. Connect to WebSocket with token using userId in the path
             const serverUrl = `${buildWsUrl(WS_ENDPOINTS.game)}/${encodeURIComponent(userId)}`;
@@ -743,6 +870,10 @@ LoginUI.init(
                 LoginUI.showError("Error al conectar con el servidor WebSocket. Verifica que el servidor esté en línea.");
                 return;
             }
+
+            // Register socket message handlers AFTER connecting (before handlers were cleared by connect())
+            hasRegisteredSocketMessageHandler = false;  // Reset for new connection
+            registerSocketMessageHandlers();
 
             // 5. WebSocket authenticated, switch to lobby
             console.log("✅ Authentication successful, entering lobby...");

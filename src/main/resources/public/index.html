@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/register.css">
     <link rel="stylesheet" href="css/lobby.css">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
 </head>
 
 <body>
@@ -167,8 +168,12 @@
                 </div>
             </div>
 
-        </div><!-- /lobby-columns -->
         </div><!-- /lobby-grid-container -->
+    </section>
+
+    <section id="view-match-start" class="game-view hidden">
+        <div id="phaser-game-container"></div>
+    </section>
         <script type="module" src="js/main.js" defer></script>
 </body>
 

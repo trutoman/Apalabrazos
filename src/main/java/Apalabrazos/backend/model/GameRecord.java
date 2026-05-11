@@ -10,6 +10,7 @@ public class GameRecord {
     private int incorrectAnswers;
     private int passedQuestions;
     private int totalTime; // in seconds
+    private int score;
 
     /**
      * Default constructor
@@ -19,6 +20,7 @@ public class GameRecord {
         this.incorrectAnswers = 0;
         this.passedQuestions = 0;
         this.totalTime = 0;
+        this.score = 0;
     }
 
     /**
@@ -29,6 +31,18 @@ public class GameRecord {
         this.incorrectAnswers = incorrectAnswers;
         this.passedQuestions = passedQuestions;
         this.totalTime = totalTime;
+        this.score = 0;
+    }
+
+    /**
+     * Constructor with all parameters including final score.
+     */
+    public GameRecord(int correctAnswers, int incorrectAnswers, int passedQuestions, int totalTime, int score) {
+        this.correctAnswers = correctAnswers;
+        this.incorrectAnswers = incorrectAnswers;
+        this.passedQuestions = passedQuestions;
+        this.totalTime = totalTime;
+        this.score = score;
     }
 
     /**
@@ -93,6 +107,24 @@ public class GameRecord {
      */
     public void setTotalTime(int totalTime) {
         this.totalTime = totalTime;
+    }
+
+    /**
+     * Get the final score.
+     *
+     * @return Final score value
+     */
+    public int getScore() {
+        return score;
+    }
+
+    /**
+     * Set the final score.
+     *
+     * @param score Final score value
+     */
+    public void setScore(int score) {
+        this.score = score;
     }
 
     /**

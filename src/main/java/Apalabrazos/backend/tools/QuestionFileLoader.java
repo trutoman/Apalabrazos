@@ -8,6 +8,7 @@ import Apalabrazos.backend.model.QuestionList;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -16,8 +17,10 @@ import java.util.List;
  */
 public class QuestionFileLoader {
 
+    private static final String CLASSPATH_PREFIX = "classpath:";
+
     // Ruta por defecto del archivo de preguntas
-    private String defaultQuestionsFile = "src/main/resources/Apalabrazos/data/questions2.json";
+    private String defaultQuestionsFile = "classpath:/Apalabrazos/data/questions2.json";
 
     /**
      * Carga las preguntas desde el archivo por defecto.
@@ -40,6 +43,17 @@ public class QuestionFileLoader {
     public QuestionList loadQuestions(String filePath) throws IOException {
         // Create JSON -> Java converter
         ObjectMapper objectMapper = new ObjectMapper();
+
+        if (filePath != null && filePath.startsWith(CLASSPATH_PREFIX)) {
+            String classpathPath = filePath.substring(CLASSPATH_PREFIX.length());
+            try (InputStream inputStream = QuestionFileLoader.class.getResourceAsStream(classpathPath)) {
+                if (inputStream == null) {
+                    throw new IOException("No se encontró recurso en classpath: " + classpathPath);
+                }
+                return objectMapper.readValue(inputStream, QuestionList.class);
+            }
+        }
+
         File file = new File(filePath);
         QuestionList questions = objectMapper.readValue(file, QuestionList.class);
         // Return loaded questions

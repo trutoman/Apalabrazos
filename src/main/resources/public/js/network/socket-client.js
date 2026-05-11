@@ -7,6 +7,9 @@ export const SocketClient = {
     connect(url, token = null) {
         return new Promise((resolve, reject) => {
             try {
+                // Clean up any stale listeners from previous connections
+                this.listeners.clear();
+
                 // If there's a token, add it as query parameter
                 const wsUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
                 console.log("🔗 WebSocket URL:", wsUrl);
@@ -93,6 +96,19 @@ export const SocketClient = {
     // Allow other modules (Lobby, Match) to subscribe to messages
     onMessage(callback) {
         this.listeners.add(callback);
+    },
+
+    // Disconnect from the server
+    disconnect() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+        }
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
+        }
+        this.listeners.clear();
+        console.log('✅ Disconnected from server');
     },
 
     _dispatch(message) {

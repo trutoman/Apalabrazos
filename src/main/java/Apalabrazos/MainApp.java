@@ -1,7 +1,7 @@
 package Apalabrazos;
 
 import Apalabrazos.backend.network.server.EmbeddedWebSocketServer;
-import Apalabrazos.backend.service.MatchesManager;
+import Apalabrazos.backend.service.MatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,8 +10,8 @@ public class MainApp {
     private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
     public static void main(String[] args) {
-        MatchesManager gameSessionManager = MatchesManager.getInstance();
-        log.info("GameSessionManager singleton initialized and ready");
+        MatchManager matchManager = MatchManager.getInstance();
+        log.info("MatchManager singleton initialized and ready");
 
         EmbeddedWebSocketServer server = new EmbeddedWebSocketServer(8080);
 

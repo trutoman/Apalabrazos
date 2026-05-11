@@ -1,0 +1,153 @@
+import { InteractiveButton } from './interactiveButton.js';
+
+export class Rosco {
+    static LETTER_COLORS = {
+        CORRECT: 0xa2ff00,
+        WRONG: 0xff4911,
+        PASSED: 0x00f0ff,
+        STROKE: 0x000000,
+        TEXT: '#000000'
+    };
+
+    constructor(scene, options = {}) {
+        this.scene = scene;
+        this.letters = (options.letters || "ABCDEFGHIJLMNÑOPQRSTUVXYZ").split("");
+        this.centerX = options.centerX ?? (this.scene.scale.width / 2);
+        this.centerY = options.centerY ?? (this.scene.scale.height / 2);
+        this.roscoRadius = options.roscoRadius || 220;
+        this.buttonRadius = options.buttonRadius || 22;
+        this.backgroundColor = options.backgroundColor || '#F0F0F0';
+        this.onPassPressed = typeof options.onPassPressed === 'function' ? options.onPassPressed : null;
+
+        this.letterButtons = new Map();
+        this.buttonsByName = new Map();
+        this.buttonsGroup = this.scene.add.group();
+        this.centerButton = null;
+
+        this.create();
+    }
+
+    create() {
+        this.createCenterButton();
+
+        this.letters.forEach((char, i) => {
+            const angle = -Math.PI / 2 + (i / this.letters.length) * Math.PI * 2;
+            const buttonX = this.centerX + Math.cos(angle) * this.roscoRadius;
+            const buttonY = this.centerY + Math.sin(angle) * this.roscoRadius;
+            const buttonName = `${char}_button`;
+
+            const button = new InteractiveButton(
+                this.scene,
+                buttonName,
+                buttonX,
+                buttonY,
+                this.buttonRadius * 2,
+                this.buttonRadius * 2,
+                char,
+                null,
+                {
+                    reactive: false
+                }
+            );
+
+            this.buttonsGroup.add(button);
+            this.letterButtons.set(char, button);
+            this.buttonsByName.set(buttonName, button);
+        });
+    }
+
+    createCenterButton() {
+        const marginToLetters = this.buttonRadius * 2;
+        const maxCenterRadius = this.roscoRadius - this.buttonRadius - marginToLetters;
+        const centerRadius = Math.max(60, maxCenterRadius);
+
+        this.centerButton = new InteractiveButton(
+            this.scene,
+            'pass_button',
+            this.centerX,
+            this.centerY,
+            centerRadius * 2,
+            centerRadius * 2,
+            'PASAR',
+            this.onPassPressed,
+            {
+                circleColor: 0x00f0ff,
+                strokeColor: 0x000000,
+                strokeWidth: 2,
+                textColor: '#000000',
+                fontSize: '38px',
+                shadowDepth: 8
+            }
+        );
+    }
+
+    destroy() {
+        this.letterButtons.forEach(btn => btn.destroy());
+        this.letterButtons.clear();
+        this.buttonsByName.clear();
+        if (this.centerButton) {
+            this.centerButton.destroy();
+            this.centerButton = null;
+        }
+        if (this.buttonsGroup) {
+            this.buttonsGroup.destroy(true);
+            this.buttonsGroup = null;
+        }
+    }
+
+    getButtonByLetter(letter) {
+        return this.letterButtons.get(letter) || null;
+    }
+
+    getButtonByName(buttonName) {
+        return this.buttonsByName.get(buttonName) || null;
+    }
+
+    getButtonsByLetters(letters) {
+        return letters
+            .map((letter) => this.getButtonByLetter(letter))
+            .filter((button) => button !== null);
+    }
+
+    getAllButtons() {
+        return this.buttonsGroup ? this.buttonsGroup.getChildren() : [];
+    }
+
+    setLetterResult(letter, isCorrect) {
+        const normalizedLetter = String(letter || '').trim().toUpperCase();
+        if (!normalizedLetter) {
+            return;
+        }
+
+        const button = this.getButtonByLetter(normalizedLetter);
+        if (!button) {
+            return;
+        }
+
+        button.setVisualStyle({
+            circleColor: isCorrect ? Rosco.LETTER_COLORS.CORRECT : Rosco.LETTER_COLORS.WRONG,
+            strokeColor: Rosco.LETTER_COLORS.STROKE,
+            textColor: Rosco.LETTER_COLORS.TEXT,
+        });
+        button.setPressedState(true);
+    }
+
+    setLetterPassed(letter) {
+        const normalizedLetter = String(letter || '').trim().toUpperCase();
+        if (!normalizedLetter) {
+            return;
+        }
+
+        const button = this.getButtonByLetter(normalizedLetter);
+        if (!button) {
+            return;
+        }
+
+        button.setVisualStyle({
+            circleColor: Rosco.LETTER_COLORS.PASSED,
+            strokeColor: Rosco.LETTER_COLORS.STROKE,
+            textColor: Rosco.LETTER_COLORS.TEXT,
+        });
+        // Do NOT call setPressedState(true) — keep the shadow so it looks unpressed
+    }
+}
