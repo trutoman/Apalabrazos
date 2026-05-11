@@ -339,6 +339,54 @@ public class MatchManager implements EventListener {
                         p.sendMessage(msg);
                     }
                 }
+            } else if (gameEvent instanceof StandingsEvent standingsEvent) {
+                GameGlobal gi = service.getGameInstance();
+                if (gi == null) return;
+
+                String eventMatchId = standingsEvent.getMatchId();
+                if (eventMatchId == null || eventMatchId.isBlank()) {
+                    eventMatchId = matchId;
+                }
+                if (!matchId.equals(eventMatchId)) {
+                    return;
+                }
+
+                List<Map<String, Object>> standings = new ArrayList<>();
+                for (StandingsEvent.StandingEntry entry : standingsEvent.getTopEntries()) {
+                    if (entry == null) {
+                        continue;
+                    }
+                    String playerId = entry.getPlayerId();
+                    if (playerId == null || playerId.isBlank()) {
+                        continue;
+                    }
+
+                    String playerName = connectionRegistry.getPlayerNameByPlayerId(playerId);
+                    if (playerName == null || playerName.isBlank()) {
+                        playerName = extractNameFromPlayerId(playerId);
+                    }
+                    if (playerName == null || playerName.isBlank()) {
+                        playerName = playerId;
+                    }
+
+                    standings.add(Map.of(
+                            "playerId", playerId,
+                            "playerName", playerName,
+                            "score", entry.getScore()));
+                }
+
+                Map<String, Object> msg = Map.of(
+                        "type", "Standings",
+                        "payload", Map.of(
+                                "roomId", eventMatchId,
+                                "standings", standings));
+
+                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+                    if (p != null && p.isConnected()) {
+                        p.sendMessage(msg);
+                    }
+                }
             } else if (gameEvent instanceof AnswerValidatedEvent answerValidated) {
                 String targetPlayerId = answerValidated.getPlayerId();
                 if (targetPlayerId == null || targetPlayerId.isBlank()) {

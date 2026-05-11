@@ -83,6 +83,18 @@ function _route(data, state, actions) {
         emitSticky('net:questionChanged', payload);
         console.log('[GAME] QuestionChanged received:', payload);
 
+    } else if (data.type === 'Standings') {
+        const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
+        const standings = Array.isArray(payload?.standings) ? payload.standings : [];
+        emitSticky('net:standings', standings);
+
     } else if (data.type === 'LobbyMatchesSnapshot') {
         const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
         console.log(`[LOBBY] Snapshot received with ${matches.length} matches`);

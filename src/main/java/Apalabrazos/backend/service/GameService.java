@@ -7,6 +7,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -443,6 +447,7 @@ public class GameService implements EventListener {
             // Publicar evento actualizado con tiempo restante
             log.debug("Tiempo restante: {} segundos", remaining);
             publishExternal(new TimerTickEvent(remaining, matchId));
+            publishExternal(buildStandingsEvent());
 
             // Si el tiempo se agotó, finalizar juego
             if (GlobalGameInstance.isTimeUp()) {
@@ -450,6 +455,22 @@ public class GameService implements EventListener {
                 finishGame();
             }
         }
+    }
+
+    private StandingsEvent buildStandingsEvent() {
+        List<StandingsEvent.StandingEntry> topEntries = new ArrayList<>();
+        if (GlobalGameInstance != null) {
+            Map<String, GameInstance> instances = GlobalGameInstance.getPlayerInstancesMap();
+            if (instances != null && !instances.isEmpty()) {
+                topEntries = instances.entrySet().stream()
+                        .filter(entry -> entry.getKey() != null && entry.getValue() != null)
+                        .map(entry -> new StandingsEvent.StandingEntry(entry.getKey(), entry.getValue().getTotalScore()))
+                        .sorted(Comparator.comparingInt(StandingsEvent.StandingEntry::getScore).reversed())
+                        .limit(3)
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+            }
+        }
+        return new StandingsEvent(matchId, topEntries);
     }
 
     /**
