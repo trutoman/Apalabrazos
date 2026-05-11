@@ -147,7 +147,7 @@ public class GameService implements EventListener {
     public void initGame() {
         // Inicializar y arrancar el TimeService
         if (this.timeService == null) {
-            this.timeService = new TimeService();
+            this.timeService = new TimeService(matchId);
         }
         this.timeService.start();
 
@@ -402,7 +402,10 @@ public class GameService implements EventListener {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
             addPlayerToGame(join.getPlayerID(), join.getPlayerName());
         } else if (event instanceof TimerTickEvent) {
-            handleTimerTick((TimerTickEvent) event);
+            TimerTickEvent tick = (TimerTickEvent) event;
+            if (matchId != null && matchId.equals(tick.getMatchId())) {
+                handleTimerTick(tick);
+            }
         } else if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
@@ -437,7 +440,7 @@ public class GameService implements EventListener {
 
             // Publicar evento actualizado con tiempo restante
             log.debug("Tiempo restante: {} segundos", remaining);
-            publishExternal(new TimerTickEvent(remaining));
+            publishExternal(new TimerTickEvent(remaining, matchId));
 
             // Si el tiempo se agotó, finalizar juego
             if (GlobalGameInstance.isTimeUp()) {

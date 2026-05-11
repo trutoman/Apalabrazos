@@ -38,6 +38,13 @@ export function bindSocketMessageHandlers({ state, actions }) {
 
 function _route(data, state, actions) {
     if (data.type === 'TimerTick') {
+        const roomId = String(data?.payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (roomId && activeRoomId && roomId !== activeRoomId) {
+            return;
+        }
+
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
 

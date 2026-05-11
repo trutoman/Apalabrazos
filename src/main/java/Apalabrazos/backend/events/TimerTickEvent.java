@@ -7,14 +7,24 @@ package Apalabrazos.backend.events;
  */
 public class TimerTickEvent extends GameEvent {
     private final int remainingSeconds;
+    private final String matchId;
 
     public TimerTickEvent(int remainingSeconds) {
+        this(remainingSeconds, null);
+    }
+
+    public TimerTickEvent(int remainingSeconds, String matchId) {
         super();
         this.remainingSeconds = remainingSeconds;
+        this.matchId = matchId;
     }
 
     public int getRemainingSeconds() {
         return remainingSeconds;
+    }
+
+    public String getMatchId() {
+        return matchId;
     }
 
     @Deprecated

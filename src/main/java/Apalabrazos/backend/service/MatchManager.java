@@ -330,7 +330,9 @@ public class MatchManager implements EventListener {
                 if (gi == null) return;
                 Map<String, Object> msg = Map.of(
                         "type", "TimerTick",
-                        "payload", Map.of("remaining", tick.getRemainingSeconds()));
+                        "payload", Map.of(
+                                "remaining", tick.getRemainingSeconds(),
+                                "roomId", matchId));
                 for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
                     Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
                     if (p != null && p.isConnected()) {
