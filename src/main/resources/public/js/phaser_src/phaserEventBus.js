@@ -30,3 +30,7 @@ export function getSticky(eventName) {
 export function clearSticky(eventName) {
 	stickyEvents.delete(eventName);
 }
+
+export function clearAllStickyEvents() {
+	stickyEvents.clear();
+}

@@ -7,6 +7,7 @@ import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.j
 import { GAME_OPTIONS } from './config/game-options.js';
 import { validate_game_creation } from './validation/game-validation.js';
 import { bindSocketMessageHandlers } from './network/message-handler.js';
+import { clearAllStickyEvents } from './phaser_src/phaserEventBus.js';
 
 // Module-level session info — populated after a successful login
 let currentUsername = null;
@@ -94,6 +95,7 @@ function renderLobbyUsername(username) {
 }
 
 function destroyPhaserGame() {
+    clearAllStickyEvents();
     if (phaserGame) {
         phaserGame.destroy(true);
         phaserGame = null;

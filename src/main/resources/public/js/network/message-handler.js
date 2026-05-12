@@ -113,13 +113,18 @@ function _route(data, state, actions) {
     } else if (data.type === 'LobbyMatchRemoved') {
         const roomId = String(data?.payload?.roomId || '').trim();
         console.log('[LOBBY] Match removed:', roomId);
+        const wasActiveRoom = Boolean(roomId) && (
+            state.currentJoinedRoomId === roomId ||
+            state.currentStartedRoomId === roomId
+        );
         actions.removeOnlineGameCard(roomId);
-        if (state.currentJoinedRoomId === roomId) {
+        if (wasActiveRoom) {
             state.currentJoinedRoomId = null;
             state.currentJoinedRoomPlayers = 0;
             state.currentStartedRoomId = null;
+            state.currentOwnedRoomId = null;
+            actions.destroyPhaserGame();
             actions.switchView('view-lobby');
-            actions.showCreateGameErrors(['La partida a la que estabas unido ya no existe.']);
             actions.syncAllJoinButtonsState();
         }
 
