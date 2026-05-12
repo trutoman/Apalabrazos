@@ -5,6 +5,8 @@ function getCssColor(variableName, fallback) {
     return value || fallback;
 }
 
+import { MatchAudio } from '../../audio/match-audio.js';
+
 export class CountdownScene extends Phaser.Scene {
     constructor() {
         super('CountdownScene');
@@ -60,6 +62,8 @@ export class CountdownScene extends Phaser.Scene {
             .setColor(this._getNumberColor(value));
         this._countdownText.setScale(0.25);
         this._countdownText.setAlpha(0);
+
+        MatchAudio.playCountdownPumSfx();
 
         this._currentTween = this.tweens.add({
             targets: this._countdownText,

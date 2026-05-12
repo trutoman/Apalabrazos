@@ -67,6 +67,37 @@ function playTone(freq, durationSeconds, offsetSeconds = 0, type = 'sine', peakG
     osc.stop(endAt + 0.01);
 }
 
+function playPitchDrop(startFreq, endFreq, durationSeconds, type = 'square', peakGain = 0.9) {
+    const ctx = ensureAudioContext();
+    const master = ensureSfxMasterGain();
+    if (!ctx || !master) {
+        return;
+    }
+
+    if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+    }
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    const endAt = now + Math.max(0.06, durationSeconds);
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(Math.max(30, startFreq), now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(30, endFreq), endAt);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+
+    osc.connect(gain);
+    gain.connect(master);
+
+    osc.start(now);
+    osc.stop(endAt + 0.01);
+}
+
 function ensureThemeAudio() {
     if (themeAudio) {
         return themeAudio;
@@ -178,5 +209,12 @@ export const MatchAudio = {
     playWrongSfx() {
         playTone(240, 0.12, 0, 'sawtooth', 0.9);
         playTone(180, 0.16, 0.1, 'square', 0.75);
+    },
+
+    playCountdownPumSfx() {
+        // Heavy retro step: low thump + short click for arcade punch.
+        playPitchDrop(210, 78, 0.22, 'square', 0.95);
+        playTone(64, 0.16, 0, 'triangle', 0.55);
+        playTone(920, 0.035, 0.006, 'square', 0.25);
     },
 };
