@@ -12,6 +12,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -50,6 +53,8 @@ public class MatchManager implements EventListener {
     // Stores the current list of player names for each active match.
     private final Map<String, List<String>> matchPlayerNames;
 
+    private final ScheduledExecutorService matchCleanupScheduler;
+
     /**
      * Private constructor to prevent direct instantiation
      */
@@ -58,6 +63,11 @@ public class MatchManager implements EventListener {
         this.connectionRegistry = ConnectionRegistry.getInstance();
         this.activeMatches = new ConcurrentHashMap<>();
         this.matchPlayerNames = new ConcurrentHashMap<>();
+        this.matchCleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread thread = new Thread(r, "match-cleanup-scheduler");
+            thread.setDaemon(true);
+            return thread;
+        });
         // Registrarse como listener de eventos
         eventBus.addListener(this);
         log.info("MatchManager singleton initialized");
@@ -517,9 +527,41 @@ public class MatchManager implements EventListener {
                                 "payload", gameFinishedPayload));
                     }
                 }
+
+                scheduleFinishedMatchCleanup(eventMatchId, service);
             }
         });
         log.info("Network bridge registrado para partida {}", matchId);
+    }
+
+    private void scheduleFinishedMatchCleanup(String matchId, GameService service) {
+        if (matchId == null || matchId.isBlank() || service == null) {
+            return;
+        }
+
+        matchCleanupScheduler.schedule(() -> cleanupFinishedMatch(matchId, service), 11, TimeUnit.SECONDS);
+        log.info("Scheduled cleanup for finished match {}", matchId);
+    }
+
+    private void cleanupFinishedMatch(String matchId, GameService service) {
+        if (matchId == null || matchId.isBlank() || service == null) {
+            return;
+        }
+
+        GameGlobal gameInstance = service.getGameInstance();
+        if (gameInstance != null) {
+            for (String playerId : new ArrayList<>(gameInstance.getAllPlayerIds())) {
+                gameInstance.removePlayer(playerId);
+            }
+            gameInstance.reset();
+        }
+
+        matchPlayerNames.remove(matchId);
+
+        if (activeMatches.remove(matchId) != null) {
+            log.info("Match {} finished and removed from backend registry", matchId);
+            LobbyRoom.getInstance().broadcastMatchRemoved(buildMatchRemovedSummary(matchId, service), this);
+        }
     }
 
     private void recalculateAllMatchesPlayersState() {
