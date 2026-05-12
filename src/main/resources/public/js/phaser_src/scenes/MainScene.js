@@ -7,6 +7,7 @@ import { Standings } from '../ui/standings.js';
 import { GameOverPopup } from '../ui/gameOverPopup.js';
 import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
 import { SocketClient } from '../../network/socket-client.js';
+import { MatchAudio } from '../../audio/match-audio.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -122,8 +123,10 @@ export class MainScene extends Phaser.Scene {
         if (this.rosco && letter) {
             if (status === 'RESPONDED_OK') {
                 this.rosco.setLetterResult(letter, true);
+                MatchAudio.playCorrectSfx();
             } else if (status === 'RESPONDED_FAIL') {
                 this.rosco.setLetterResult(letter, false);
+                MatchAudio.playWrongSfx();
             } else if (status === 'PASSED') {
                 this.rosco.setLetterPassed(letter);
             }
