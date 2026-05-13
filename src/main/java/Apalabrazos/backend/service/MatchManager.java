@@ -3,6 +3,7 @@ package Apalabrazos.backend.service;
 import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.GameGlobal;
+import Apalabrazos.backend.model.GameRecord;
 import Apalabrazos.backend.model.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -49,6 +53,8 @@ public class MatchManager implements EventListener {
     // Stores the current list of player names for each active match.
     private final Map<String, List<String>> matchPlayerNames;
 
+    private final ScheduledExecutorService matchCleanupScheduler;
+
     /**
      * Private constructor to prevent direct instantiation
      */
@@ -57,6 +63,11 @@ public class MatchManager implements EventListener {
         this.connectionRegistry = ConnectionRegistry.getInstance();
         this.activeMatches = new ConcurrentHashMap<>();
         this.matchPlayerNames = new ConcurrentHashMap<>();
+        this.matchCleanupScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread thread = new Thread(r, "match-cleanup-scheduler");
+            thread.setDaemon(true);
+            return thread;
+        });
         // Registrarse como listener de eventos
         eventBus.addListener(this);
         log.info("MatchManager singleton initialized");
@@ -329,7 +340,89 @@ public class MatchManager implements EventListener {
                 if (gi == null) return;
                 Map<String, Object> msg = Map.of(
                         "type", "TimerTick",
-                        "payload", Map.of("remaining", tick.getRemainingSeconds()));
+                        "payload", Map.of(
+                                "remaining", tick.getRemainingSeconds(),
+                                "roomId", matchId));
+                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+                    if (!service.shouldReceiveTimerTick(pid)) {
+                        continue;
+                    }
+                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+                    if (p != null && p.isConnected()) {
+                        p.sendMessage(msg);
+                    }
+                }
+            } else if (gameEvent instanceof ExtraTimeScoreEvent extraTimeScoreEvent) {
+                String targetPlayerId = extraTimeScoreEvent.getPlayerId();
+                if (targetPlayerId == null || targetPlayerId.isBlank()) {
+                    return;
+                }
+
+                String eventMatchId = extraTimeScoreEvent.getMatchId();
+                if (eventMatchId == null || eventMatchId.isBlank()) {
+                    eventMatchId = matchId;
+                }
+                if (!matchId.equals(eventMatchId)) {
+                    return;
+                }
+
+                Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
+                if (target == null || !target.isConnected()) {
+                    return;
+                }
+
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("roomId", eventMatchId);
+                payload.put("playerId", targetPlayerId);
+                payload.put("remainingSeconds", extraTimeScoreEvent.getRemainingSeconds());
+                payload.put("extraTimeScore", extraTimeScoreEvent.getExtraTimeScore());
+                payload.put("totalScore", extraTimeScoreEvent.getTotalScore());
+
+                target.sendMessage(Map.of(
+                        "type", "ExtraTimeScore",
+                        "payload", payload));
+            } else if (gameEvent instanceof StandingsEvent standingsEvent) {
+                GameGlobal gi = service.getGameInstance();
+                if (gi == null) return;
+
+                String eventMatchId = standingsEvent.getMatchId();
+                if (eventMatchId == null || eventMatchId.isBlank()) {
+                    eventMatchId = matchId;
+                }
+                if (!matchId.equals(eventMatchId)) {
+                    return;
+                }
+
+                List<Map<String, Object>> standings = new ArrayList<>();
+                for (StandingsEvent.StandingEntry entry : standingsEvent.getTopEntries()) {
+                    if (entry == null) {
+                        continue;
+                    }
+                    String playerId = entry.getPlayerId();
+                    if (playerId == null || playerId.isBlank()) {
+                        continue;
+                    }
+
+                    String playerName = connectionRegistry.getPlayerNameByPlayerId(playerId);
+                    if (playerName == null || playerName.isBlank()) {
+                        playerName = extractNameFromPlayerId(playerId);
+                    }
+                    if (playerName == null || playerName.isBlank()) {
+                        playerName = playerId;
+                    }
+
+                    standings.add(Map.of(
+                            "playerId", playerId,
+                            "playerName", playerName,
+                            "score", entry.getScore()));
+                }
+
+                Map<String, Object> msg = Map.of(
+                        "type", "Standings",
+                        "payload", Map.of(
+                                "roomId", eventMatchId,
+                                "standings", standings));
+
                 for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
                     Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
                     if (p != null && p.isConnected()) {
@@ -360,12 +453,15 @@ public class MatchManager implements EventListener {
 
                 target.sendMessage(Map.of(
                         "type", "AnswerValidated",
-                        "payload", Map.of("answerResult", answerResult)));
+                    "payload", Map.of(
+                        "roomId", matchId,
+                        "answerResult", answerResult)));
             } else if (gameEvent instanceof QuestionChangedEvent questionChanged) {
                 GameGlobal gi = service.getGameInstance();
                 if (gi == null) return;
 
                 Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("roomId", matchId);
                 payload.put("questionIndex", questionChanged.getQuestionIndex());
                 payload.put("status", questionChanged.getStatus() != null ? questionChanged.getStatus().name() : null);
                 payload.put("nextQuestion", questionChanged.getNextQuestion());
@@ -392,9 +488,112 @@ public class MatchManager implements EventListener {
                         p.sendMessage(msg);
                     }
                 }
+            } else if (gameEvent instanceof GameFinishedEvent gameFinished) {
+                GameGlobal gi = service.getGameInstance();
+                if (gi == null) return;
+
+                String eventMatchId = gameFinished.getMatchId();
+                if (eventMatchId != null && !eventMatchId.isBlank() && !eventMatchId.equals(matchId)) {
+                    return;
+                }
+                if (eventMatchId == null || eventMatchId.isBlank()) {
+                    eventMatchId = matchId;
+                }
+
+                GameRecord playerOneRecord = gameFinished.getPlayerOneRecord();
+                GameRecord playerTwoRecord = gameFinished.getPlayerTwoRecord();
+
+                // Determine winner by iterating all participants in the match.
+                String winnerPlayerId = null;
+                String winnerName = "Empate";
+                int winnerScore = 0;
+                boolean tie = false;
+
+                Map<String, Apalabrazos.backend.model.GameInstance> instances = gi.getPlayerInstancesMap();
+                if (instances != null && !instances.isEmpty()) {
+                    int bestScore = Integer.MIN_VALUE;
+
+                    for (Map.Entry<String, Apalabrazos.backend.model.GameInstance> entry : instances.entrySet()) {
+                        String playerId = entry.getKey();
+                        Apalabrazos.backend.model.GameInstance instance = entry.getValue();
+                        if (playerId == null || instance == null) {
+                            continue;
+                        }
+
+                        int score = instance.getTotalScore();
+                        if (score > bestScore) {
+                            bestScore = score;
+                            winnerPlayerId = playerId;
+                            winnerScore = score;
+                            tie = false;
+                        } else if (score == bestScore) {
+                            tie = true;
+                        }
+                    }
+
+                    if (!tie && winnerPlayerId != null) {
+                        String resolvedName = connectionRegistry.getPlayerNameByPlayerId(winnerPlayerId);
+                        if (resolvedName == null || resolvedName.isBlank()) {
+                            resolvedName = extractNameFromPlayerId(winnerPlayerId);
+                        }
+                        winnerName = (resolvedName == null || resolvedName.isBlank()) ? "Ganador" : resolvedName;
+                    } else {
+                        winnerPlayerId = null;
+                        winnerName = "Empate";
+                    }
+                }
+
+                Map<String, Object> gameFinishedPayload = new LinkedHashMap<>();
+                gameFinishedPayload.put("roomId", eventMatchId);
+                gameFinishedPayload.put("playerOneRecord", playerOneRecord);
+                gameFinishedPayload.put("playerTwoRecord", playerTwoRecord);
+                gameFinishedPayload.put("winnerName", winnerName);
+                gameFinishedPayload.put("winnerScore", winnerScore);
+                gameFinishedPayload.put("winnerPlayerId", winnerPlayerId);
+
+                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+                    if (p != null && p.isConnected()) {
+                        p.sendMessage(Map.of(
+                                "type", "GameFinished",
+                                "payload", gameFinishedPayload));
+                    }
+                }
+
+                scheduleFinishedMatchCleanup(eventMatchId, service);
             }
         });
         log.info("Network bridge registrado para partida {}", matchId);
+    }
+
+    private void scheduleFinishedMatchCleanup(String matchId, GameService service) {
+        if (matchId == null || matchId.isBlank() || service == null) {
+            return;
+        }
+
+        matchCleanupScheduler.schedule(() -> cleanupFinishedMatch(matchId, service), 11, TimeUnit.SECONDS);
+        log.info("Scheduled cleanup for finished match {}", matchId);
+    }
+
+    private void cleanupFinishedMatch(String matchId, GameService service) {
+        if (matchId == null || matchId.isBlank() || service == null) {
+            return;
+        }
+
+        GameGlobal gameInstance = service.getGameInstance();
+        if (gameInstance != null) {
+            for (String playerId : new ArrayList<>(gameInstance.getAllPlayerIds())) {
+                gameInstance.removePlayer(playerId);
+            }
+            gameInstance.reset();
+        }
+
+        matchPlayerNames.remove(matchId);
+
+        if (activeMatches.remove(matchId) != null) {
+            log.info("Match {} finished and removed from backend registry", matchId);
+            LobbyRoom.getInstance().broadcastMatchRemoved(buildMatchRemovedSummary(matchId, service), this);
+        }
     }
 
     private void recalculateAllMatchesPlayersState() {
@@ -715,7 +914,9 @@ public class MatchManager implements EventListener {
             if (requester != null) {
                 requester.sendMessage(Map.of(
                         "type", "StartMatchRequestInvalid",
-                        "payload", Map.of("cause", "No se ha encontrado el creador de la partida.")));
+                        "payload", Map.of(
+                                "roomId", roomId,
+                                "cause", "No se ha encontrado el creador de la partida.")));
             }
             return;
         }
@@ -725,7 +926,9 @@ public class MatchManager implements EventListener {
             if (requester != null) {
                 requester.sendMessage(Map.of(
                         "type", "StartMatchRequestInvalid",
-                        "payload", Map.of("cause", "Solo el creador puede iniciar la partida.")));
+                        "payload", Map.of(
+                                "roomId", roomId,
+                                "cause", "Solo el creador puede iniciar la partida.")));
             }
             return;
         }
@@ -738,7 +941,9 @@ public class MatchManager implements EventListener {
                 if (requester != null) {
                     requester.sendMessage(Map.of(
                             "type", "StartMatchRequestInvalid",
-                            "payload", Map.of("cause", "Se necesita al menos 1 jugador para iniciar la partida.")));
+                            "payload", Map.of(
+                                    "roomId", roomId,
+                                    "cause", "Se necesita al menos 1 jugador para iniciar la partida.")));
                 }
                 return;
             }
@@ -753,7 +958,9 @@ public class MatchManager implements EventListener {
             if (requester != null) {
                 requester.sendMessage(Map.of(
                         "type", "StartMatchRequestInvalid",
-                        "payload", Map.of("cause", "La partida ya no existe.")));
+                        "payload", Map.of(
+                                "roomId", roomId,
+                                "cause", "La partida ya no existe.")));
             }
         }
     }

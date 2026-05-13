@@ -7,7 +7,8 @@ import { API_ENDPOINTS, WS_ENDPOINTS, buildApiUrl, buildWsUrl } from './config.j
 import { GAME_OPTIONS } from './config/game-options.js';
 import { validate_game_creation } from './validation/game-validation.js';
 import { bindSocketMessageHandlers } from './network/message-handler.js';
-import { PhaserEventBus } from './phaser_src/phaserEventBus.js';
+import { PhaserEventBus, clearAllStickyEvents } from './phaser_src/phaserEventBus.js';
+import { MatchAudio } from './audio/match-audio.js';
 
 // Module-level session info — populated after a successful login
 let currentUsername = null;
@@ -97,11 +98,10 @@ function renderLobbyUsername(username) {
 }
 
 function destroyPhaserGame() {
-    // Quitar el listener de respuestas antes de destruir el juego para evitar fugas
-    if (_answerSelectedHandler) {
-        PhaserEventBus.off('ui:answerSelected', _answerSelectedHandler);
-        _answerSelectedHandler = null;
-    }
+    PhaserEventBus.removeAllListeners();
+    clearAllStickyEvents();
+    MatchAudio.stopTheme();
+    _answerSelectedHandler = null;
     if (phaserGame) {
         phaserGame.destroy(true);
         phaserGame = null;
@@ -117,18 +117,17 @@ function showMatchStartView(payload = {}) {
 
     destroyPhaserGame();
     import('/js/phaser_src/game-launcher.js').then((mod) => {
-        phaserGame = mod.startGame('phaser-game-container');
+        phaserGame = mod.startGame('phaser-game-container', {
+            onCountdownComplete: () => {
+                MatchAudio.playThemeLoop();
+                if (roomId && currentStartedRoomId !== roomId) {
+                    currentStartedRoomId = roomId;
+                    SocketClient.send('GameControllerReady', { roomId });
+                }
+            },
+        });
     });
 
-    if (roomId && currentStartedRoomId !== roomId) {
-        currentStartedRoomId = roomId;
-        SocketClient.send('GameControllerReady', { roomId });
-    }
-
-    // Registrar el listener que envía las respuestas del jugador al servidor vía WebSocket
-    if (_answerSelectedHandler) {
-        PhaserEventBus.off('ui:answerSelected', _answerSelectedHandler);
-    }
     _answerSelectedHandler = ({ questionIndex, selectedOption }) => {
         const roomId = String(currentJoinedRoomId || currentStartedRoomId || '').trim();
         if (roomId) SocketClient.send('AnswerSubmit', { roomId, questionIndex, selectedOption });
@@ -194,6 +193,7 @@ function handleLogout() {
 
     // Destroy Phaser game if running
     destroyPhaserGame();
+    MatchAudio.stopTheme();
 
     // Clear any pending timeouts
     if (createGamePendingTimeout) {
@@ -601,13 +601,19 @@ function registerSocketMessageHandlers() {
             resetCreateGameForm,
             destroyPhaserGame,
             buildRandomCardColors,
-            switchView:      (id) => UIManager.switchView(id),
+            switchView:      (id) => {
+                if (id !== 'view-match-start') {
+                    MatchAudio.stopTheme();
+                }
+                UIManager.switchView(id);
+            },
             addLobbyMessage: (username, text, isOwn) => LobbyUI.addMessage(username, text, isOwn),
         },
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    MatchAudio.prepare();
     populateGameSelects();
     syncCreateGameControlsState();
     bindLogoutButton();

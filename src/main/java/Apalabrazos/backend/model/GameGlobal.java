@@ -399,4 +399,41 @@ public class GameGlobal {
     public boolean isGameInitialized() {
         return this.state == GameGlobalState.INITIALIZED;
     }
+
+    /**
+     * Check if all players have answered all their questions
+     *
+     * @return true if all players have no unanswered questions
+     */
+    public boolean areAllPlayersQuestionsDone() {
+        if (playerInstances.isEmpty()) {
+            return false;
+        }
+
+        for (GameInstance instance : playerInstances.values()) {
+            if (!instance.areAllQuestionsAnswered()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if all players are disconnected
+     *
+     * @return true if all players are in DISCONNECTED state
+     */
+    public boolean areAllPlayersDisconnected() {
+        if (playerInstances.isEmpty()) {
+            return false;
+        }
+
+        // Get all player IDs from playerInstances and check their state in the player registry
+        for (String playerId : playerInstances.keySet()) {
+            // We can't directly check player state here, but we can check if playerInstances exists
+            // This is a simplified check - in real scenario, we'd need access to Player objects
+            // For now, just return false if there are any players
+        }
+        return false; // Placeholder - actual implementation depends on player registry access
+    }
 }

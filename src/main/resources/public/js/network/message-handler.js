@@ -38,10 +38,41 @@ export function bindSocketMessageHandlers({ state, actions }) {
 
 function _route(data, state, actions) {
     if (data.type === 'TimerTick') {
+        const roomId = String(data?.payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
 
+    } else if (data.type === 'ExtraTimeScore') {
+        const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
+        PhaserEventBus.emit('net:extraTimeScore', {
+            roomId,
+            playerId: payload?.playerId,
+            remainingSeconds: payload?.remainingSeconds,
+            extraTimeScore: payload?.extraTimeScore,
+            totalScore: payload?.totalScore,
+        });
+
     } else if (data.type === 'AnswerValidated') {
+        const roomId = String(data?.payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const answerResult = data?.payload?.answerResult || null;
         if (answerResult) {
             emitSticky('net:answerValidated', answerResult);
@@ -49,6 +80,13 @@ function _route(data, state, actions) {
 
     } else if (data.type === 'QuestionChanged') {
         const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
         const nextQuestion = payload?.nextQuestion || null;
         const responsesCount = Array.isArray(nextQuestion?.questionResponsesList)
             ? nextQuestion.questionResponsesList.length
@@ -61,6 +99,18 @@ function _route(data, state, actions) {
         });
         emitSticky('net:questionChanged', payload);
         console.log('[GAME] QuestionChanged received:', payload);
+
+    } else if (data.type === 'Standings') {
+        const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
+        const standings = Array.isArray(payload?.standings) ? payload.standings : [];
+        emitSticky('net:standings', standings);
 
     } else if (data.type === 'LobbyMatchesSnapshot') {
         const matches = Array.isArray(data?.payload?.matches) ? data.payload.matches : [];
@@ -80,13 +130,18 @@ function _route(data, state, actions) {
     } else if (data.type === 'LobbyMatchRemoved') {
         const roomId = String(data?.payload?.roomId || '').trim();
         console.log('[LOBBY] Match removed:', roomId);
+        const wasActiveRoom = Boolean(roomId) && (
+            state.currentJoinedRoomId === roomId ||
+            state.currentStartedRoomId === roomId
+        );
         actions.removeOnlineGameCard(roomId);
-        if (state.currentJoinedRoomId === roomId) {
+        if (wasActiveRoom) {
             state.currentJoinedRoomId = null;
             state.currentJoinedRoomPlayers = 0;
             state.currentStartedRoomId = null;
+            state.currentOwnedRoomId = null;
+            actions.destroyPhaserGame();
             actions.switchView('view-lobby');
-            actions.showCreateGameErrors(['La partida a la que estabas unido ya no existe.']);
             actions.syncAllJoinButtonsState();
         }
 
@@ -115,6 +170,11 @@ function _route(data, state, actions) {
     } else if (data.type === 'MatchStarted') {
         const payload = data?.payload || {};
         const roomId = String(payload?.roomId || '').trim();
+        const joinedRoomId = String(state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || !joinedRoomId || roomId !== joinedRoomId) {
+            return;
+        }
 
         if (roomId) {
             state.currentJoinedRoomId = roomId;
@@ -214,5 +274,17 @@ function _route(data, state, actions) {
         const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
         console.warn('[CREATE] Validation failed:', [cause]);
         actions.showCreateGameErrors([cause]);
+
+    } else if (data.type === 'GameFinished') {
+        const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
+        console.log('[GAME] GameFinished received:', payload);
+        emitSticky('net:gameFinished', payload);
     }
 }

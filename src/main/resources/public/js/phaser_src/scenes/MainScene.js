@@ -4,8 +4,11 @@ import { Counter } from '../ui/counter.js';
 import { InteractiveButton } from '../ui/interactiveButton.js';
 import { Scoreboard } from '../ui/scoreboard.js';
 import { Standings } from '../ui/standings.js';
+import { GameOverPopup } from '../ui/gameOverPopup.js';
+import { ExtraTimePopup } from '../ui/extraTimePopup.js';
 import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
 import { SocketClient } from '../../network/socket-client.js';
+import { MatchAudio } from '../../audio/match-audio.js';
 
 export class MainScene extends Phaser.Scene {
     constructor() {
@@ -16,11 +19,25 @@ export class MainScene extends Phaser.Scene {
         this.counter   = null;
         this.scoreboard  = null;
         this.standings   = null;
+        this.gameOverPopup = null;
+        this.extraTimePopup = null;
         this._resizeTimer = null;
         this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
         this._onNetAnswerValidated = this._handleAnswerValidated.bind(this);
+        this._onNetStandings = this._handleStandings.bind(this);
+        this._onNetGameFinished = this._handleGameFinished.bind(this);
+        this._onNetExtraTimeScore = this._handleExtraTimeScore.bind(this);
         this.currentQuestionIndex = null;
         this.lastSubmittedQuestionIndex = null;
+
+        // Estado guardado para preservar durante resize
+        this._savedState = {
+            letterStates: new Map(), // Map<letter, 'CORRECT'|'WRONG'|'PASSED'>
+            correct: 0,
+            wrong: 0,
+            score: 0,
+            questionData: null
+        };
     }
 
     preload() {
@@ -35,6 +52,9 @@ export class MainScene extends Phaser.Scene {
         this.scale.on('resize', this._onResize, this);
         PhaserEventBus.on('net:questionChanged', this._onNetQuestionChanged);
         PhaserEventBus.on('net:answerValidated', this._onNetAnswerValidated);
+        PhaserEventBus.on('net:standings', this._onNetStandings);
+        PhaserEventBus.on('net:gameFinished', this._onNetGameFinished);
+        PhaserEventBus.on('net:extraTimeScore', this._onNetExtraTimeScore);
 
         const initialQuestionPayload = getSticky('net:questionChanged');
         if (initialQuestionPayload) {
@@ -44,6 +64,11 @@ export class MainScene extends Phaser.Scene {
         const initialAnswerResult = getSticky('net:answerValidated');
         if (initialAnswerResult) {
             this._handleAnswerValidated(initialAnswerResult);
+        }
+
+        const initialStandings = getSticky('net:standings');
+        if (initialStandings) {
+            this._handleStandings(initialStandings);
         }
     }
 
@@ -102,14 +127,72 @@ export class MainScene extends Phaser.Scene {
         if (this.rosco && letter) {
             if (status === 'RESPONDED_OK') {
                 this.rosco.setLetterResult(letter, true);
+                MatchAudio.playCorrectSfx();
             } else if (status === 'RESPONDED_FAIL') {
                 this.rosco.setLetterResult(letter, false);
+                MatchAudio.playWrongSfx();
             } else if (status === 'PASSED') {
                 this.rosco.setLetterPassed(letter);
             }
         }
 
         console.log('[GAME][SCENE] Resultado de respuesta recibido', answerResult);
+    }
+
+    _handleGameFinished(gameFinishedPayload = {}) {
+        console.log('[GAME][SCENE] Game finished received', gameFinishedPayload);
+
+        if (!this.gameOverPopup) {
+            this.gameOverPopup = new GameOverPopup(this);
+        }
+
+        this.gameOverPopup.showGameOver({
+            winnerName: gameFinishedPayload?.winnerName,
+            winnerScore: gameFinishedPayload?.winnerScore,
+        });
+    }
+
+    _handleStandings(standings = []) {
+        if (!this.standings) {
+            return;
+        }
+        this.standings.setEntries(Array.isArray(standings) ? standings : []);
+    }
+
+    _handleExtraTimeScore(payload = {}) {
+        const extraTimeScoreRaw = Number(payload?.extraTimeScore);
+        const extraTimeScore = Number.isFinite(extraTimeScoreRaw) && extraTimeScoreRaw >= 0
+            ? Math.round(extraTimeScoreRaw)
+            : 0;
+
+        const backendTotalScoreRaw = Number(payload?.totalScore);
+        const backendTotalScore = Number.isFinite(backendTotalScoreRaw) && backendTotalScoreRaw >= 0
+            ? Math.round(backendTotalScoreRaw)
+            : null;
+
+        if (!this.extraTimePopup) {
+            this.extraTimePopup = new ExtraTimePopup(this);
+        }
+
+        const currentScoreRaw = Number(this.scoreboard?.scoreValueText?.text);
+        const currentScore = Number.isFinite(currentScoreRaw) && currentScoreRaw >= 0
+            ? Math.round(currentScoreRaw)
+            : 0;
+
+        this.extraTimePopup.show({
+            extraTimePoints: extraTimeScore,
+            baseScore: currentScore,
+            onProgress: (transferred) => {
+                this._syncTotalScore(currentScore + transferred);
+            },
+            onComplete: () => {
+                if (backendTotalScore !== null) {
+                    this._syncTotalScore(backendTotalScore);
+                } else {
+                    this._syncTotalScore(currentScore + extraTimeScore);
+                }
+            },
+        });
     }
 
     _syncCounter(totalCorrect, totalIncorrect) {
@@ -142,11 +225,79 @@ export class MainScene extends Phaser.Scene {
     _onResize(gameSize) {
         // Debounce: wait 80 ms after the last resize event before rebuilding
         if (this._resizeTimer) clearTimeout(this._resizeTimer);
+
+        // Guardar estado antes de destruir
+        this._saveGameState();
+
         this._resizeTimer = setTimeout(() => {
             this._resizeTimer = null;
             this._destroyLayout();
             this._buildLayout(gameSize.width, gameSize.height);
+            // Restaurar estado después de reconstruir
+            this._restoreGameState();
         }, 80);
+    }
+
+    _saveGameState() {
+        // Guardar estados de las letras
+        if (this.rosco && this.rosco.letterButtons) {
+            this._savedState.letterStates.clear();
+            this.rosco.letterButtons.forEach((button, letter) => {
+                // Detectar estado por el color del botón (accediendo a _circleColor)
+                if (button && button._circleColor !== undefined) {
+                    const color = button._circleColor;
+                    if (color === 0xa2ff00) { // CORRECT
+                        this._savedState.letterStates.set(letter, 'CORRECT');
+                    } else if (color === 0xff4911) { // WRONG
+                        this._savedState.letterStates.set(letter, 'WRONG');
+                    } else if (color === 0x00f0ff) { // PASSED
+                        this._savedState.letterStates.set(letter, 'PASSED');
+                    }
+                }
+            });
+        }
+
+        // Guardar counter
+        if (this.counter) {
+            this._savedState.correct = this.counter.correctValue || 0;
+            this._savedState.wrong = this.counter.wrongValue || 0;
+        }
+
+        // Guardar score (accediendo a través del texto)
+        if (this.scoreboard && this.scoreboard.scoreValueText) {
+            const scoreText = this.scoreboard.scoreValueText.text;
+            this._savedState.score = Number(scoreText) || 0;
+        }
+    }
+
+    _restoreGameState() {
+        // Restaurar estados de las letras
+        if (this.rosco) {
+            this._savedState.letterStates.forEach((state, letter) => {
+                if (state === 'CORRECT') {
+                    this.rosco.setLetterResult(letter, true);
+                } else if (state === 'WRONG') {
+                    this.rosco.setLetterResult(letter, false);
+                } else if (state === 'PASSED') {
+                    this.rosco.setLetterPassed(letter);
+                }
+            });
+        }
+
+        // Restaurar counter
+        if (this.counter) {
+            if (this._savedState.correct > 0) {
+                this.counter.setCorrect(this._savedState.correct);
+            }
+            if (this._savedState.wrong > 0) {
+                this.counter.setWrong(this._savedState.wrong);
+            }
+        }
+
+        // Restaurar score
+        if (this.scoreboard && this._savedState.score > 0) {
+            this.scoreboard.setScore(this._savedState.score);
+        }
     }
 
     _buildLayout(w, h) {
@@ -270,6 +421,8 @@ export class MainScene extends Phaser.Scene {
         if (this.question)   { this.question.destroy();   this.question   = null; }
         if (this.scoreboard) { this.scoreboard.destroy(); this.scoreboard = null; }
         if (this.standings)  { this.standings.destroy();  this.standings  = null; }
+        if (this.gameOverPopup) { this.gameOverPopup.destroy(); this.gameOverPopup = null; }
+        if (this.extraTimePopup) { this.extraTimePopup.destroy(); this.extraTimePopup = null; }
         if (this.bg)         { this.bg.destroy();         this.bg         = null; }
     }
 
@@ -279,6 +432,9 @@ export class MainScene extends Phaser.Scene {
     shutdown() {
         PhaserEventBus.off('net:questionChanged', this._onNetQuestionChanged);
         PhaserEventBus.off('net:answerValidated', this._onNetAnswerValidated);
+        PhaserEventBus.off('net:standings', this._onNetStandings);
+        PhaserEventBus.off('net:gameFinished', this._onNetGameFinished);
+        PhaserEventBus.off('net:extraTimeScore', this._onNetExtraTimeScore);
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
         this._destroyLayout();
