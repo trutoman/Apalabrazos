@@ -48,7 +48,7 @@ public class AIQuestionGenerator {
     private static final String DEFAULT_MODEL = "gemma4";
     private static final String DEFAULT_FALLBACK_MODEL = "";
 
-    private static final String DEFAULT_WORD_DICTIONARY_PATH = "src/main/resources/Apalabrazos/data/0_palabras_todas.txt";
+    private static final String DEFAULT_WORD_DICTIONARY_PATH = "Apalabrazos/data/0_palabras_todas.txt";
 
     private static final int DEFAULT_QUESTIONS_PER_LETTER = 1;
     private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
@@ -664,21 +664,29 @@ FORMATO JSON OBLIGATORIO:
             return wordsByLetterCache;
         }
 
-        Path path = Path.of(wordDictionaryPath).toAbsolutePath().normalize();
-
-        if (!Files.exists(path)) {
-            throw new IllegalStateException("No existe el diccionario de palabras: " + path);
-        }
-
-        log.info("Cargando diccionario desde {}", path);
-
         Map<String, List<String>> result = new LinkedHashMap<>();
         Map<String, Set<String>> seenByLetter = new LinkedHashMap<>();
 
         long totalLines = 0;
         long acceptedWords = 0;
 
-        try (java.util.stream.Stream<String> lines = Files.lines(path, StandardCharsets.UTF_8)) {
+        // Intenta filesystem primero, luego classpath (Docker)
+        java.io.InputStream dictStream = null;
+        Path fsPath = Path.of(wordDictionaryPath).toAbsolutePath().normalize();
+        if (Files.exists(fsPath)) {
+            log.info("Cargando diccionario desde filesystem: {}", fsPath);
+            dictStream = Files.newInputStream(fsPath);
+        } else {
+            dictStream = getClass().getClassLoader().getResourceAsStream(wordDictionaryPath);
+            if (dictStream == null) {
+                throw new IllegalStateException("No existe el diccionario de palabras: " + wordDictionaryPath);
+            }
+            log.info("Cargando diccionario desde classpath: {}", wordDictionaryPath);
+        }
+
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(dictStream, StandardCharsets.UTF_8));
+             java.util.stream.Stream<String> lines = reader.lines()) {
             for (String line : (Iterable<String>) lines::iterator) {
                 totalLines++;
 
@@ -708,7 +716,7 @@ FORMATO JSON OBLIGATORIO:
 
         wordsByLetterCache = result;
 
-        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", path, totalLines, acceptedWords);
+        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", wordDictionaryPath, totalLines, acceptedWords);
         for (Map.Entry<String, List<String>> entry : wordsByLetterCache.entrySet()) {
             log.info("Letra '{}' -> {} palabras disponibles", entry.getKey(), entry.getValue().size());
         }
