@@ -2,11 +2,8 @@ package Apalabrazos.backend.service;
 
 import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.model.*;
-import Apalabrazos.backend.tools.QuestionFileLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -175,11 +172,12 @@ public class GameService implements EventListener {
      */
     private void loadQuestionsForAllPlayers() {
         try {
-            QuestionFileLoader loader = new QuestionFileLoader();
             int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
 
-            // Cargar y limitar la lista de preguntas
-            QuestionList baseQuestionList = loader.loadQuestions(numberOfQuestions);
+            // Generar una bateria nueva por IA para cada partida.
+            // Si la IA no esta disponible, AIQuestionApiService usa el JSON local como fallback.
+            QuestionList baseQuestionList = AIQuestionApiService.getInstance()
+                    .generateQuestionsForNewGame(numberOfQuestions, true);
 
             // Asignar a cada instancia de jugador
             for (GameInstance instance : GlobalGameInstance.getAllPlayerInstances()) {
@@ -187,8 +185,8 @@ public class GameService implements EventListener {
                 instance.setQuestionList(cloneQuestionList(baseQuestionList));
                 instance.start();
             }
-        } catch (IOException e) {
-            log.error("Error al cargar preguntas: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Error al generar/cargar preguntas: {}", e.getMessage(), e);
         }
     }
 
