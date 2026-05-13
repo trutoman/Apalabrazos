@@ -44,8 +44,8 @@ public class AIQuestionGenerator {
     private static final String ENYE = "ñ";
     private static final String ENYE_UPPER = "Ñ";
 
-    private static final String DEFAULT_API_URL = "http://172.18.0.20:11434/v1/messages";
-    private static final String DEFAULT_MODEL = "gemma4:e2b";
+    private static final String DEFAULT_API_URL = "http://100.93.139.92:11434/api/chat";
+    private static final String DEFAULT_MODEL = "gemma4";
     private static final String DEFAULT_FALLBACK_MODEL = "";
 
     private static final String DEFAULT_WORD_DICTIONARY_PATH = "src/main/resources/Apalabrazos/data/0_palabras_todas.txt";
@@ -382,19 +382,13 @@ public class AIQuestionGenerator {
     private String buildRequestBody(String prompt, String modelToUse) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", modelToUse);
-        body.put("max_tokens", maxTokens);
+        body.put("stream", false);
+        body.put("options", Map.of("num_predict", maxTokens));
 
         List<Map<String, Object>> messages = new ArrayList<>();
         Map<String, Object> userMessage = new LinkedHashMap<>();
         userMessage.put("role", "user");
-
-        List<Map<String, Object>> content = new ArrayList<>();
-        Map<String, Object> textPart = new LinkedHashMap<>();
-        textPart.put("type", "text");
-        textPart.put("text", prompt);
-        content.add(textPart);
-
-        userMessage.put("content", content);
+        userMessage.put("content", prompt);
         messages.add(userMessage);
 
         body.put("messages", messages);
@@ -407,12 +401,10 @@ public class AIQuestionGenerator {
                 .uri(URI.create(apiUrl))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .header("anthropic-version", "2023-06-01")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                 .timeout(Duration.ofSeconds(120));
 
         if (apiKey != null && !apiKey.isBlank()) {
-            requestBuilder.header("x-api-key", apiKey);
             requestBuilder.header("Authorization", "Bearer " + apiKey);
         }
 
@@ -424,7 +416,7 @@ public class AIQuestionGenerator {
         int status = response.statusCode();
         String body = response.body();
 
-        log.info("HTTP status IA Anthropic-compatible para lote {} con modelo '{}': {}", batchLetters, modelToUse, status);
+        log.info("HTTP status Ollama para lote {} con modelo '{}': {}", batchLetters, modelToUse, status);
 
         if (status == 200) {
             if (body == null || body.isBlank()) {
@@ -605,24 +597,19 @@ FORMATO JSON OBLIGATORIO:
         }
 
         JsonNode root = mapper.readTree(responseBody);
-        JsonNode contentNode = root.path("content");
 
-        if (!contentNode.isArray() || contentNode.isEmpty()) {
-            throw new RuntimeException("La respuesta Anthropic-compatible no contiene 'content'.");
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (JsonNode item : contentNode) {
-            String type = item.path("type").asText("");
-            if ("text".equals(type)) {
-                String text = item.path("text").asText("");
-                if (!text.isBlank()) {
-                    sb.append(text);
-                }
+        // Ollama /api/chat: {"message": {"role": "assistant", "content": "..."}, "done": true}
+        JsonNode messageNode = root.path("message");
+        if (!messageNode.isMissingNode()) {
+            String text = messageNode.path("content").asText("").trim();
+            if (text.isBlank()) {
+                throw new RuntimeException("La respuesta Ollama contiene 'message' pero 'content' está vacío.");
             }
+            return sanitizeContent(repairMojibakeIfNeeded(text));
         }
 
-        return sanitizeContent(repairMojibakeIfNeeded(sb.toString()));
+        throw new RuntimeException("Respuesta inesperada de Ollama — no se encontró 'message.content'. Body: "
+                + responseBody.substring(0, Math.min(500, responseBody.length())));
     }
 
     private Map<String, CandidateQuestionData> buildCandidatesForBatch(List<String> batchLetters) throws Exception {
