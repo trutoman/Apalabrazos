@@ -344,11 +344,43 @@ public class MatchManager implements EventListener {
                                 "remaining", tick.getRemainingSeconds(),
                                 "roomId", matchId));
                 for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+                    if (!service.shouldReceiveTimerTick(pid)) {
+                        continue;
+                    }
                     Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
                     if (p != null && p.isConnected()) {
                         p.sendMessage(msg);
                     }
                 }
+            } else if (gameEvent instanceof ExtraTimeScoreEvent extraTimeScoreEvent) {
+                String targetPlayerId = extraTimeScoreEvent.getPlayerId();
+                if (targetPlayerId == null || targetPlayerId.isBlank()) {
+                    return;
+                }
+
+                String eventMatchId = extraTimeScoreEvent.getMatchId();
+                if (eventMatchId == null || eventMatchId.isBlank()) {
+                    eventMatchId = matchId;
+                }
+                if (!matchId.equals(eventMatchId)) {
+                    return;
+                }
+
+                Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
+                if (target == null || !target.isConnected()) {
+                    return;
+                }
+
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("roomId", eventMatchId);
+                payload.put("playerId", targetPlayerId);
+                payload.put("remainingSeconds", extraTimeScoreEvent.getRemainingSeconds());
+                payload.put("extraTimeScore", extraTimeScoreEvent.getExtraTimeScore());
+                payload.put("totalScore", extraTimeScoreEvent.getTotalScore());
+
+                target.sendMessage(Map.of(
+                        "type", "ExtraTimeScore",
+                        "payload", payload));
             } else if (gameEvent instanceof StandingsEvent standingsEvent) {
                 GameGlobal gi = service.getGameInstance();
                 if (gi == null) return;

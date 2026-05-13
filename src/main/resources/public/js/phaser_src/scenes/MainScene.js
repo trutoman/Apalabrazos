@@ -5,6 +5,7 @@ import { InteractiveButton } from '../ui/interactiveButton.js';
 import { Scoreboard } from '../ui/scoreboard.js';
 import { Standings } from '../ui/standings.js';
 import { GameOverPopup } from '../ui/gameOverPopup.js';
+import { ExtraTimePopup } from '../ui/extraTimePopup.js';
 import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
 import { SocketClient } from '../../network/socket-client.js';
 import { MatchAudio } from '../../audio/match-audio.js';
@@ -19,11 +20,13 @@ export class MainScene extends Phaser.Scene {
         this.scoreboard  = null;
         this.standings   = null;
         this.gameOverPopup = null;
+        this.extraTimePopup = null;
         this._resizeTimer = null;
         this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
         this._onNetAnswerValidated = this._handleAnswerValidated.bind(this);
         this._onNetStandings = this._handleStandings.bind(this);
         this._onNetGameFinished = this._handleGameFinished.bind(this);
+        this._onNetExtraTimeScore = this._handleExtraTimeScore.bind(this);
         this.currentQuestionIndex = null;
         this.lastSubmittedQuestionIndex = null;
 
@@ -51,6 +54,7 @@ export class MainScene extends Phaser.Scene {
         PhaserEventBus.on('net:answerValidated', this._onNetAnswerValidated);
         PhaserEventBus.on('net:standings', this._onNetStandings);
         PhaserEventBus.on('net:gameFinished', this._onNetGameFinished);
+        PhaserEventBus.on('net:extraTimeScore', this._onNetExtraTimeScore);
 
         const initialQuestionPayload = getSticky('net:questionChanged');
         if (initialQuestionPayload) {
@@ -153,6 +157,42 @@ export class MainScene extends Phaser.Scene {
             return;
         }
         this.standings.setEntries(Array.isArray(standings) ? standings : []);
+    }
+
+    _handleExtraTimeScore(payload = {}) {
+        const extraTimeScoreRaw = Number(payload?.extraTimeScore);
+        const extraTimeScore = Number.isFinite(extraTimeScoreRaw) && extraTimeScoreRaw >= 0
+            ? Math.round(extraTimeScoreRaw)
+            : 0;
+
+        const backendTotalScoreRaw = Number(payload?.totalScore);
+        const backendTotalScore = Number.isFinite(backendTotalScoreRaw) && backendTotalScoreRaw >= 0
+            ? Math.round(backendTotalScoreRaw)
+            : null;
+
+        if (!this.extraTimePopup) {
+            this.extraTimePopup = new ExtraTimePopup(this);
+        }
+
+        const currentScoreRaw = Number(this.scoreboard?.scoreValueText?.text);
+        const currentScore = Number.isFinite(currentScoreRaw) && currentScoreRaw >= 0
+            ? Math.round(currentScoreRaw)
+            : 0;
+
+        this.extraTimePopup.show({
+            extraTimePoints: extraTimeScore,
+            baseScore: currentScore,
+            onProgress: (transferred) => {
+                this._syncTotalScore(currentScore + transferred);
+            },
+            onComplete: () => {
+                if (backendTotalScore !== null) {
+                    this._syncTotalScore(backendTotalScore);
+                } else {
+                    this._syncTotalScore(currentScore + extraTimeScore);
+                }
+            },
+        });
     }
 
     _syncCounter(totalCorrect, totalIncorrect) {
@@ -382,6 +422,7 @@ export class MainScene extends Phaser.Scene {
         if (this.scoreboard) { this.scoreboard.destroy(); this.scoreboard = null; }
         if (this.standings)  { this.standings.destroy();  this.standings  = null; }
         if (this.gameOverPopup) { this.gameOverPopup.destroy(); this.gameOverPopup = null; }
+        if (this.extraTimePopup) { this.extraTimePopup.destroy(); this.extraTimePopup = null; }
         if (this.bg)         { this.bg.destroy();         this.bg         = null; }
     }
 
@@ -393,6 +434,7 @@ export class MainScene extends Phaser.Scene {
         PhaserEventBus.off('net:answerValidated', this._onNetAnswerValidated);
         PhaserEventBus.off('net:standings', this._onNetStandings);
         PhaserEventBus.off('net:gameFinished', this._onNetGameFinished);
+        PhaserEventBus.off('net:extraTimeScore', this._onNetExtraTimeScore);
         this.scale.off('resize', this._onResize, this);
         if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
         this._destroyLayout();
