@@ -135,7 +135,7 @@ public abstract class ConnectionHandler {
                     log.info("[CLIENT-DISCONNECT] Player {} removed from match {} during disconnect",
                             player.getPlayerID(), leftMatchId);
                 }
-                
+
                 log.info("[CLIENT-DISCONNECT] ✓ Cliente desconectado exitosamente: {} (SessionID: {})",
                         player.getName(), sessionId);
                 log.debug("[CLIENT-DISCONNECT] Estado final del jugador: {}", player.getState());
@@ -163,12 +163,6 @@ public abstract class ConnectionHandler {
                 log.warn("Sesión a reconectar no encontrada: {}", sessionId);
                 return;
             }
-
-            // Reemplazar el MessageSender con la nueva conexión
-            WebSocketMessageSender newSender = new WebSocketMessageSender(newSession, sessionId.toString());
-
-            // Actualizar el jugador (esto requeriría un setter en Player)
-            // player.setMessageSender(newSender);
 
             ((WebSocketMessageSender) player.getSender()).reconnect();
 
