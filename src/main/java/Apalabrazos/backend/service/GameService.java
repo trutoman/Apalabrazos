@@ -12,6 +12,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -42,6 +44,7 @@ public class GameService implements EventListener {
     // Listeners separados para evitar rebotes entre buses
     private final EventListener globalListener = this::onGlobalEvent;
     private final EventListener externalListener = this::onExternalEvent;
+    private final Set<String> playersWithExtraTimeAwarded = ConcurrentHashMap.newKeySet();
 
 
     private TimeService timeService;
@@ -363,6 +366,16 @@ public class GameService implements EventListener {
     }
 
     /**
+     * Indica si el jugador debe seguir recibiendo ticks de tiempo.
+     */
+    public boolean shouldReceiveTimerTick(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return false;
+        }
+        return !playersWithExtraTimeAwarded.contains(playerId);
+    }
+
+    /**
      * Get the external AsyncEventBus instance for this GameService.
      * Controllers can use this bus to publish events and receive game updates.
      *
@@ -625,6 +638,10 @@ public class GameService implements EventListener {
         int publishQuestionIndex = nextQuestionIndex >= 0 ? nextQuestionIndex : questionIndex;
         playerInstance.setNextCurrentQuestionIndex(publishQuestionIndex);
 
+        if (nextQuestion == null) {
+            handlePlayerRoscoFinished(playerId, playerInstance);
+        }
+
         QuestionStatus nextQuestionStatus = nextQuestion != null ? QuestionStatus.INIT : null;
         publishQuestionForPlayer(playerId, publishQuestionIndex, nextQuestionStatus, nextQuestion);
 
@@ -709,6 +726,34 @@ public class GameService implements EventListener {
 
         int score = BASE_QUESTION_SCORE - (SCORE_PENALTY_PER_PASS * question.getPassedCount());
         return Math.max(0, score);
+    }
+
+    /**
+     * Aplica bonus de tiempo restante cuando el jugador completa su rosco.
+     */
+    private void handlePlayerRoscoFinished(String playerId, GameInstance playerInstance) {
+        if (playerId == null || playerId.isBlank() || playerInstance == null) {
+            return;
+        }
+
+        if (!playersWithExtraTimeAwarded.add(playerId)) {
+            return;
+        }
+
+        playerInstance.setGameInstanceState(GameInstance.GameState.FINISHED);
+
+        int remainingSeconds = Math.max(0, getRemainingSeconds());
+        int extraTimeScore = Math.max(0, remainingSeconds * 10);
+        if (extraTimeScore > 0) {
+            playerInstance.addToTotalScore(extraTimeScore);
+        }
+
+        int totalScore = playerInstance.getTotalScore();
+        publishExternal(new ExtraTimeScoreEvent(matchId, playerId, remainingSeconds, extraTimeScore, totalScore));
+        publishExternal(buildStandingsEvent());
+
+        log.info("Jugador {} completó rosco. remainingSeconds={}, extraTimeScore={}, totalScore={}",
+            playerId, remainingSeconds, extraTimeScore, totalScore);
     }
 
 }

@@ -48,6 +48,23 @@ function _route(data, state, actions) {
         const remaining = data?.payload?.remaining ?? 0;
         PhaserEventBus.emit('net:timerTick', { remaining });
 
+    } else if (data.type === 'ExtraTimeScore') {
+        const payload = data?.payload || {};
+        const roomId = String(payload?.roomId || '').trim();
+        const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
+
+        if (!roomId || (activeRoomId && roomId !== activeRoomId)) {
+            return;
+        }
+
+        PhaserEventBus.emit('net:extraTimeScore', {
+            roomId,
+            playerId: payload?.playerId,
+            remainingSeconds: payload?.remainingSeconds,
+            extraTimeScore: payload?.extraTimeScore,
+            totalScore: payload?.totalScore,
+        });
+
     } else if (data.type === 'AnswerValidated') {
         const roomId = String(data?.payload?.roomId || '').trim();
         const activeRoomId = String(state.currentStartedRoomId || state.currentJoinedRoomId || '').trim();
