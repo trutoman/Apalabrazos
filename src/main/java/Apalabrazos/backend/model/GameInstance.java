@@ -1,9 +1,5 @@
 package Apalabrazos.backend.model;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 /**
  * Represents the game instance for a single player.
  * Contains the player's timer, question list, and game result.
@@ -23,6 +19,7 @@ public class GameInstance {
     private QuestionList questionList;
     private GameRecord gameResult;
     private int currentQuestionIndex;  // Índice de la pregunta actual
+    private int totalScore;
     private GameState gameInstanceState;
 
     /**
@@ -32,6 +29,7 @@ public class GameInstance {
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
         this.currentQuestionIndex = 0;
+        this.totalScore = 0;
         // No añadir jugadores por defecto; se añaden vía PlayerJoinedEvent
         this.gameInstanceState = GameState.PENDING;
     }
@@ -53,6 +51,7 @@ public class GameInstance {
         this.questionList = new QuestionList();
         this.gameResult = new GameRecord();
         this.currentQuestionIndex = 0;
+        this.totalScore = 0;
         this.gameInstanceState = GameState.PENDING;
     }
 
@@ -101,7 +100,37 @@ public class GameInstance {
      * @param currentQuestionIndex The index of the question to set as current
      */
     public void setNextCurrentQuestionIndex(int currentQuestionIndex) {
-        this.currentQuestionIndex = currentQuestionIndex + 1;
+        this.currentQuestionIndex = Math.max(0, currentQuestionIndex);
+    }
+
+    /**
+     * Get the accumulated score for this player instance.
+     *
+     * @return total score points
+     */
+    public int getTotalScore() {
+        return totalScore;
+    }
+
+    /**
+     * Set accumulated score (clamped to 0).
+     *
+     * @param totalScore total score value
+     */
+    public void setTotalScore(int totalScore) {
+        this.totalScore = Math.max(0, totalScore);
+    }
+
+    /**
+     * Add points to accumulated score. Negative deltas are ignored.
+     *
+     * @param scoreDelta points to add
+     */
+    public void addToTotalScore(int scoreDelta) {
+        if (scoreDelta <= 0) {
+            return;
+        }
+        this.totalScore += scoreDelta;
     }
 
     /**
@@ -173,6 +202,25 @@ public class GameInstance {
         }
 
         return new int[]{totalCorrect, totalIncorrect};
+    }
+
+    /**
+     * Check if all questions in the list have been answered (not in 'init' state)
+     * @return true if all questions are answered, false otherwise
+     */
+    public boolean areAllQuestionsAnswered() {
+        if (questionList == null || questionList.getCurrentLength() == 0) {
+            return true; // No questions = trivially answered
+        }
+
+        for (int i = 0; i < questionList.getCurrentLength(); i++) {
+            Question q = questionList.getQuestionAt(i);
+            String userResponse = q.getUserResponseRecorded();
+            if ("init".equals(userResponse)) {
+                return false; // Found an unanswered question
+            }
+        }
+        return true; // All questions answered
     }
 
 }

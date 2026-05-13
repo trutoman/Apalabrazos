@@ -202,3 +202,14 @@ button:hover {
   display: flex;
   flex-direction: column;
 }
+
+#view-match-start {
+  padding: 0;
+  background: #F0F0F0;
+}
+
+#phaser-game-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}

@@ -48,7 +48,7 @@ public class AIQuestionGenerator {
     private static final String DEFAULT_MODEL = "gemma4:e2b";
     private static final String DEFAULT_FALLBACK_MODEL = "";
 
-    private static final String DEFAULT_WORD_DICTIONARY_PATH = "src/main/resources/Apalabrazos/data/0_palabras_todas.txt";
+    private static final String DEFAULT_WORD_DICTIONARY_PATH = "classpath:/Apalabrazos/data/0_palabras_todas.txt";
 
     private static final int DEFAULT_QUESTIONS_PER_LETTER = 1;
     private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
@@ -125,7 +125,7 @@ public class AIQuestionGenerator {
         this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
         log.info(
-                "AIQuestionGenerator configurado para Anthropic-compatible. apiUrl={}, modelo={}, fallbackModel={}, questionsPerLetter={}, questionsToGeneratePerLetterInBatch={}, lettersPerBatch={}, maxAttemptsPerBatch={}, maxTokens={}, appName={}, appUrl={}",
+                "AIQuestionGenerator configurado. apiUrl={}, modelo={}, fallbackModel={}, questionsPerLetter={}, questionsToGeneratePerLetterInBatch={}, lettersPerBatch={}, maxAttemptsPerBatch={}, maxTokens={}, appName={}, appUrl={}",
                 apiUrl, model, fallbackModel, questionsPerLetter, questionsToGeneratePerLetterInBatch,
                 lettersPerBatch, maxAttemptsPerBatch, maxTokens, appName, appUrl
         );
@@ -677,23 +677,16 @@ FORMATO JSON OBLIGATORIO:
             return wordsByLetterCache;
         }
 
-        Path path = Path.of(wordDictionaryPath).toAbsolutePath().normalize();
-
-        if (!Files.exists(path)) {
-            throw new IllegalStateException("No existe el diccionario de palabras: " + path);
-        }
-
-        log.info("Cargando diccionario desde {}", path);
+        log.info("Cargando diccionario desde {}", wordDictionaryPath);
 
         Map<String, List<String>> result = new LinkedHashMap<>();
         Map<String, Set<String>> seenByLetter = new LinkedHashMap<>();
 
-        long totalLines = 0;
-        long acceptedWords = 0;
+        long[] counters = new long[] {0L, 0L};
 
-        try (java.util.stream.Stream<String> lines = Files.lines(path, StandardCharsets.UTF_8)) {
+        try (java.util.stream.Stream<String> lines = openDictionaryLines(wordDictionaryPath)) {
             for (String line : (Iterable<String>) lines::iterator) {
-                totalLines++;
+                counters[0]++;
 
                 String word = repairAndTrim(line);
 
@@ -714,19 +707,39 @@ FORMATO JSON OBLIGATORIO:
 
                 if (seenByLetter.get(firstLetter).add(normalizedWord)) {
                     result.get(firstLetter).add(word);
-                    acceptedWords++;
+                    counters[1]++;
                 }
             }
         }
 
         wordsByLetterCache = result;
 
-        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", path, totalLines, acceptedWords);
+        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", wordDictionaryPath, counters[0], counters[1]);
         for (Map.Entry<String, List<String>> entry : wordsByLetterCache.entrySet()) {
             log.info("Letra '{}' -> {} palabras disponibles", entry.getKey(), entry.getValue().size());
         }
 
         return wordsByLetterCache;
+    }
+
+
+    private java.util.stream.Stream<String> openDictionaryLines(String configuredPath) throws Exception {
+        if (configuredPath != null && configuredPath.startsWith("classpath:")) {
+            String resourcePath = configuredPath.substring("classpath:".length());
+            try (java.io.InputStream in = AIQuestionGenerator.class.getResourceAsStream(resourcePath)) {
+                if (in == null) {
+                    throw new IllegalStateException("No existe el diccionario de palabras en classpath: " + resourcePath);
+                }
+                String content = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                return content.lines();
+            }
+        }
+
+        Path path = Path.of(configuredPath).toAbsolutePath().normalize();
+        if (!Files.exists(path)) {
+            throw new IllegalStateException("No existe el diccionario de palabras: " + path);
+        }
+        return Files.lines(path, StandardCharsets.UTF_8);
     }
 
     private boolean looksReasonableDictionaryWord(String word) {

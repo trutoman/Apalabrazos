@@ -4,7 +4,7 @@ import Apalabrazos.backend.dto.LoginRequest;
 import Apalabrazos.backend.dto.RegisterRequest;
 import Apalabrazos.backend.model.User;
 import Apalabrazos.backend.repository.UserRepository;
-import Apalabrazos.backend.tools.AIQuestionScheduler;
+import Apalabrazos.backend.service.AIQuestionApiService;
 import Apalabrazos.backend.tools.JwtService;
 import Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;
@@ -40,7 +40,6 @@ public class EmbeddedWebSocketServer {
     private final JavalinConnectionHandler connectionHandler = new JavalinConnectionHandler();
     private final UserRepository userRepository = new UserRepository();
     private final JwtService jwtService = new JwtService();
-    private AIQuestionScheduler aiQuestionScheduler;
 
     /**
      * Creates an embedded WebSocket server.
@@ -86,20 +85,65 @@ public class EmbeddedWebSocketServer {
     }
 
     /**
-     * Sets the AI Question Scheduler (inyectado desde MainApp).
-     */
-    public void setAiQuestionScheduler(AIQuestionScheduler scheduler) {
-        this.aiQuestionScheduler = scheduler;
-    }
-
-    /**
-     * Registers all REST API endpoints (login, register and admin).
+     * Registers all REST API endpoints (login and register).
      * Responsibility: API endpoint registration and initialization.
      */
     private void registerApiEndpoints() {
         registerLoginEndpoint();
         registerRegisterEndpoint();
-        registerAdminEndpoints();
+        registerAIQuestionsEndpoint();
+    }
+
+
+    /**
+     * Endpoint REST para probar y consumir la generacion de preguntas por IA.
+     *
+     * POST /api/questions/generate
+     * Body opcional:
+     * {
+     *   "questionCount": 27,
+     *   "allowFallback": true,
+     *   "letters": ["a", "b", "c"]
+     * }
+     */
+    private void registerAIQuestionsEndpoint() {
+        app.post("/api/questions/generate", ctx -> {
+            try {
+                com.fasterxml.jackson.databind.JsonNode body = null;
+                if (ctx.body() != null && !ctx.body().isBlank()) {
+                    body = new com.fasterxml.jackson.databind.ObjectMapper().readTree(ctx.body());
+                }
+
+                int questionCount = body != null ? body.path("questionCount").asInt(27) : 27;
+                boolean allowFallback = body == null || body.path("allowFallback").asBoolean(true);
+
+                Apalabrazos.backend.model.QuestionList questions;
+
+                if (body != null && body.has("letters") && body.get("letters").isArray()) {
+                    java.util.List<String> letters = new java.util.ArrayList<>();
+                    for (com.fasterxml.jackson.databind.JsonNode letterNode : body.get("letters")) {
+                        letters.add(letterNode.asText());
+                    }
+                    questions = AIQuestionApiService.getInstance().generateQuestionsForLetters(letters, allowFallback);
+                } else {
+                    questions = AIQuestionApiService.getInstance().generateQuestionsForNewGame(questionCount, allowFallback);
+                }
+
+                java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+                response.put("status", "ok");
+                response.put("count", questions.getCurrentLength());
+                response.put("questions", questions);
+                ctx.json(response);
+            } catch (Exception e) {
+                log.error("Error generando preguntas por IA: {}", e.getMessage(), e);
+                ctx.status(500).json(new java.util.LinkedHashMap<String, Object>() {
+                    {
+                        put("status", "error");
+                        put("message", e.getMessage());
+                    }
+                });
+            }
+        });
     }
 
     /**
@@ -258,34 +302,6 @@ public class EmbeddedWebSocketServer {
                     }
                 });
             }
-        });
-    }
-
-    /**
-     * Registers admin API endpoints for AI question generation.
-     * Responsibility: Admin endpoint for manual question generation trigger.
-     */
-    private void registerAdminEndpoints() {
-        app.post("/api/admin/generate-questions", ctx -> {
-            if (aiQuestionScheduler == null) {
-                ctx.status(503).json(new java.util.HashMap<String, String>() {
-                    {
-                        put("status", "error");
-                        put("message", "AI Question Scheduler not initialized");
-                    }
-                });
-                return;
-            }
-
-            log.info("[ADMIN] Manual question generation triggered");
-            aiQuestionScheduler.forceGenerate();
-
-            ctx.json(new java.util.HashMap<String, String>() {
-                {
-                    put("status", "ok");
-                    put("message", "AI question generation triggered. Check logs for progress.");
-                }
-            });
         });
     }
 

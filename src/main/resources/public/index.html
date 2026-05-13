@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/register.css">
     <link rel="stylesheet" href="css/lobby.css">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
 </head>
 
 <body>
@@ -92,7 +93,7 @@
             <!-- HEADER: full width -->
             <div class="lobby-header">
                 <div class="user-info">
-                    <span class="user-name" id="lobby-username">Alvaro</span>
+                    <span class="user-name" id="lobby-username"></span>
                     <span class="user-status" id="lobby-status">Conectado</span>
                     <button class="btn-settings" id="btn-settings" title="Settings">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -167,8 +168,12 @@
                 </div>
             </div>
 
-        </div><!-- /lobby-columns -->
         </div><!-- /lobby-grid-container -->
+    </section>
+
+    <section id="view-match-start" class="game-view hidden">
+        <div id="phaser-game-container"></div>
+    </section>
         <script type="module" src="js/main.js" defer></script>
 </body>
 

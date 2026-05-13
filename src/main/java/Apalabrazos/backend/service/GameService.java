@@ -2,12 +2,20 @@ package Apalabrazos.backend.service;
 
 import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.model.*;
-import Apalabrazos.backend.tools.QuestionFileLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Service that manages the game logic and publishes events.
@@ -17,17 +25,24 @@ import java.util.Random;
 public class GameService implements EventListener {
 
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
+    private static final int BASE_QUESTION_SCORE = 100;
+    private static final int SCORE_PENALTY_PER_PASS = 10;
 
-    private final EventBus eventBus;
-    private final EventBus externalBus;
+    private final AsyncEventBus eventBus;
+    private final AsyncEventBus externalBus;
     private GameGlobal GlobalGameInstance;
 
     // Controla que el evento de inicio para el controlador se publique una sola vez
     private boolean creatorInitEventSent = false;
 
+    // Timeout de espera de GameControllerReady de todos los jugadores
+    private final ScheduledExecutorService controllerReadyScheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> controllerReadyTimeout;
+
     // Listeners separados para evitar rebotes entre buses
     private final EventListener globalListener = this::onGlobalEvent;
     private final EventListener externalListener = this::onExternalEvent;
+    private final Set<String> playersWithExtraTimeAwarded = ConcurrentHashMap.newKeySet();
 
 
     private TimeService timeService;
@@ -37,8 +52,8 @@ public class GameService implements EventListener {
 
     public GameService() {
         this.GlobalGameInstance = new GameGlobal();
-        this.eventBus = GlobalEventBus.getInstance();
-        this.externalBus = new EventBus();
+        this.eventBus = GlobalAsyncEventBus.getInstance();
+        this.externalBus = new AsyncEventBus();
         this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
         eventBus.addListener(globalListener);
@@ -48,8 +63,8 @@ public class GameService implements EventListener {
     public GameService(GamePlayerConfig playerConfig) {
         // Configurar la instancia global del juego para multijugador
         this.GlobalGameInstance = new GameGlobal(playerConfig);
-        this.eventBus = GlobalEventBus.getInstance();
-        this.externalBus = new EventBus();
+        this.eventBus = GlobalAsyncEventBus.getInstance();
+        this.externalBus = new AsyncEventBus();
         this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
         eventBus.addListener(globalListener);
@@ -113,7 +128,22 @@ public class GameService implements EventListener {
     public void GameStartedValid() {
         // Transicionar a START_VALIDATED en la máquina de estados
         GlobalGameInstance.transitionStartValidated();
+        // Arrancar el timeout: si no todos confirman en N segundos, cancelar la partida
+        int timeoutSecs = GlobalGameInstance.getControllerReadyTimeoutSeconds();
+        controllerReadyTimeout = controllerReadyScheduler.schedule(() -> {
+            if (!GlobalGameInstance.isGameInitialized()
+                    && GlobalGameInstance.getState() != GameGlobal.GameGlobalState.PLAYING) {
+                log.warn("Timeout ({} s) esperando GameControllerReady de todos los jugadores. Cancelando partida {}.", timeoutSecs, matchId);
+                cancelGameDueToTimeout();
+            }
+        }, timeoutSecs, TimeUnit.SECONDS);
         checkAndInitialize();
+    }
+
+    private void cancelGameDueToTimeout() {
+        GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
+        externalBus.publish(new GameFinishedEvent(null, null, matchId));
+        log.info("Partida {} cancelada por timeout de GameControllerReady.", matchId);
     }
 
     /**
@@ -122,7 +152,7 @@ public class GameService implements EventListener {
     public void initGame() {
         // Inicializar y arrancar el TimeService
         if (this.timeService == null) {
-            this.timeService = new TimeService();
+            this.timeService = new TimeService(matchId);
         }
         this.timeService.start();
 
@@ -131,9 +161,9 @@ public class GameService implements EventListener {
             this.GlobalGameInstance.setState(GameGlobal.GameGlobalState.PLAYING);
         }
 
-        // Cargar preguntas para todos y publicar la primera
+        // Cargar preguntas para todos y publicar la primera (letra A)
         loadQuestionsForAllPlayers();
-        publishQuestionForAllPlayers(-1, QuestionStatus.INIT);
+        publishQuestionForAllPlayers(0, QuestionStatus.INIT);
 
         log.info("Juego iniciado. TimeService iniciado");
     }
@@ -143,19 +173,21 @@ public class GameService implements EventListener {
      */
     private void loadQuestionsForAllPlayers() {
         try {
-            QuestionFileLoader loader = new QuestionFileLoader();
             int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
 
-            // Cargar y limitar la lista de preguntas
-            QuestionList questionList = loader.loadQuestions(numberOfQuestions);
+            // Generar una bateria nueva por IA para cada partida.
+            // Si la IA no esta disponible, AIQuestionApiService usa el JSON local como fallback.
+            QuestionList baseQuestionList = AIQuestionApiService.getInstance()
+                    .generateQuestionsForNewGame(numberOfQuestions, true);
 
             // Asignar a cada instancia de jugador
             for (GameInstance instance : GlobalGameInstance.getAllPlayerInstances()) {
-                instance.setQuestionList(questionList);
+                // Cada jugador debe tener su propia copia para que su progreso sea independiente.
+                instance.setQuestionList(cloneQuestionList(baseQuestionList));
                 instance.start();
             }
-        } catch (IOException e) {
-            log.error("Error al cargar preguntas: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Error al generar/cargar preguntas: {}", e.getMessage(), e);
         }
     }
 
@@ -201,6 +233,20 @@ public class GameService implements EventListener {
         QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion, totalCorrect, totalIncorrect);
         log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {}, correct: {}, incorrect: {})",
             questionIndex, playerId, nextQuestion != null ? "sí" : "no", totalCorrect, totalIncorrect);
+        if (nextQuestion == null) {
+            log.warn("[QUESTION-PUBLISH] nextQuestion is null for playerId={}, questionIndex={}, status={}",
+                    playerId, questionIndex, status);
+        } else {
+            int responsesCount = nextQuestion.getQuestionResponsesList() != null
+                    ? nextQuestion.getQuestionResponsesList().size()
+                    : 0;
+            log.info("[QUESTION-PUBLISH] playerId={}, questionIndex={}, status={}, question='{}', responsesCount={}",
+                    playerId,
+                    questionIndex,
+                    status,
+                    nextQuestion.getQuestionText(),
+                    responsesCount);
+        }
         externalBus.publish(event);
     }
 
@@ -311,12 +357,30 @@ public class GameService implements EventListener {
     }
 
     /**
-     * Get the external EventBus instance for this GameService.
+     * Publicar un evento y esperar a que los listeners externos lo procesen.
+     * Se usa en flujos donde el orden observable por el cliente importa.
+     */
+    public void publishExternalAndWait(GameEvent event) {
+        externalBus.publishAndWait(event);
+    }
+
+    /**
+     * Indica si el jugador debe seguir recibiendo ticks de tiempo.
+     */
+    public boolean shouldReceiveTimerTick(String playerId) {
+        if (playerId == null || playerId.isBlank()) {
+            return false;
+        }
+        return !playersWithExtraTimeAwarded.contains(playerId);
+    }
+
+    /**
+     * Get the external AsyncEventBus instance for this GameService.
      * Controllers can use this bus to publish events and receive game updates.
      *
-     * @return EventBus instance for external communication
+     * @return AsyncEventBus instance for external communication
      */
-    public EventBus getExternalBus() {
+    public AsyncEventBus getExternalBus() {
         return externalBus;
     }
 
@@ -327,6 +391,11 @@ public class GameService implements EventListener {
     private void checkAndInitialize() {
         if (GlobalGameInstance.isGameInitialized()) {
             log.info("Ambas condiciones cumplidas (Controller + Start Validation) - notificando al GameController");
+            // Cancelar el timeout ya que todos los jugadores confirmaron a tiempo
+            if (controllerReadyTimeout != null && !controllerReadyTimeout.isDone()) {
+                controllerReadyTimeout.cancel(false);
+                log.info("Timeout de GameControllerReady cancelado para partida {}.", matchId);
+            }
             if (!creatorInitEventSent) {
                 externalBus.publish(new CreatorInitGameEvent());
                 creatorInitEventSent = true;
@@ -347,13 +416,18 @@ public class GameService implements EventListener {
     private void onGlobalEvent(GameEvent event) {
         if (event instanceof PlayerJoinedEvent) {
             PlayerJoinedEvent join = (PlayerJoinedEvent) event;
-            addPlayerToGame(join.getPlayerID(), join.getPlayerName());
+            if (matchId != null && matchId.equals(join.getRoomCode())) {
+                addPlayerToGame(join.getPlayerID(), join.getPlayerName());
+            }
         } else if (event instanceof TimerTickEvent) {
-            handleTimerTick((TimerTickEvent) event);
+            TimerTickEvent tick = (TimerTickEvent) event;
+            if (matchId != null && matchId.equals(tick.getMatchId())) {
+                handleTimerTick(tick);
+            }
         } else if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
-            GlobalGameInstance.transitionControllerReady();
+            GlobalGameInstance.transitionControllerReady(ready.getPlayerId());
             checkAndInitialize();
         }
     }
@@ -363,7 +437,7 @@ public class GameService implements EventListener {
         if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {} (external bus)", ready.getPlayerId());
-            GlobalGameInstance.transitionControllerReady();
+            GlobalGameInstance.transitionControllerReady(ready.getPlayerId());
             checkAndInitialize();
         } else if (event instanceof TimerTickEvent) {
             // No reenviar TimerTickEvent al mismo bus para evitar bucles
@@ -384,7 +458,8 @@ public class GameService implements EventListener {
 
             // Publicar evento actualizado con tiempo restante
             log.debug("Tiempo restante: {} segundos", remaining);
-            publishExternal(new TimerTickEvent(remaining));
+            publishExternal(new TimerTickEvent(remaining, matchId));
+            publishExternal(buildStandingsEvent());
 
             // Si el tiempo se agotó, finalizar juego
             if (GlobalGameInstance.isTimeUp()) {
@@ -392,6 +467,22 @@ public class GameService implements EventListener {
                 finishGame();
             }
         }
+    }
+
+    private StandingsEvent buildStandingsEvent() {
+        List<StandingsEvent.StandingEntry> topEntries = new ArrayList<>();
+        if (GlobalGameInstance != null) {
+            Map<String, GameInstance> instances = GlobalGameInstance.getPlayerInstancesMap();
+            if (instances != null && !instances.isEmpty()) {
+                topEntries = instances.entrySet().stream()
+                        .filter(entry -> entry.getKey() != null && entry.getValue() != null)
+                        .map(entry -> new StandingsEvent.StandingEntry(entry.getKey(), entry.getValue().getTotalScore()))
+                        .sorted(Comparator.comparingInt(StandingsEvent.StandingEntry::getScore).reversed())
+                        .limit(3)
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+            }
+        }
+        return new StandingsEvent(matchId, topEntries);
     }
 
     /**
@@ -412,15 +503,55 @@ public class GameService implements EventListener {
         if (GlobalGameInstance != null) {
             java.util.List<GameInstance> instances = new java.util.ArrayList<>(GlobalGameInstance.getAllPlayerInstances());
             if (instances.size() > 0) {
-                playerOneRecord = instances.get(0).getGameResult();
+                playerOneRecord = buildFinalRecord(instances.get(0));
             }
             if (instances.size() > 1) {
-                playerTwoRecord = instances.get(1).getGameResult();
+                playerTwoRecord = buildFinalRecord(instances.get(1));
             }
         }
 
-        publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord));
+        publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord, matchId));
         log.info("Juego finalizado");
+    }
+
+    private GameRecord buildFinalRecord(GameInstance instance) {
+        if (instance == null) {
+            return null;
+        }
+
+        GameRecord record = instance.getGameResult();
+        if (record == null) {
+            record = new GameRecord();
+            instance.setGameResult(record);
+        }
+
+        int[] totals = instance.getCorrectIncorrectTotals();
+        int correctAnswers = totals[0];
+        int incorrectAnswers = totals[1];
+
+        int passedQuestions = 0;
+        QuestionList questionList = instance.getQuestionList();
+        if (questionList != null) {
+            for (int i = 0; i < questionList.getCurrentLength(); i++) {
+                Question q = questionList.getQuestionAt(i);
+                if (q != null) {
+                    passedQuestions += q.getPassedCount();
+                }
+            }
+        }
+
+        int totalTime = 0;
+        if (GlobalGameInstance != null) {
+            totalTime = Math.max(0, GlobalGameInstance.getGameDuration() - GlobalGameInstance.getRemainingSeconds());
+        }
+
+        record.setCorrectAnswers(correctAnswers);
+        record.setIncorrectAnswers(incorrectAnswers);
+        record.setPassedQuestions(passedQuestions);
+        record.setTotalTime(totalTime);
+        record.setScore(instance.getTotalScore());
+
+        return record;
     }
 
     /**
@@ -441,9 +572,6 @@ public class GameService implements EventListener {
             return;
         }
 
-        // Actualizar índice actual de la pregunta en la instancia del jugador
-        playerInstance.setNextCurrentQuestionIndex(questionIndex);
-
         // Obtener la pregunta
         QuestionList questionList = playerInstance.getQuestionList();
         if (questionList == null || questionIndex < 0 || questionIndex >= questionList.getCurrentLength()) {
@@ -457,6 +585,7 @@ public class GameService implements EventListener {
 
         if (selectedOption == -1) {
             newStatus = QuestionStatus.PASSED;
+            question.incrementPassedCount();
             log.info("Jugador {} pasó la pregunta {}", playerId, questionIndex);
         } else {
             boolean isCorrect = question.isCorrectIndex(selectedOption);
@@ -466,17 +595,164 @@ public class GameService implements EventListener {
             newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
         }
 
-        // Registrar el resultado de la respuesta en la Question dentro de la QuestionList
-        question.setUserResponseRecorded(newStatus.getValue());
+        // Registrar estado: PASSED conserva la pregunta como no respondida (INIT) para el recorrido circular.
+        if (newStatus == QuestionStatus.PASSED) {
+            question.setQuestionStatus(QuestionStatus.INIT);
+            question.setUserResponseRecorded(QuestionStatus.INIT.getValue());
+        } else {
+            question.setQuestionStatus(newStatus);
+            question.setUserResponseRecorded(newStatus.getValue());
+        }
+        int questionScore = calculateAnswerScore(question, newStatus);
+        playerInstance.addToTotalScore(questionScore);
+        int totalScore = playerInstance.getTotalScore();
 
-        // Calcular la siguiente pregunta (si existe)
-        Question nextQuestion = null;
-        int nextQuestionIndex = questionIndex + 1;
-        if (nextQuestionIndex < questionList.getCurrentLength()) {
-            nextQuestion = questionList.getQuestionAt(nextQuestionIndex);
+        int[] totals = playerInstance.getCorrectIncorrectTotals();
+        int totalCorrect = totals[0];
+        int totalIncorrect = totals[1];
+
+        String selectedAnswer = null;
+        if (selectedOption >= 0 && selectedOption < question.getQuestionResponsesList().size()) {
+            selectedAnswer = question.getQuestionResponsesList().get(selectedOption);
         }
 
-        publishQuestionForPlayer(playerId, questionIndex, newStatus, nextQuestion);
+        String questionLetter = question.getQuestionLetter();
+        String correctAnswer = question.getCorrectResponse();
+
+        publishExternalAndWait(new AnswerValidatedEvent(
+            playerId,
+            questionIndex,
+            questionLetter,
+            selectedAnswer,
+            newStatus,
+            correctAnswer,
+            questionScore,
+            totalScore,
+            totalCorrect,
+            totalIncorrect));
+
+        // Siguiente pregunta circular: buscar siempre la siguiente NO respondida.
+        int nextQuestionIndex = findNextUnansweredIndexCircular(questionList, questionIndex);
+        Question nextQuestion = nextQuestionIndex >= 0 ? questionList.getQuestionAt(nextQuestionIndex) : null;
+        int publishQuestionIndex = nextQuestionIndex >= 0 ? nextQuestionIndex : questionIndex;
+        playerInstance.setNextCurrentQuestionIndex(publishQuestionIndex);
+
+        if (nextQuestion == null) {
+            handlePlayerRoscoFinished(playerId, playerInstance);
+        }
+
+        QuestionStatus nextQuestionStatus = nextQuestion != null ? QuestionStatus.INIT : null;
+        publishQuestionForPlayer(playerId, publishQuestionIndex, nextQuestionStatus, nextQuestion);
+
+        // Check if all players have answered all questions
+        if (GlobalGameInstance != null && GlobalGameInstance.areAllPlayersQuestionsDone()) {
+            log.info("All players have answered all questions. Finishing game.");
+            finishGame();
+        }
+    }
+
+    private QuestionList cloneQuestionList(QuestionList source) {
+        QuestionList clone = new QuestionList();
+        if (source == null) {
+            return clone;
+        }
+
+        for (int i = 0; i < source.getCurrentLength(); i++) {
+            Question q = source.getQuestionAt(i);
+            if (q == null) {
+                continue;
+            }
+            Question copy = new Question(
+                q.getQuestionText(),
+                q.getQuestionResponsesList(),
+                q.getCorrectQuestionIndex(),
+                QuestionStatus.INIT,
+                q.getQuestionLevel(),
+                q.getQuestionLetter(),
+                QuestionStatus.INIT.getValue());
+            clone.addQuestion(copy);
+        }
+        return clone;
+    }
+
+    /**
+     * Busca la siguiente pregunta no respondida en una lista circular.
+     * Una pregunta se considera respondida si su estado es RESPONDED_OK o RESPONDED_FAIL.
+     * PASSED se almacena como INIT, por lo tanto sigue siendo candidata.
+     *
+     * @return índice de la siguiente no respondida, o -1 si no quedan.
+     */
+    private int findNextUnansweredIndexCircular(QuestionList questionList, int currentIndex) {
+        if (questionList == null) {
+            return -1;
+        }
+
+        int size = questionList.getCurrentLength();
+        if (size <= 0) {
+            return -1;
+        }
+
+        int normalizedCurrent = currentIndex;
+        if (normalizedCurrent < 0 || normalizedCurrent >= size) {
+            normalizedCurrent = 0;
+        }
+
+        for (int step = 1; step <= size; step++) {
+            int candidateIndex = (normalizedCurrent + step) % size;
+            Question candidate = questionList.getQuestionAt(candidateIndex);
+            if (candidate == null) {
+                continue;
+            }
+            String response = candidate.getUserResponseRecorded();
+            boolean answered = "responsed_ok".equals(response) || "responsed_fail".equals(response);
+            if (!answered) {
+                return candidateIndex;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * Calcula la puntuacion de la respuesta actual para una pregunta concreta.
+     * RESPONDED_OK: 100 - (10 * passedCount), acotado a 0.
+     * RESPONDED_FAIL/PASSED: 0.
+     */
+    private int calculateAnswerScore(Question question, QuestionStatus status) {
+        if (question == null || status != QuestionStatus.RESPONDED_OK) {
+            return 0;
+        }
+
+        int score = BASE_QUESTION_SCORE - (SCORE_PENALTY_PER_PASS * question.getPassedCount());
+        return Math.max(0, score);
+    }
+
+    /**
+     * Aplica bonus de tiempo restante cuando el jugador completa su rosco.
+     */
+    private void handlePlayerRoscoFinished(String playerId, GameInstance playerInstance) {
+        if (playerId == null || playerId.isBlank() || playerInstance == null) {
+            return;
+        }
+
+        if (!playersWithExtraTimeAwarded.add(playerId)) {
+            return;
+        }
+
+        playerInstance.setGameInstanceState(GameInstance.GameState.FINISHED);
+
+        int remainingSeconds = Math.max(0, getRemainingSeconds());
+        int extraTimeScore = Math.max(0, remainingSeconds * 10);
+        if (extraTimeScore > 0) {
+            playerInstance.addToTotalScore(extraTimeScore);
+        }
+
+        int totalScore = playerInstance.getTotalScore();
+        publishExternal(new ExtraTimeScoreEvent(matchId, playerId, remainingSeconds, extraTimeScore, totalScore));
+        publishExternal(buildStandingsEvent());
+
+        log.info("Jugador {} completó rosco. remainingSeconds={}, extraTimeScore={}, totalScore={}",
+            playerId, remainingSeconds, extraTimeScore, totalScore);
     }
 
 }

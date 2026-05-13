@@ -8,11 +8,17 @@ import Apalabrazos.backend.model.GameRecord;
 public class GameFinishedEvent extends GameEvent {
     private final GameRecord playerOneRecord;
     private final GameRecord playerTwoRecord;
+    private final String matchId;
 
     public GameFinishedEvent(GameRecord playerOneRecord, GameRecord playerTwoRecord) {
+        this(playerOneRecord, playerTwoRecord, null);
+    }
+
+    public GameFinishedEvent(GameRecord playerOneRecord, GameRecord playerTwoRecord, String matchId) {
         super();
         this.playerOneRecord = playerOneRecord;
         this.playerTwoRecord = playerTwoRecord;
+        this.matchId = matchId;
     }
 
     public GameRecord getPlayerOneRecord() {
@@ -21,5 +27,9 @@ public class GameFinishedEvent extends GameEvent {
 
     public GameRecord getPlayerTwoRecord() {
         return playerTwoRecord;
+    }
+
+    public String getMatchId() {
+        return matchId;
     }
 }
