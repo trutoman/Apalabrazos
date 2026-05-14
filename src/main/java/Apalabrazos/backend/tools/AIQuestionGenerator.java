@@ -43,7 +43,7 @@ public class AIQuestionGenerator {
 
     private static final String ENYE = "ñ";
     private static final String ENYE_UPPER = "Ñ";
-
+    // METODO DE CONEXION A LA IA COMPATIBLE CON ANTHROPIC (OLLAMA, ETC.)
     private static final String DEFAULT_API_URL = "http://100.93.139.92:11434/api/chat";
     private static final String DEFAULT_MODEL = "gemma4";
     private static final String DEFAULT_FALLBACK_MODEL = "";
@@ -68,20 +68,19 @@ public class AIQuestionGenerator {
             Charset.forName("CP437"),
             Charset.forName("CP850"),
             Charset.forName("windows-1252"),
-            StandardCharsets.ISO_8859_1
-    );
+            StandardCharsets.ISO_8859_1);
 
     /**
      * Palabras de apoyo SOLO para letras difíciles.
-     * El resto de letras sigue usando el diccionario completo para mantener aleatoriedad.
+     * El resto de letras sigue usando el diccionario completo para mantener
+     * aleatoriedad.
      */
     private static final Map<String, List<String>> SAFE_WORDS_BY_LETTER = Map.of(
             "k", List.of("kilo", "kiwi", "karate", "kayak", "kebab", "koala"),
             "w", List.of("wifi", "wok", "waterpolo", "whisky", "windsurf", "web"),
             "x", List.of("xilofono", "xenofobia", "xerografia", "xilografia", "xenon", "xilema"),
             "ñ", List.of("niño", "señal", "montaña", "pañuelo", "caña", "bañera", "sueño", "araña"),
-            "y", List.of("yate", "yema", "yogur", "yerno", "yunque", "yegua")
-    );
+            "y", List.of("yate", "yema", "yogur", "yerno", "yunque", "yegua"));
 
     private final String apiKey;
     private final String apiUrl;
@@ -108,8 +107,7 @@ public class AIQuestionGenerator {
         this.questionsPerLetter = readEnvInt("AI_QUESTIONS_PER_LETTER", DEFAULT_QUESTIONS_PER_LETTER);
         this.questionsToGeneratePerLetterInBatch = readEnvInt(
                 "AI_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH",
-                DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH
-        );
+                DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH);
         this.lettersPerBatch = readEnvInt("AI_LETTERS_PER_BATCH", DEFAULT_LETTERS_PER_BATCH);
         this.maxAttemptsPerBatch = readEnvInt("AI_MAX_ATTEMPTS_PER_BATCH", DEFAULT_MAX_ATTEMPTS_PER_BATCH);
         this.maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
@@ -127,8 +125,7 @@ public class AIQuestionGenerator {
         log.info(
                 "AIQuestionGenerator configurado para Anthropic-compatible. apiUrl={}, modelo={}, fallbackModel={}, questionsPerLetter={}, questionsToGeneratePerLetterInBatch={}, lettersPerBatch={}, maxAttemptsPerBatch={}, maxTokens={}, appName={}, appUrl={}",
                 apiUrl, model, fallbackModel, questionsPerLetter, questionsToGeneratePerLetterInBatch,
-                lettersPerBatch, maxAttemptsPerBatch, maxTokens, appName, appUrl
-        );
+                lettersPerBatch, maxAttemptsPerBatch, maxTokens, appName, appUrl);
 
         log.info("Diccionario de palabras configurado en: {}", wordDictionaryPath);
     }
@@ -151,7 +148,8 @@ public class AIQuestionGenerator {
         }
 
         if (questionsToGeneratePerLetterInBatch < questionsPerLetter) {
-            throw new IllegalStateException("AI_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH debe ser >= AI_QUESTIONS_PER_LETTER.");
+            throw new IllegalStateException(
+                    "AI_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH debe ser >= AI_QUESTIONS_PER_LETTER.");
         }
 
         if (lettersPerBatch <= 0) {
@@ -221,7 +219,8 @@ public class AIQuestionGenerator {
                     Map<String, CandidateQuestionData> candidatesByLetter = buildCandidatesForBatch(batchLetters);
 
                     if (candidatesByLetter.isEmpty()) {
-                        log.warn("No se pudieron preparar candidatas para el lote {}. Se salta el intento.", batchLetters);
+                        log.warn("No se pudieron preparar candidatas para el lote {}. Se salta el intento.",
+                                batchLetters);
                         break;
                     }
 
@@ -237,13 +236,13 @@ public class AIQuestionGenerator {
                                     "Pregunta descartada | Letra: {} | Pista: {} | Respuestas: {}",
                                     q != null ? q.getQuestionLetter() : "null",
                                     q != null ? q.getQuestionText() : "null",
-                                    q != null ? q.getQuestionResponsesList() : "null"
-                            );
+                                    q != null ? q.getQuestionResponsesList() : "null");
                             continue;
                         }
 
                         String letter = normalizeLetter(q.getQuestionLetter());
-                        List<Question> existingForLetter = acceptedByLetter.getOrDefault(letter, Collections.emptyList());
+                        List<Question> existingForLetter = acceptedByLetter.getOrDefault(letter,
+                                Collections.emptyList());
 
                         if (existingForLetter.size() >= questionsPerLetter) {
                             continue;
@@ -254,8 +253,7 @@ public class AIQuestionGenerator {
                                     "Pregunta descartada por duplicada | Letra: {} | Pista: {} | Correcta: {}",
                                     letter,
                                     q.getQuestionText(),
-                                    q.getQuestionResponsesList().get(q.getCorrectQuestionIndex())
-                            );
+                                    q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()));
                             continue;
                         }
 
@@ -268,8 +266,7 @@ public class AIQuestionGenerator {
                                 q.getQuestionText(),
                                 q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()),
                                 acceptedByLetter.get(letter).size(),
-                                questionsPerLetter
-                        );
+                                questionsPerLetter);
                     }
 
                     log.info(
@@ -277,11 +274,11 @@ public class AIQuestionGenerator {
                             batchLetters,
                             attempts,
                             maxAttemptsPerBatch,
-                            acceptedThisAttempt
-                    );
+                            acceptedThisAttempt);
 
                 } catch (QuotaExceededException e) {
-                    log.warn("Cuota agotada mientras se procesaban letras pendientes. Se detiene la generación: {}", e.getMessage());
+                    log.warn("Cuota agotada mientras se procesaban letras pendientes. Se detiene la generación: {}",
+                            e.getMessage());
                     quotaExceeded = true;
                     break;
                 } catch (Exception e) {
@@ -291,8 +288,7 @@ public class AIQuestionGenerator {
                             attempts,
                             maxAttemptsPerBatch,
                             e.getMessage(),
-                            e
-                    );
+                            e);
 
                     if (isQuotaException(e)) {
                         long waitMs = extractRetryDelayMillis(e.getMessage());
@@ -314,10 +310,10 @@ public class AIQuestionGenerator {
         log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
         return result;
     }
+
     private String callAIForBatch(
             List<String> batchLetters,
-            Map<String, CandidateQuestionData> candidatesByLetter
-    ) throws Exception {
+            Map<String, CandidateQuestionData> candidatesByLetter) throws Exception {
         return callAIWithModel(batchLetters, candidatesByLetter, model, true);
     }
 
@@ -325,8 +321,7 @@ public class AIQuestionGenerator {
             List<String> batchLetters,
             Map<String, CandidateQuestionData> candidatesByLetter,
             String modelToUse,
-            boolean allowFallback
-    ) throws Exception {
+            boolean allowFallback) throws Exception {
         String prompt = buildBatchPrompt(batchLetters, candidatesByLetter);
         String requestBody = buildRequestBody(prompt, modelToUse);
 
@@ -348,8 +343,7 @@ public class AIQuestionGenerator {
                         batchLetters,
                         attempt,
                         modelToUse,
-                        delayMs
-                );
+                        delayMs);
 
                 Thread.sleep(delayMs);
                 delayMs *= 2;
@@ -366,8 +360,7 @@ public class AIQuestionGenerator {
                     "Lote {} -> fallback de modelo por 503: '{}' -> '{}'",
                     batchLetters,
                     modelToUse,
-                    fallbackModel
-            );
+                    fallbackModel);
 
             return callAIWithModel(batchLetters, candidatesByLetter, fallbackModel, false);
         }
@@ -396,7 +389,8 @@ public class AIQuestionGenerator {
         return mapper.writeValueAsString(body);
     }
 
-    private String executeMessagesRequest(List<String> batchLetters, String modelToUse, String requestBody) throws Exception {
+    private String executeMessagesRequest(List<String> batchLetters, String modelToUse, String requestBody)
+            throws Exception {
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))
                 .header("Content-Type", "application/json")
@@ -410,8 +404,7 @@ public class AIQuestionGenerator {
 
         HttpResponse<String> response = httpClient.send(
                 requestBuilder.build(),
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-        );
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
         int status = response.statusCode();
         String body = response.body();
@@ -430,8 +423,7 @@ public class AIQuestionGenerator {
                 status,
                 modelToUse,
                 batchLetters,
-                preview(body, DEFAULT_LOG_PREVIEW)
-        );
+                preview(body, DEFAULT_LOG_PREVIEW));
 
         String detailedMessage = extractApiErrorMessage(body);
 
@@ -459,13 +451,13 @@ public class AIQuestionGenerator {
             throw new RuntimeException("HTTP " + status + " error interno del proveedor. Detalle: " + detailedMessage);
         }
 
-        throw new RuntimeException("Error llamando a la API Anthropic-compatible: HTTP " + status + ". Detalle: " + detailedMessage);
+        throw new RuntimeException(
+                "Error llamando a la API Anthropic-compatible: HTTP " + status + ". Detalle: " + detailedMessage);
     }
 
     private String buildBatchPrompt(
             List<String> batchLetters,
-            Map<String, CandidateQuestionData> candidatesByLetter
-    ) {
+            Map<String, CandidateQuestionData> candidatesByLetter) {
         String wordsData = batchLetters.stream()
                 .map(this::normalizeLetter)
                 .filter(candidatesByLetter::containsKey)
@@ -476,46 +468,45 @@ public class AIQuestionGenerator {
                     String prefix = isEnye ? "Contiene la Ñ:" : "Con la " + upper + ":";
 
                     return """
-- Letra: "%s"
-  Palabra correcta: "%s"
-  El enunciado debe empezar exactamente por: "%s"
-""".formatted(letter, c.correctWord(), prefix);
+                            - Letra: "%s"
+                              Palabra correcta: "%s"
+                              El enunciado debe empezar exactamente por: "%s"
+                            """.formatted(letter, c.correctWord(), prefix);
                 })
                 .collect(Collectors.joining("\n"));
 
         return """
-Eres un generador experto de preguntas tipo rosco de Pasapalabra en español.
-Debes responder SOLO con JSON válido.
-No escribas markdown.
-No escribas explicaciones.
-No generes respuestas posibles.
-No generes correctQuestionIndex.
+                Eres un generador experto de preguntas tipo rosco de Pasapalabra en español.
+                Debes responder SOLO con JSON válido.
+                No escribas markdown.
+                No escribas explicaciones.
+                No generes respuestas posibles.
+                No generes correctQuestionIndex.
 
-Tu única tarea es generar una pista breve para cada palabra correcta.
-La pista NO puede mencionar literalmente la palabra correcta ni derivados evidentes.
-La pista debe definir EXACTAMENTE la palabra correcta, no otra palabra parecida.
-La pista debe ser clara, natural, en español y de dificultad media.
+                Tu única tarea es generar una pista breve para cada palabra correcta.
+                La pista NO puede mencionar literalmente la palabra correcta ni derivados evidentes.
+                La pista debe definir EXACTAMENTE la palabra correcta, no otra palabra parecida.
+                La pista debe ser clara, natural, en español y de dificultad media.
 
-DATOS:
-%s
+                DATOS:
+                %s
 
-FORMATO JSON OBLIGATORIO:
-{
-  "questionList": [
-    {
-      "questionLetter": "a",
-      "questionText": "Con la A: Pista breve sin decir la respuesta."
-    }
-  ]
-}
-""".formatted(wordsData);
+                FORMATO JSON OBLIGATORIO:
+                {
+                  "questionList": [
+                    {
+                      "questionLetter": "a",
+                      "questionText": "Con la A: Pista breve sin decir la respuesta."
+                    }
+                  ]
+                }
+                """.formatted(wordsData);
     }
 
     private List<Question> parseAIResponse(
             String responseBody,
             List<String> expectedLetters,
-            Map<String, CandidateQuestionData> candidatesByLetter
-    ) throws Exception {
+            Map<String, CandidateQuestionData> candidatesByLetter) throws Exception {
         String content = extractTextContentFromResponse(responseBody);
 
         if (content.isBlank()) {
@@ -528,12 +519,14 @@ FORMATO JSON OBLIGATORIO:
         try {
             questionsNode = mapper.readTree(content);
         } catch (Exception e) {
-            throw new RuntimeException("La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000), e);
+            throw new RuntimeException("La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000),
+                    e);
         }
 
         JsonNode listNode = null;
 
-        if (questionsNode.isObject() && questionsNode.has("questionList") && questionsNode.get("questionList").isArray()) {
+        if (questionsNode.isObject() && questionsNode.has("questionList")
+                && questionsNode.get("questionList").isArray()) {
             listNode = questionsNode.get("questionList");
         } else if (questionsNode.isArray()) {
             listNode = questionsNode;
@@ -576,8 +569,7 @@ FORMATO JSON OBLIGATORIO:
                         QuestionStatus.INIT,
                         QuestionLevel.MEDIUM,
                         finalLetter,
-                        "init"
-                );
+                        "init");
 
                 q.setQuestionLetter(finalLetter);
                 questions.add(q);
@@ -598,7 +590,8 @@ FORMATO JSON OBLIGATORIO:
 
         JsonNode root = mapper.readTree(responseBody);
 
-        // Ollama /api/chat: {"message": {"role": "assistant", "content": "..."}, "done": true}
+        // Ollama /api/chat: {"message": {"role": "assistant", "content": "..."},
+        // "done": true}
         JsonNode messageNode = root.path("message");
         if (!messageNode.isMissingNode()) {
             String text = messageNode.path("content").asText("").trim();
@@ -622,8 +615,10 @@ FORMATO JSON OBLIGATORIO:
 
             List<String> availableWords;
 
-            // Para letras difíciles usamos una bolsa de apoyo estable, porque el diccionario bruto
-            // suele tener muy pocas palabras jugables. Para el resto mantenemos aleatoriedad total.
+            // Para letras difíciles usamos una bolsa de apoyo estable, porque el
+            // diccionario bruto
+            // suele tener muy pocas palabras jugables. Para el resto mantenemos
+            // aleatoriedad total.
             List<String> safeWords = SAFE_WORDS_BY_LETTER.get(letter);
             if (isDifficultLetter(letter) && safeWords != null && safeWords.size() >= 4) {
                 availableWords = new ArrayList<>(safeWords);
@@ -633,7 +628,8 @@ FORMATO JSON OBLIGATORIO:
             }
 
             if (availableWords.size() < 4) {
-                log.warn("No hay suficientes palabras para la letra '{}'. Disponibles: {}", letter, availableWords.size());
+                log.warn("No hay suficientes palabras para la letra '{}'. Disponibles: {}", letter,
+                        availableWords.size());
                 continue;
             }
 
@@ -652,8 +648,7 @@ FORMATO JSON OBLIGATORIO:
                     "Candidatas preparadas | Letra: {} | Respuestas: {} | Correcta: {}",
                     letter,
                     responses,
-                    correctWord
-            );
+                    correctWord);
         }
 
         return result;
@@ -686,7 +681,7 @@ FORMATO JSON OBLIGATORIO:
 
         try (java.io.BufferedReader reader = new java.io.BufferedReader(
                 new java.io.InputStreamReader(dictStream, StandardCharsets.UTF_8));
-             java.util.stream.Stream<String> lines = reader.lines()) {
+                java.util.stream.Stream<String> lines = reader.lines()) {
             for (String line : (Iterable<String>) lines::iterator) {
                 totalLines++;
 
@@ -716,7 +711,8 @@ FORMATO JSON OBLIGATORIO:
 
         wordsByLetterCache = result;
 
-        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", wordDictionaryPath, totalLines, acceptedWords);
+        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", wordDictionaryPath,
+                totalLines, acceptedWords);
         for (Map.Entry<String, List<String>> entry : wordsByLetterCache.entrySet()) {
             log.info("Letra '{}' -> {} palabras disponibles", entry.getKey(), entry.getValue().size());
         }
@@ -725,18 +721,25 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private boolean looksReasonableDictionaryWord(String word) {
-        if (word == null) return false;
+        if (word == null)
+            return false;
 
         String repaired = repairAndTrim(word);
         String normalized = normalizeFreeText(repaired);
         String firstLetter = getDictionaryKeyForWord(repaired);
 
-        if (repaired.isBlank()) return false;
-        if (repaired.length() < 4 || repaired.length() > 11) return false;
-        if (repaired.contains(" ")) return false;
-        if (repaired.contains("-")) return false;
-        if (looksLikeMojibake(repaired)) return false;
-        if (!repaired.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$")) return false;
+        if (repaired.isBlank())
+            return false;
+        if (repaired.length() < 4 || repaired.length() > 11)
+            return false;
+        if (repaired.contains(" "))
+            return false;
+        if (repaired.contains("-"))
+            return false;
+        if (looksLikeMojibake(repaired))
+            return false;
+        if (!repaired.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$"))
+            return false;
 
         // Evita palabras raras con k/w en letras normales, pero permite K y W.
         if (!"k".equals(firstLetter) && !"w".equals(firstLetter)) {
@@ -745,7 +748,8 @@ FORMATO JSON OBLIGATORIO:
             }
         }
 
-        if (isLikelyBadConjugation(normalized)) return false;
+        if (isLikelyBadConjugation(normalized))
+            return false;
 
         return true;
     }
@@ -759,7 +763,8 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private boolean isLikelyBadConjugation(String normalized) {
-        if (normalized == null || normalized.isBlank()) return true;
+        if (normalized == null || normalized.isBlank())
+            return true;
 
         return normalized.endsWith("abais")
                 || normalized.endsWith("abamos")
@@ -811,7 +816,8 @@ FORMATO JSON OBLIGATORIO:
      * - Ñ: la palabra debe CONTENER la ñ, no necesariamente empezar por ella.
      */
     private String getDictionaryKeyForWord(String word) {
-        if (word == null || word.isBlank()) return "";
+        if (word == null || word.isBlank())
+            return "";
 
         String repaired = repairAndTrim(word);
         String lower = repaired.toLowerCase(Locale.ROOT);
@@ -828,15 +834,20 @@ FORMATO JSON OBLIGATORIO:
             String letter,
             List<String> responses,
             int correctIndex,
-            String correctWord
-    ) {}
+            String correctWord) {
+    }
 
     private boolean isValidQuestion(Question q) {
-        if (q == null) return false;
-        if (q.getQuestionResponsesList() == null || q.getQuestionResponsesList().size() != 4) return false;
-        if (q.getCorrectQuestionIndex() < 0 || q.getCorrectQuestionIndex() > 3) return false;
-        if (q.getQuestionText() == null || q.getQuestionText().isBlank()) return false;
-        if (q.getQuestionLetter() == null || q.getQuestionLetter().isBlank()) return false;
+        if (q == null)
+            return false;
+        if (q.getQuestionResponsesList() == null || q.getQuestionResponsesList().size() != 4)
+            return false;
+        if (q.getCorrectQuestionIndex() < 0 || q.getCorrectQuestionIndex() > 3)
+            return false;
+        if (q.getQuestionText() == null || q.getQuestionText().isBlank())
+            return false;
+        if (q.getQuestionLetter() == null || q.getQuestionLetter().isBlank())
+            return false;
 
         String text = normalizeFreeText(repairAndTrim(q.getQuestionText()));
         String letter = normalizeLetter(repairAndTrim(q.getQuestionLetter()));
@@ -860,7 +871,8 @@ FORMATO JSON OBLIGATORIO:
         String correct = repairAndTrim(q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()));
 
         for (String r : q.getQuestionResponsesList()) {
-            if (!containsLetter(repairAndTrim(r), letter)) return false;
+            if (!containsLetter(repairAndTrim(r), letter))
+                return false;
         }
 
         if (startsMode && !startsWithLetter(correct, letter)) {
@@ -881,17 +893,17 @@ FORMATO JSON OBLIGATORIO:
     private boolean isDuplicate(List<Question> existing, Question candidate) {
         String candidateText = normalizeFreeText(repairAndTrim(candidate.getQuestionText()));
         String candidateCorrect = normalizeFreeText(
-                repairAndTrim(candidate.getQuestionResponsesList().get(candidate.getCorrectQuestionIndex()))
-        );
+                repairAndTrim(candidate.getQuestionResponsesList().get(candidate.getCorrectQuestionIndex())));
 
         for (Question q : existing) {
             String existingText = normalizeFreeText(repairAndTrim(q.getQuestionText()));
             String existingCorrect = normalizeFreeText(
-                    repairAndTrim(q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()))
-            );
+                    repairAndTrim(q.getQuestionResponsesList().get(q.getCorrectQuestionIndex())));
 
-            if (existingText.equals(candidateText)) return true;
-            if (existingCorrect.equals(candidateCorrect)) return true;
+            if (existingText.equals(candidateText))
+                return true;
+            if (existingCorrect.equals(candidateCorrect))
+                return true;
         }
 
         return false;
@@ -906,24 +918,35 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private boolean looksReasonableAnswer(String answer) {
-        if (answer == null || answer.isBlank()) return false;
+        if (answer == null || answer.isBlank())
+            return false;
 
         String repaired = repairAndTrim(answer);
         String normalized = normalizeFreeText(repaired);
 
-        if (normalized.isBlank()) return false;
-        if (normalized.length() < 2 || normalized.length() > 40) return false;
-        if (normalized.matches(".*\\d.*")) return false;
-        if (normalized.contains("?") || normalized.contains("¿") || normalized.contains("!")) return false;
-        if (normalized.contains(",")) return false;
-        if (normalized.contains(";")) return false;
-        if (normalized.contains(":")) return false;
+        if (normalized.isBlank())
+            return false;
+        if (normalized.length() < 2 || normalized.length() > 40)
+            return false;
+        if (normalized.matches(".*\\d.*"))
+            return false;
+        if (normalized.contains("?") || normalized.contains("¿") || normalized.contains("!"))
+            return false;
+        if (normalized.contains(","))
+            return false;
+        if (normalized.contains(";"))
+            return false;
+        if (normalized.contains(":"))
+            return false;
 
         int words = repaired.trim().split("\\s+").length;
-        if (words > 2) return false;
+        if (words > 2)
+            return false;
 
-        if (looksLikeMojibake(repaired)) return false;
-        if (!repaired.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s-]+$")) return false;
+        if (looksLikeMojibake(repaired))
+            return false;
+        if (!repaired.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s-]+$"))
+            return false;
 
         return true;
     }
@@ -969,7 +992,8 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private String sanitizeContent(String content) {
-        if (content == null) return "";
+        if (content == null)
+            return "";
 
         content = content.trim();
 
@@ -993,12 +1017,14 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private boolean isQuotaException(Exception e) {
-        if (e == null || e.getMessage() == null) return false;
+        if (e == null || e.getMessage() == null)
+            return false;
         return e.getMessage().contains("HTTP 429");
     }
 
     private boolean is503Exception(Exception e) {
-        if (e == null || e.getMessage() == null) return false;
+        if (e == null || e.getMessage() == null)
+            return false;
         return e.getMessage().contains("HTTP 503") || e.getMessage().contains("UNAVAILABLE");
     }
 
@@ -1027,11 +1053,13 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private String normalizeLetter(String letter) {
-        if (letter == null) return "";
+        if (letter == null)
+            return "";
         String repaired = repairAndTrim(letter);
         String trimmed = repaired.trim().toLowerCase(Locale.ROOT);
 
-        if ("ñ".equals(trimmed) || "├▒".equals(trimmed) || "ã±".equals(trimmed) || "Ã±".equals(trimmed) || "┬ñ".equals(trimmed)) {
+        if ("ñ".equals(trimmed) || "├▒".equals(trimmed) || "ã±".equals(trimmed) || "Ã±".equals(trimmed)
+                || "┬ñ".equals(trimmed)) {
             return "ñ";
         }
 
@@ -1039,7 +1067,8 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private String normalizeFreeText(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
 
         String repaired = repairAndTrim(text)
                 .trim()
@@ -1061,12 +1090,14 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private boolean startsWithLetter(String word, String letter) {
-        if (word == null || letter == null) return false;
+        if (word == null || letter == null)
+            return false;
 
         String rawWord = repairAndTrim(word).toLowerCase(Locale.ROOT);
         String normalizedLetter = normalizeLetter(letter);
 
-        if (rawWord.isBlank() || normalizedLetter.isBlank()) return false;
+        if (rawWord.isBlank() || normalizedLetter.isBlank())
+            return false;
 
         if ("ñ".equals(normalizedLetter)) {
             return rawWord.startsWith("ñ");
@@ -1076,12 +1107,14 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private boolean containsLetter(String word, String letter) {
-        if (word == null || letter == null) return false;
+        if (word == null || letter == null)
+            return false;
 
         String rawWord = repairAndTrim(word).toLowerCase(Locale.ROOT);
         String normalizedLetter = normalizeLetter(letter);
 
-        if (rawWord.isBlank() || normalizedLetter.isBlank()) return false;
+        if (rawWord.isBlank() || normalizedLetter.isBlank())
+            return false;
 
         if ("ñ".equals(normalizedLetter)) {
             return rawWord.contains("ñ");
@@ -1110,11 +1143,13 @@ FORMATO JSON OBLIGATORIO:
                     sb.append("code=").append(code);
                 }
                 if (!type.isBlank()) {
-                    if (sb.length() > 0) sb.append(", ");
+                    if (sb.length() > 0)
+                        sb.append(", ");
                     sb.append("type=").append(type);
                 }
                 if (!message.isBlank()) {
-                    if (sb.length() > 0) sb.append(", ");
+                    if (sb.length() > 0)
+                        sb.append(", ");
                     sb.append("message=").append(message);
                 }
 
@@ -1127,9 +1162,11 @@ FORMATO JSON OBLIGATORIO:
             String message = root.path("message").asText("");
             if (!type.isBlank() || !message.isBlank()) {
                 StringBuilder sb = new StringBuilder();
-                if (!type.isBlank()) sb.append("type=").append(type);
+                if (!type.isBlank())
+                    sb.append("type=").append(type);
                 if (!message.isBlank()) {
-                    if (sb.length() > 0) sb.append(", ");
+                    if (sb.length() > 0)
+                        sb.append(", ");
                     sb.append("message=").append(message);
                 }
                 return sb.toString();
@@ -1143,7 +1180,8 @@ FORMATO JSON OBLIGATORIO:
     }
 
     private String preview(String text, int maxLen) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         return text.substring(0, Math.min(text.length(), maxLen));
     }
 
@@ -1197,11 +1235,16 @@ FORMATO JSON OBLIGATORIO:
 
         int score = 0;
 
-        if (text.contains("Ã")) score -= 10;
-        if (text.contains("Â")) score -= 10;
-        if (text.contains("├")) score -= 12;
-        if (text.contains("┬")) score -= 12;
-        if (text.contains("�")) score -= 20;
+        if (text.contains("Ã"))
+            score -= 10;
+        if (text.contains("Â"))
+            score -= 10;
+        if (text.contains("├"))
+            score -= 12;
+        if (text.contains("┬"))
+            score -= 12;
+        if (text.contains("�"))
+            score -= 20;
 
         for (char c : text.toCharArray()) {
             if ("áéíóúÁÉÍÓÚñÑüÜ".indexOf(c) >= 0) {
