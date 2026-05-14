@@ -21,6 +21,7 @@ export class MainScene extends Phaser.Scene {
         this.standings   = null;
         this.gameOverPopup = null;
         this.extraTimePopup = null;
+        this.muteThemeBtn = null;
         this._resizeTimer = null;
         this._onNetQuestionChanged = this._handleQuestionChanged.bind(this);
         this._onNetAnswerValidated = this._handleAnswerValidated.bind(this);
@@ -36,7 +37,8 @@ export class MainScene extends Phaser.Scene {
             correct: 0,
             wrong: 0,
             score: 0,
-            questionData: null
+            questionData: null,
+            themeMuted: false
         };
     }
 
@@ -141,6 +143,7 @@ export class MainScene extends Phaser.Scene {
 
     _handleGameFinished(gameFinishedPayload = {}) {
         console.log('[GAME][SCENE] Game finished received', gameFinishedPayload);
+        MatchAudio.playGameOverCelebrationSfx();
 
         if (!this.gameOverPopup) {
             this.gameOverPopup = new GameOverPopup(this);
@@ -268,6 +271,9 @@ export class MainScene extends Phaser.Scene {
             const scoreText = this.scoreboard.scoreValueText.text;
             this._savedState.score = Number(scoreText) || 0;
         }
+
+        // Guardar estado mute del tema
+        // (this._savedState.themeMuted se actualiza en el callback del botón, no hay que hacer nada)
     }
 
     _restoreGameState() {
@@ -361,18 +367,68 @@ export class MainScene extends Phaser.Scene {
             height: 130
         });
 
+        const actualCounterTopY = Math.min(counterTopY, h - counterHeight - 12);
         this.counter = new Counter(this, {
             centerX: layoutCenter.x,
-            topY: Math.min(counterTopY, h - counterHeight - 12),
+            topY: actualCounterTopY,
             width: 240,
             height: counterHeight,
             timeValue: '180',
             correctValue: 0,
             wrongValue: 0
         });
+
+        // ── Mute theme toggle (neobrutalism checkbox) ──────────────────
+        const _cGap = 8;
+        const _cTopH = Math.round((counterHeight - _cGap) * 0.6);
+        const _cBotH = (counterHeight - _cGap) - _cTopH;
+        const muteBtnSize = 40;
+        const muteBtnX = Math.min(layoutCenter.x + 120 + 10 + muteBtnSize / 2 + 50, w - muteBtnSize / 2 - 6);
+        const muteBtnY = actualCounterTopY + _cTopH + _cGap + _cBotH / 2;
+        const isThemeMuted = this._savedState.themeMuted;
+        this.muteThemeBtn = new InteractiveButton(
+            this, 'mute-theme-btn',
+            muteBtnX, muteBtnY,
+            muteBtnSize, muteBtnSize,
+            '',
+            () => {
+                const muted = !this._savedState.themeMuted;
+                this._savedState.themeMuted = muted;
+                MatchAudio.setThemeMuted(muted);
+                this.muteThemeBtn._muteXOverlay.setVisible(muted);
+            },
+            {
+                type: 'square',
+                circleColor: 0xffffff,
+                strokeColor: 0x000000,
+                strokeWidth: 3,
+                textColor: '#000000',
+                fontSize: '1px',
+                shadowDepth: 4,
+            }
+        );
+        // Check clásico: caja vacía + cruz roja al activar, y nota fija a la derecha
+        const _muteXText = this.add.text(0, 0, '\u2715', {
+            fontSize: '28px',
+            fontFamily: 'Archivo Black',
+            color: '#ff0000',
+            stroke: '#b10000',
+            strokeThickness: 4,
+        }).setOrigin(0.5).setVisible(isThemeMuted);
+        this.muteThemeBtn.add(_muteXText);
+        this.muteThemeBtn._muteXOverlay = _muteXText;
+
+        const _musicIcon = this.add.text((muteBtnSize / 2) + 12, 0, '\u266B', {
+            fontSize: '24px',
+            fontFamily: 'Archivo Black',
+            color: '#000000',
+        }).setOrigin(0, 0.5);
+        this.muteThemeBtn.add(_musicIcon);
     }
 
     _submitPass() {
+        MatchAudio.playPassSfx();
+
         const questionIndex = Number(this.currentQuestionIndex);
         if (!Number.isFinite(questionIndex) || questionIndex < 0) {
             console.warn('[GAME] Ignorando pasar: no hay pregunta activa');
@@ -423,6 +479,7 @@ export class MainScene extends Phaser.Scene {
         if (this.standings)  { this.standings.destroy();  this.standings  = null; }
         if (this.gameOverPopup) { this.gameOverPopup.destroy(); this.gameOverPopup = null; }
         if (this.extraTimePopup) { this.extraTimePopup.destroy(); this.extraTimePopup = null; }
+        if (this.muteThemeBtn) { this.muteThemeBtn.destroy(); this.muteThemeBtn = null; }
         if (this.bg)         { this.bg.destroy();         this.bg         = null; }
     }
 
