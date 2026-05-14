@@ -2,6 +2,10 @@ package Apalabrazos.backend.model;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class User {
@@ -29,9 +33,22 @@ public class User {
 
     public static class Scores {
         public String max_score;
+        public Map<String, List<String>> scoreIdsByType;
 
         public Scores() {
             this.max_score = "";
+            this.scoreIdsByType = new HashMap<>();
+        }
+
+        public void addScoreId(String scoreType, String scoreId) {
+            if (scoreType == null || scoreType.isBlank() || scoreId == null || scoreId.isBlank()) {
+                return;
+            }
+
+            List<String> ids = scoreIdsByType.computeIfAbsent(scoreType, key -> new ArrayList<>());
+            if (!ids.contains(scoreId)) {
+                ids.add(scoreId);
+            }
         }
     }
 
@@ -77,5 +94,12 @@ public class User {
         this.connectionId = "";
         this.preferences = new Preferences();
         this.scores = new Scores();
+    }
+
+    public void addScoreReference(String scoreType, String scoreId) {
+        if (this.scores == null) {
+            this.scores = new Scores();
+        }
+        this.scores.addScoreId(scoreType, scoreId);
     }
 }
