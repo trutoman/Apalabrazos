@@ -20,9 +20,67 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Service that manages the game logic and publishes events.
- * This is where the business logic lives - it listens to user events
- * and publishes state change events.
+ * Service that manages the logic of a specific game match and publishes events.
+ *
+ * <h2>Arquitectura de doble bus</h2>
+ * <p>{@code GameService} utiliza internamente <strong>dos buses de eventos distintos</strong>
+ * para aislar por completo los flujos de comunicación:</p>
+ *
+ * <table border="1">
+ *   <caption>Comparativa de los dos buses</caption>
+ *   <tr><th>Bus</th><th>Campo</th><th>Instancia</th><th>Propósito</th></tr>
+ *   <tr>
+ *     <td><b>Global</b></td>
+ *     <td>{@code eventBus}</td>
+ *     <td>Singleton compartido: {@link GlobalAsyncEventBus#getInstance()}</td>
+ *     <td>Coordinación interna de backend: recibe {@code PlayerJoinedEvent},
+ *         {@code TimerTickEvent} y {@code GameControllerReady} provenientes
+ *         de {@code MatchManager} o {@code TimeService}.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>Externo</b></td>
+ *     <td>{@code externalBus}</td>
+ *     <td>Nueva instancia {@code AsyncEventBus} por partida</td>
+ *     <td>Canal hacia el controlador/cliente: recibe {@code AnswerSubmittedEvent}
+ *         y {@code GameControllerReady} publicados por {@code MatchManager},
+ *         y difunde hacia afuera {@code TimerTickEvent}, {@code AnswerValidatedEvent},
+ *         {@code QuestionChangedEvent}, {@code GameFinishedEvent}, etc.</td>
+ *   </tr>
+ * </table>
+ *
+ * <h3>¿Por qué dos buses?</h3>
+ * <ol>
+ *   <li><b>Evitar bucles de retroalimentación</b>: si {@code GameService} publicase
+ *       y escuchase en el mismo bus global, un evento que él mismo produce (p. ej.
+ *       {@code TimerTickEvent} reenriquecido) podría volver a disparar su propio
+ *       handler, creando un bucle infinito.</li>
+ *   <li><b>Separación de responsabilidades</b>: el bus global es de coordinación
+ *       entre servicios de backend; el bus externo es la interfaz de salida hacia
+ *       el controlador de red ({@code MatchManager}) que transforma los eventos
+ *       en mensajes WebSocket para los clientes.</li>
+ *   <li><b>Aislamiento por partida</b>: cada instancia de {@code GameService}
+ *       tiene su propio {@code externalBus} privado, por lo que los eventos de
+ *       una partida nunca "escapan" a otra.</li>
+ * </ol>
+ *
+ * <h3>Routing interno</h3>
+ * <pre>
+ *   GlobalAsyncEventBus  ──► globalListener  ──► onGlobalEvent()
+ *                                               (PlayerJoinedEvent, TimerTickEvent,
+ *                                                GameControllerReady desde infraestructura)
+ *
+ *   externalBus (privado) ──► externalListener ──► onExternalEvent()
+ *                                               (GameControllerReady, AnswerSubmittedEvent
+ *                                                publicados por MatchManager)
+ *
+ *   GameService publica en externalBus ──► MatchManager (bridge de red)
+ *                                               (TimerTickEvent, AnswerValidatedEvent,
+ *                                                QuestionChangedEvent, GameFinishedEvent, …)
+ * </pre>
+ *
+ * <p>Los listeners están implementados como referencias de método separadas
+ * ({@code globalListener} y {@code externalListener}) para que cada bus registre
+ * exactamente el handler que le corresponde y no haya cruce de llamadas.</p>
  */
 public class GameService implements EventListener {
 
@@ -30,8 +88,20 @@ public class GameService implements EventListener {
     private static final int BASE_QUESTION_SCORE = 100;
     private static final int SCORE_PENALTY_PER_PASS = 10;
 
+    /**
+     * Bus global compartido. Recibe eventos de infraestructura de backend
+     * (p. ej. {@code PlayerJoinedEvent} de {@code MatchManager},
+     * {@code TimerTickEvent} de {@code TimeService}).
+     */
     private final AsyncEventBus eventBus;
+
+    /**
+     * Bus externo privado de esta partida. Canal bidireccional con {@code MatchManager}:
+     * recibe comandos del controlador (respuestas, confirmaciones de carga) y
+     * publica actualizaciones de estado hacia los clientes WebSocket.
+     */
     private final AsyncEventBus externalBus;
+
     private GameGlobal GlobalGameInstance;
 
     // Controla que el evento de inicio para el controlador se publique una sola vez
@@ -41,7 +111,9 @@ public class GameService implements EventListener {
     private final ScheduledExecutorService controllerReadyScheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> controllerReadyTimeout;
 
-    // Listeners separados para evitar rebotes entre buses
+    // Listeners separados para evitar rebotes entre buses:
+    // globalListener escucha el bus compartido de infraestructura,
+    // externalListener escucha el bus privado de esta partida.
     private final EventListener globalListener = this::onGlobalEvent;
     private final EventListener externalListener = this::onExternalEvent;
     private final Set<String> playersWithExtraTimeAwarded = ConcurrentHashMap.newKeySet();
