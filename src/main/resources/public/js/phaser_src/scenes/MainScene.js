@@ -383,7 +383,10 @@ export class MainScene extends Phaser.Scene {
         const _cTopH = Math.round((counterHeight - _cGap) * 0.6);
         const _cBotH = (counterHeight - _cGap) - _cTopH;
         const muteBtnSize = 40;
-        const muteBtnX = Math.min(layoutCenter.x + 120 + 10 + muteBtnSize / 2 + 50, w - muteBtnSize / 2 - 6);
+        const muteIconLeftOffset = (muteBtnSize / 2) + 12;
+        const muteIconBoxWidth = 28;
+        const muteControlRightOffset = muteIconLeftOffset + muteIconBoxWidth;
+        const muteBtnX = rightAnswerEdgeX - muteControlRightOffset;
         const muteBtnY = actualCounterTopY + _cTopH + _cGap + _cBotH / 2;
         const isThemeMuted = this._savedState.themeMuted;
         this.muteThemeBtn = new InteractiveButton(
@@ -418,10 +421,12 @@ export class MainScene extends Phaser.Scene {
         this.muteThemeBtn.add(_muteXText);
         this.muteThemeBtn._muteXOverlay = _muteXText;
 
-        const _musicIcon = this.add.text((muteBtnSize / 2) + 12, 0, '\u266B', {
+        const _musicIcon = this.add.text(muteIconLeftOffset, 0, '\u266B', {
             fontSize: '24px',
             fontFamily: 'Archivo Black',
             color: '#000000',
+            fixedWidth: muteIconBoxWidth,
+            align: 'center',
         }).setOrigin(0, 0.5);
         this.muteThemeBtn.add(_musicIcon);
     }
