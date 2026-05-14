@@ -858,6 +858,7 @@ public class MatchManager implements EventListener {
 
         log.info("Game creation requested by {}", player.getName());
         GameService gameService = new GameService(event.getConfig());
+        gameService.startQuestionPreload();
         // Asignar creador y nombre de partida antes de agregar a registro
         gameService.setCreatorPlayerId(player.getPlayerID());
         gameService.setGameName(tempRoomCode);

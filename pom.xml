@@ -68,27 +68,9 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.6.3</version>
-        <executions>
-            <execution>
-                <id>run-mainapp</id>
-                <goals>
-                    <goal>java</goal>
-                </goals>
-                <configuration>
-                    <mainClass>Apalabrazos.MainApp</mainClass>
-                </configuration>
-            </execution>
-
-            <execution>
-                <id>run-ai-generator</id>
-                <goals>
-                    <goal>java</goal>
-                </goals>
-                <configuration>
-                    <mainClass>Apalabrazos.backend.tools.AIQuestionGeneratorRunner</mainClass>
-                </configuration>
-            </execution>
-        </executions>
+        <configuration>
+            <mainClass>Apalabrazos.MainApp</mainClass>
+        </configuration>
         </plugin>
         </plugins>
     </build>

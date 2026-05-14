@@ -80,14 +80,6 @@
     "questionLetter" : "j",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la K: Mamífero australiano conocido por su pelaje.",
-    "questionResponsesList" : [ "kiwi", "kebab", "karate", "koala" ],
-    "correctQuestionIndex" : 3,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "k",
-    "userResponseRecorded" : "init"
-  }, {
     "questionText" : "Con la L: El brillo o reflejo que se produce en ciertas superficies.",
     "questionResponsesList" : [ "laces", "lampara", "lambucea", "lagoteaba" ],
     "correctQuestionIndex" : 2,
@@ -184,14 +176,6 @@
     "questionLetter" : "v",
     "userResponseRecorded" : "init"
   }, {
-    "questionText" : "Con la W: Deporte practicado en el agua.",
-    "questionResponsesList" : [ "whisky", "wifi", "waterpolo", "windsurf" ],
-    "correctQuestionIndex" : 2,
-    "questionStatus" : "init",
-    "questionLevel" : "medium",
-    "questionLetter" : "w",
-    "userResponseRecorded" : "init"
-  }, {
     "questionText" : "Con la X: Tejido esencial de las plantas.",
     "questionResponsesList" : [ "xilema", "xilografia", "xilofono", "xerografia" ],
     "correctQuestionIndex" : 0,
@@ -216,5 +200,5 @@
     "questionLetter" : "z",
     "userResponseRecorded" : "init"
   } ],
-  "max_length" : 27
+  "max_length" : 25
 }

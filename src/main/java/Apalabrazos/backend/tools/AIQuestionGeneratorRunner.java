@@ -133,8 +133,8 @@ public class AIQuestionGeneratorRunner {
     // ✅ ALFABETO ESPAÑOL CORRECTO
     private static List<String> buildSpanishAlphabet() {
         return List.of(
-                "a","b","c","d","e","f","g","h","i","j","k","l","m",
-                "n","ñ","o","p","q","r","s","t","u","v","w","x","y","z"
+                "a","b","c","d","e","f","g","h","i","j","l","m",
+                "n","ñ","o","p","q","r","s","t","u","v","x","y","z"
         );
     }
 

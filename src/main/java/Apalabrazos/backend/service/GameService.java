@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +45,8 @@ public class GameService implements EventListener {
     // Executor para cargar preguntas con timeout
     private final ExecutorService questionLoadExecutor = Executors.newSingleThreadExecutor();
     private Future<?> questionLoadFuture;
+    private volatile QuestionList preloadedQuestions;
+    private volatile boolean questionPreloadStarted = false;
 
     // Listeners separados para evitar rebotes entre buses
     private final EventListener globalListener = this::onGlobalEvent;
@@ -164,6 +167,7 @@ public class GameService implements EventListener {
      * Initialize a new game - starts the timer and changes state to PLAYING
      */
     public void initGame() {
+        log.info("[SEQ][BACKEND] initGame() entered for match {}", matchId);
         // Inicializar y arrancar el TimeService
         if (this.timeService == null) {
             this.timeService = new TimeService(matchId);
@@ -178,6 +182,7 @@ public class GameService implements EventListener {
         // Cargar preguntas para todos con timeout - BLOQUEANTE hasta 30 segundos
         try {
             loadQuestionsForAllPlayersWithTimeout();
+            log.info("[SEQ][BACKEND] Questions ready for match {}. Publishing first question now.", matchId);
             // Solo publicar preguntas si la carga fue exitosa
             publishQuestionForAllPlayers(0, QuestionStatus.INIT);
             log.info("Juego iniciado. TimeService iniciado");
@@ -197,32 +202,32 @@ public class GameService implements EventListener {
      * BLOQUEANTE: espera hasta 30 segundos. Si expira el tiempo, lanza TimeoutException.
      */
     private void loadQuestionsForAllPlayersWithTimeout() throws TimeoutException, Exception {
-        questionLoadFuture = questionLoadExecutor.submit((java.util.concurrent.Callable<Void>) () -> {
-            int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
+        if (!questionPreloadStarted) {
+            startQuestionPreload();
+        }
+        try {
+            // Bloquear hasta 30 segundos esperando que termine la carga
+            if (questionLoadFuture != null) {
+                questionLoadFuture.get(QUESTION_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            }
 
-            // Generar una bateria nueva por IA para cada partida.
-            // Si la IA no esta disponible, AIQuestionApiService usa el JSON local como fallback.
-            QuestionList baseQuestionList = AIQuestionApiService.getInstance()
-                    .generateQuestionsForNewGame(numberOfQuestions, true);
+            if (preloadedQuestions == null || preloadedQuestions.getCurrentLength() <= 0) {
+                throw new IllegalStateException("No se pudieron cargar preguntas para la partida " + matchId);
+            }
 
-            // Asignar a cada instancia de jugador
+            // Asignar a cada instancia de jugador solo cuando realmente empieza la partida.
             for (GameInstance instance : GlobalGameInstance.getAllPlayerInstances()) {
-                // Cada jugador debe tener su propia copia para que su progreso sea independiente.
-                instance.setQuestionList(cloneQuestionList(baseQuestionList));
+                instance.setQuestionList(cloneQuestionList(preloadedQuestions));
                 instance.start();
             }
 
-            log.info("Preguntas cargadas exitosamente para partida {}", matchId);
-            return null;
-        });
-
-        try {
-            // Bloquear hasta 30 segundos esperando que termine la carga
-            questionLoadFuture.get(QUESTION_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            log.info("Preguntas asignadas a jugadores para partida {}", matchId);
         } catch (TimeoutException e) {
-            questionLoadFuture.cancel(true);
+            if (questionLoadFuture != null) {
+                questionLoadFuture.cancel(true);
+            }
             throw e;
-        } catch (java.util.concurrent.ExecutionException e) {
+        } catch (ExecutionException e) {
             // La tarea lanzó una excepción
             Throwable cause = e.getCause();
             if (cause instanceof Exception) {
@@ -233,6 +238,33 @@ public class GameService implements EventListener {
             Thread.currentThread().interrupt();
             throw new Exception("Question loading interrupted", e);
         }
+    }
+
+    /**
+     * Inicia la precarga de preguntas en segundo plano.
+     * Se llama al crear partida para adelantar la latencia antes del start.
+     */
+    public synchronized void startQuestionPreload() {
+        if (questionPreloadStarted) {
+            return;
+        }
+
+        questionPreloadStarted = true;
+        questionLoadFuture = questionLoadExecutor.submit((java.util.concurrent.Callable<Void>) () -> {
+            int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
+
+            // Generar una bateria nueva por IA para cada partida.
+            // Si la IA no esta disponible, AIQuestionApiService usa el JSON local como fallback.
+            preloadedQuestions = AIQuestionApiService.getInstance()
+                    .generateQuestionsForNewGame(numberOfQuestions, true);
+
+            log.info("Precarga de preguntas completada para partida {} ({} preguntas)",
+                    matchId,
+                    preloadedQuestions != null ? preloadedQuestions.getCurrentLength() : 0);
+            return null;
+        });
+
+        log.info("Precarga de preguntas iniciada para partida {}", matchId);
     }
 
     /**
@@ -435,6 +467,7 @@ public class GameService implements EventListener {
     private void checkAndInitialize() {
         if (GlobalGameInstance.isGameInitialized()) {
             log.info("Ambas condiciones cumplidas (Controller + Start Validation) - notificando al GameController");
+            log.info("[SEQ][BACKEND] checkAndInitialize -> initialized=true, match={}", matchId);
             // Cancelar el timeout ya que todos los jugadores confirmaron a tiempo
             if (controllerReadyTimeout != null && !controllerReadyTimeout.isDone()) {
                 controllerReadyTimeout.cancel(false);
@@ -477,6 +510,7 @@ public class GameService implements EventListener {
         if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
             log.info("GameControllerReady received from playerId: {} (external bus)", ready.getPlayerId());
+            log.info("[SEQ][BACKEND] GameControllerReady received. match={}, playerId={}", matchId, ready.getPlayerId());
             GlobalGameInstance.transitionControllerReady(ready.getPlayerId());
             checkAndInitialize();
         } else if (event instanceof TimerTickEvent) {

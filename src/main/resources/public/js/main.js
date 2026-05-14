@@ -114,16 +114,22 @@ function showMatchStartView(payload = {}) {
     const roomId = String(payload?.roomId || currentJoinedRoomId || '').trim();
 
     UIManager.switchView('view-match-start');
+    console.log('[SEQ][UI] Entered match-start view (spinner stage). roomId=', roomId || '(none)');
+
+    // Confirmar el controller listo en cuanto se abre la pantalla de espera (spinner).
+    // Evita el bloqueo circular: servidor esperando ready mientras cliente espera preguntas.
+    if (roomId && currentStartedRoomId !== roomId) {
+        currentStartedRoomId = roomId;
+        SocketClient.send('GameControllerReady', { roomId });
+        console.log('[SEQ][UI] Sent GameControllerReady immediately on spinner load. roomId=', roomId);
+    }
 
     destroyPhaserGame();
     import('/js/phaser_src/game-launcher.js').then((mod) => {
         phaserGame = mod.startGame('phaser-game-container', {
             onCountdownComplete: () => {
+                console.log('[SEQ][UI] Numeric countdown completed. Starting MainScene + theme loop.');
                 MatchAudio.playThemeLoop();
-                if (roomId && currentStartedRoomId !== roomId) {
-                    currentStartedRoomId = roomId;
-                    SocketClient.send('GameControllerReady', { roomId });
-                }
             },
         });
     });

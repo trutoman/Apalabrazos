@@ -52,7 +52,7 @@ public class AIQuestionGenerator {
 
     private static final int DEFAULT_QUESTIONS_PER_LETTER = 1;
     private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
-    private static final int DEFAULT_LETTERS_PER_BATCH = 27;
+    private static final int DEFAULT_LETTERS_PER_BATCH = 25;
     private static final int DEFAULT_MAX_ATTEMPTS_PER_BATCH = 1;
     private static final int DEFAULT_MAX_TOKENS = 6000;
 
