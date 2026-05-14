@@ -21,6 +21,14 @@ public final class GlobalBusEventCatalog {
         MATCH_NOTIFICATION
     }
 
+    /**
+     * Describe cómo se usa un tipo de evento dentro del bus global.
+     *
+     * @param category categoría funcional del evento dentro del flujo backend
+     * @param emitters componentes que suelen publicar este evento
+     * @param receivers componentes que deben reaccionar a este evento
+     * @param notes contexto adicional útil para entender el propósito del flujo
+     */
     public record Route(Category category, List<String> emitters, List<String> receivers, String notes) {
     }
 

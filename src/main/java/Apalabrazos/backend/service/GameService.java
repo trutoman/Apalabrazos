@@ -416,7 +416,7 @@ public class GameService implements EventListener {
             return;
         }
 
-        if (event instanceof TimerTickEvent tick && matchId != null && matchId.equals(tick.getMatchId())) {
+        if (matchId != null && event instanceof TimerTickEvent tick && matchId.equals(tick.getMatchId())) {
             handleTimerTick(tick);
         }
     }
