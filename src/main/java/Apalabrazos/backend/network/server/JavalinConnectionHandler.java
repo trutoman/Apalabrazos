@@ -164,7 +164,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         Apalabrazos.backend.events.GameCreationRequestedEvent creationEvent = new Apalabrazos.backend.events.GameCreationRequestedEvent(
                                 config, gameName);
 
-                        Apalabrazos.backend.events.GlobalAsyncEventBus.getInstance().publish(creationEvent);
+                        Apalabrazos.backend.events.GlobalAsyncEventBus.publish(creationEvent);
                     }
 
                     // ── JOIN MATCH REQUEST ───────────────────────────────────────
@@ -253,7 +253,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     log.info("[GAME-START] ▶️ Solicitud de inicio recibida de '{}' para la sala {}",
                             player.getName(), roomId);
 
-                    Apalabrazos.backend.events.GlobalAsyncEventBus.getInstance().publish(
+                    Apalabrazos.backend.events.GlobalAsyncEventBus.publish(
                             new Apalabrazos.backend.events.GameStartedRequestEvent(roomId, player.getPlayerID()));
 
                     // ── GAME CONTROLLER READY ───────────────────────────────────
