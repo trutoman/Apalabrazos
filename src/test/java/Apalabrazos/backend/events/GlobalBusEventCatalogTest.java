@@ -8,15 +8,15 @@ class GlobalBusEventCatalogTest {
 
     @Test
     void shouldClassifyMatchManagerCommandEvents() {
-        GlobalBusEventCatalog.Route route = GlobalBusEventCatalog.describe(
-                new PlayerJoinedEvent("player-1", "match-1", "Alice"))
+        PlayerJoinedEvent event = new PlayerJoinedEvent("player-1", "match-1", "Alice");
+        GlobalBusEventCatalog.Route route = GlobalBusEventCatalog.describe(event)
                 .orElseThrow();
 
         assertEquals(GlobalBusEventCatalog.Category.MATCH_COMMAND, route.category());
         assertTrue(route.emitters().contains("MatchManager.joinPlayerToMatch"));
         assertTrue(route.receivers().contains("MatchManager"));
-        assertTrue(GlobalBusEventCatalog.isHandledByMatchManager(new PlayerJoinedEvent("player-1", "match-1")));
-        assertFalse(GlobalBusEventCatalog.isHandledByGameService(new PlayerJoinedEvent("player-1", "match-1")));
+        assertTrue(GlobalBusEventCatalog.isHandledByMatchManager(event));
+        assertFalse(GlobalBusEventCatalog.isHandledByGameService(event));
     }
 
     @Test
