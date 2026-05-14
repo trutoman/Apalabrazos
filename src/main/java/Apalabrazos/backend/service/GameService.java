@@ -30,7 +30,6 @@ public class GameService implements EventListener {
     private static final int BASE_QUESTION_SCORE = 100;
     private static final int SCORE_PENALTY_PER_PASS = 10;
 
-    private final AsyncEventBus eventBus;
     private final AsyncEventBus externalBus;
     private GameGlobal GlobalGameInstance;
 
@@ -54,22 +53,20 @@ public class GameService implements EventListener {
 
     public GameService() {
         this.GlobalGameInstance = new GameGlobal();
-        this.eventBus = GlobalAsyncEventBus.getInstance();
         this.externalBus = new AsyncEventBus();
         this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
-        eventBus.addListener(globalListener);
+        GlobalAsyncEventBus.addListener(globalListener);
         externalBus.addListener(externalListener);
     }
 
     public GameService(GamePlayerConfig playerConfig) {
         // Configurar la instancia global del juego para multijugador
         this.GlobalGameInstance = new GameGlobal(playerConfig);
-        this.eventBus = GlobalAsyncEventBus.getInstance();
         this.externalBus = new AsyncEventBus();
         this.matchId = generateMatchId();
         // Registrarse con listeners separados (evita rebotes entre buses)
-        eventBus.addListener(globalListener);
+        GlobalAsyncEventBus.addListener(globalListener);
         externalBus.addListener(externalListener);
     }
 
@@ -415,21 +412,12 @@ public class GameService implements EventListener {
 
     // Maneja eventos del bus global (GameSessionManager, TimeService, etc.)
     private void onGlobalEvent(GameEvent event) {
-        if (event instanceof PlayerJoinedEvent) {
-            PlayerJoinedEvent join = (PlayerJoinedEvent) event;
-            if (matchId != null && matchId.equals(join.getRoomCode())) {
-                addPlayerToGame(join.getPlayerID(), join.getPlayerName());
-            }
-        } else if (event instanceof TimerTickEvent) {
-            TimerTickEvent tick = (TimerTickEvent) event;
-            if (matchId != null && matchId.equals(tick.getMatchId())) {
-                handleTimerTick(tick);
-            }
-        } else if (event instanceof GameControllerReady) {
-            GameControllerReady ready = (GameControllerReady) event;
-            log.info("GameControllerReady received from playerId: {}", ready.getPlayerId());
-            GlobalGameInstance.transitionControllerReady(ready.getPlayerId());
-            checkAndInitialize();
+        if (!GlobalBusEventCatalog.isHandledByGameService(event)) {
+            return;
+        }
+
+        if (event instanceof TimerTickEvent tick && matchId != null && matchId.equals(tick.getMatchId())) {
+            handleTimerTick(tick);
         }
     }
 
