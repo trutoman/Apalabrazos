@@ -2,6 +2,7 @@ package Apalabrazos.backend.network.server;
 
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.network.ConnectionHandler;
+import Apalabrazos.backend.network.WsMessageType;
 import Apalabrazos.backend.tools.JwtService;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import io.javalin.websocket.WsCloseContext;
@@ -179,7 +180,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     } else if (roomId.isEmpty()) {
                         log.warn("[GAME-JOIN] ⚠️ JoinMatchRequest sin roomId de '{}'", username);
                         player.sendMessage(java.util.Map.of(
-                                "type", "JoinMatchRequestInvalid",
+                                "type", WsMessageType.JOIN_MATCH_REQUEST_INVALID,
                                 "payload", java.util.Map.of(
                                         "roomId", roomId,
                                         "cause", "No se ha indicado una sala válida.")));
@@ -191,11 +192,11 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                             payload.put("roomId", roomId);
                             payload.put("joined", true);
                             player.sendMessage(java.util.Map.of(
-                                    "type", "JoinMatchRequestValid",
+                                    "type", WsMessageType.JOIN_MATCH_REQUEST_VALID,
                                     "payload", payload));
                         } else {
                             player.sendMessage(java.util.Map.of(
-                                    "type", "JoinMatchRequestInvalid",
+                                    "type", WsMessageType.JOIN_MATCH_REQUEST_INVALID,
                                     "payload", java.util.Map.of(
                                             "roomId", roomId,
                                             "cause", "No se ha podido unir a la partida. Puede estar llena o no existir.")));
@@ -217,13 +218,13 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     if (leftRoomId != null && !leftRoomId.isBlank()) {
                         player.sendMessage(java.util.Map.of(
-                                "type", "LeaveMatchRequestValid",
+                                "type", WsMessageType.LEAVE_MATCH_REQUEST_VALID,
                                 "payload", java.util.Map.of(
                                         "roomId", leftRoomId,
                                         "left", true)));
                     } else {
                         player.sendMessage(java.util.Map.of(
-                                "type", "LeaveMatchRequestInvalid",
+                                "type", WsMessageType.LEAVE_MATCH_REQUEST_INVALID,
                                 "payload", java.util.Map.of(
                                         "cause", "No estás unido a ninguna partida.")));
                     }
@@ -242,7 +243,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     if (roomId.isEmpty()) {
                         player.sendMessage(java.util.Map.of(
-                                "type", "StartMatchRequestInvalid",
+                                "type", WsMessageType.START_MATCH_REQUEST_INVALID,
                                 "payload", java.util.Map.of(
                                         "roomId", roomId,
                                         "cause", "No se ha indicado una sala válida para iniciar la partida.")));
