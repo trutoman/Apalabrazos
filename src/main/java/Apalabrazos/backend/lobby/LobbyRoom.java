@@ -1,6 +1,7 @@
 package Apalabrazos.backend.lobby;
 
 import Apalabrazos.backend.model.Player;
+import Apalabrazos.backend.network.WsMessageType;
 import Apalabrazos.backend.service.MatchManager;
 import Apalabrazos.backend.service.ConnectionRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -75,7 +76,7 @@ public class LobbyRoom {
             payload.put("username_originator", usernameOriginator);
 
             ObjectNode message = mapper.createObjectNode();
-            message.put("type", "chat_message");
+            message.put("type", WsMessageType.CHAT_MESSAGE);
             message.set("payload", payload);
 
             String json = mapper.writeValueAsString(message);
@@ -102,21 +103,21 @@ public class LobbyRoom {
      * @param sessionManager The MatchManager used to resolve sessions -> Players.
      */
     public void broadcastMatchCreated(Map<String, Object> matchSummary, MatchManager sessionManager) {
-        broadcastMatchEvent("LobbyMatchCreated", matchSummary, sessionManager);
+        broadcastMatchEvent(WsMessageType.LOBBY_MATCH_CREATED, matchSummary, sessionManager);
     }
 
     /**
      * Broadcasts an updated match summary to all players currently in the lobby.
      */
     public void broadcastMatchUpdated(Map<String, Object> matchSummary, MatchManager sessionManager) {
-        broadcastMatchEvent("LobbyMatchUpdated", matchSummary, sessionManager);
+        broadcastMatchEvent(WsMessageType.LOBBY_MATCH_UPDATED, matchSummary, sessionManager);
     }
 
     /**
      * Broadcasts that a match was removed from the lobby.
      */
     public void broadcastMatchRemoved(Map<String, Object> matchSummary, MatchManager sessionManager) {
-        broadcastMatchEvent("LobbyMatchRemoved", matchSummary, sessionManager);
+        broadcastMatchEvent(WsMessageType.LOBBY_MATCH_REMOVED, matchSummary, sessionManager);
     }
 
     private void broadcastMatchEvent(String type, Map<String, Object> matchSummary, MatchManager sessionManager) {

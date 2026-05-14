@@ -2,6 +2,7 @@ package Apalabrazos.backend.network;
 
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.Player;
+import Apalabrazos.backend.network.WsMessageType;
 import Apalabrazos.backend.service.MatchManager;
 import Apalabrazos.backend.service.ConnectionRegistry;
 import org.slf4j.Logger;
@@ -135,7 +136,7 @@ public abstract class ConnectionHandler {
                     log.info("[CLIENT-DISCONNECT] Player {} removed from match {} during disconnect",
                             player.getPlayerID(), leftMatchId);
                 }
-                
+
                 log.info("[CLIENT-DISCONNECT] ✓ Cliente desconectado exitosamente: {} (SessionID: {})",
                         player.getName(), sessionId);
                 log.debug("[CLIENT-DISCONNECT] Estado final del jugador: {}", player.getState());
@@ -164,12 +165,6 @@ public abstract class ConnectionHandler {
                 return;
             }
 
-            // Reemplazar el MessageSender con la nueva conexión
-            WebSocketMessageSender newSender = new WebSocketMessageSender(newSession, sessionId.toString());
-
-            // Actualizar el jugador (esto requeriría un setter en Player)
-            // player.setMessageSender(newSender);
-
             ((WebSocketMessageSender) player.getSender()).reconnect();
 
             log.info("✓ Cliente reconectado: {} (SessionID: {})",
@@ -194,7 +189,7 @@ public abstract class ConnectionHandler {
             payload.put("matches", matchManager.getActiveMatchesSummary());
 
             java.util.Map<String, Object> message = new java.util.LinkedHashMap<>();
-            message.put("type", "LobbyMatchesSnapshot");
+            message.put("type", WsMessageType.LOBBY_MATCHES_SNAPSHOT);
             message.put("payload", payload);
 
             player.sendMessage(message);

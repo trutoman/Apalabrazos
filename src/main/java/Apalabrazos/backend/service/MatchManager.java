@@ -5,6 +5,7 @@ import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.GameRecord;
 import Apalabrazos.backend.model.Player;
+import Apalabrazos.backend.network.WsMessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -324,7 +325,7 @@ public class MatchManager implements EventListener {
             log.info("[BROADCAST-START] 🎮 Jugador {} - conectado: {}", playerId, player != null && player.isConnected());
             if (player != null && player.isConnected()) {
                 player.sendMessage(Map.of(
-                        "type", "MatchStarted",
+                        "type", WsMessageType.MATCH_STARTED,
                         "payload", payload));
                 log.info("[BROADCAST-START] ✅ MatchStarted enviado a jugador {}", playerId);
             } else {
@@ -336,234 +337,266 @@ public class MatchManager implements EventListener {
     private void registerMatchNetworkBridge(String matchId, GameService service) {
         service.addListener(gameEvent -> {
             if (gameEvent instanceof TimerTickEvent tick) {
-                GameGlobal gi = service.getGameInstance();
-                if (gi == null) return;
-                Map<String, Object> msg = Map.of(
-                        "type", "TimerTick",
-                        "payload", Map.of(
-                                "remaining", tick.getRemainingSeconds(),
-                                "roomId", matchId));
-                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
-                    if (!service.shouldReceiveTimerTick(pid)) {
-                        continue;
-                    }
-                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
-                    if (p != null && p.isConnected()) {
-                        p.sendMessage(msg);
-                    }
-                }
+                sendTimerTickToPlayers(tick, matchId, service);
             } else if (gameEvent instanceof ExtraTimeScoreEvent extraTimeScoreEvent) {
-                String targetPlayerId = extraTimeScoreEvent.getPlayerId();
-                if (targetPlayerId == null || targetPlayerId.isBlank()) {
-                    return;
-                }
-
-                String eventMatchId = extraTimeScoreEvent.getMatchId();
-                if (eventMatchId == null || eventMatchId.isBlank()) {
-                    eventMatchId = matchId;
-                }
-                if (!matchId.equals(eventMatchId)) {
-                    return;
-                }
-
-                Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
-                if (target == null || !target.isConnected()) {
-                    return;
-                }
-
-                Map<String, Object> payload = new LinkedHashMap<>();
-                payload.put("roomId", eventMatchId);
-                payload.put("playerId", targetPlayerId);
-                payload.put("remainingSeconds", extraTimeScoreEvent.getRemainingSeconds());
-                payload.put("extraTimeScore", extraTimeScoreEvent.getExtraTimeScore());
-                payload.put("totalScore", extraTimeScoreEvent.getTotalScore());
-
-                target.sendMessage(Map.of(
-                        "type", "ExtraTimeScore",
-                        "payload", payload));
+                sendExtraTimeScoreToPlayer(extraTimeScoreEvent, matchId);
             } else if (gameEvent instanceof StandingsEvent standingsEvent) {
-                GameGlobal gi = service.getGameInstance();
-                if (gi == null) return;
-
-                String eventMatchId = standingsEvent.getMatchId();
-                if (eventMatchId == null || eventMatchId.isBlank()) {
-                    eventMatchId = matchId;
-                }
-                if (!matchId.equals(eventMatchId)) {
-                    return;
-                }
-
-                List<Map<String, Object>> standings = new ArrayList<>();
-                for (StandingsEvent.StandingEntry entry : standingsEvent.getTopEntries()) {
-                    if (entry == null) {
-                        continue;
-                    }
-                    String playerId = entry.getPlayerId();
-                    if (playerId == null || playerId.isBlank()) {
-                        continue;
-                    }
-
-                    String playerName = connectionRegistry.getPlayerNameByPlayerId(playerId);
-                    if (playerName == null || playerName.isBlank()) {
-                        playerName = extractNameFromPlayerId(playerId);
-                    }
-                    if (playerName == null || playerName.isBlank()) {
-                        playerName = playerId;
-                    }
-
-                    standings.add(Map.of(
-                            "playerId", playerId,
-                            "playerName", playerName,
-                            "score", entry.getScore()));
-                }
-
-                Map<String, Object> msg = Map.of(
-                        "type", "Standings",
-                        "payload", Map.of(
-                                "roomId", eventMatchId,
-                                "standings", standings));
-
-                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
-                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
-                    if (p != null && p.isConnected()) {
-                        p.sendMessage(msg);
-                    }
-                }
+                sendStandingsToPlayers(standingsEvent, matchId, service);
             } else if (gameEvent instanceof AnswerValidatedEvent answerValidated) {
-                String targetPlayerId = answerValidated.getPlayerId();
-                if (targetPlayerId == null || targetPlayerId.isBlank()) {
-                    return;
-                }
-
-                Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
-                if (target == null || !target.isConnected()) {
-                    return;
-                }
-
-                Map<String, Object> answerResult = new LinkedHashMap<>();
-                answerResult.put("questionIndex", answerValidated.getQuestionIndex());
-                answerResult.put("questionLetter", answerValidated.getQuestionLetter());
-                answerResult.put("selectedAnswer", answerValidated.getSelectedAnswer());
-                answerResult.put("status", answerValidated.getStatus() != null ? answerValidated.getStatus().name() : null);
-                answerResult.put("correctAnswer", answerValidated.getCorrectAnswer());
-                answerResult.put("score", answerValidated.getScore());
-                answerResult.put("totalScore", answerValidated.getTotalScore());
-                answerResult.put("totalCorrect", answerValidated.getTotalCorrect());
-                answerResult.put("totalIncorrect", answerValidated.getTotalIncorrect());
-
-                target.sendMessage(Map.of(
-                        "type", "AnswerValidated",
-                    "payload", Map.of(
-                        "roomId", matchId,
-                        "answerResult", answerResult)));
+                sendAnswerValidatedToPlayer(answerValidated, matchId);
             } else if (gameEvent instanceof QuestionChangedEvent questionChanged) {
-                GameGlobal gi = service.getGameInstance();
-                if (gi == null) return;
-
-                Map<String, Object> payload = new LinkedHashMap<>();
-                payload.put("roomId", matchId);
-                payload.put("questionIndex", questionChanged.getQuestionIndex());
-                payload.put("status", questionChanged.getStatus() != null ? questionChanged.getStatus().name() : null);
-                payload.put("nextQuestion", questionChanged.getNextQuestion());
-                payload.put("totalCorrect", questionChanged.getTotalCorrect());
-                payload.put("totalIncorrect", questionChanged.getTotalIncorrect());
-
-                String targetPlayerId = questionChanged.getPlayerId();
-                if (targetPlayerId != null && !targetPlayerId.isBlank()) {
-                    Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
-                    if (target != null && target.isConnected()) {
-                        target.sendMessage(Map.of(
-                                "type", "QuestionChanged",
-                                "payload", payload));
-                    }
-                    return;
-                }
-
-                Map<String, Object> msg = Map.of(
-                        "type", "QuestionChanged",
-                        "payload", payload);
-                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
-                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
-                    if (p != null && p.isConnected()) {
-                        p.sendMessage(msg);
-                    }
-                }
+                sendQuestionChangedToPlayers(questionChanged, matchId, service);
             } else if (gameEvent instanceof GameFinishedEvent gameFinished) {
-                GameGlobal gi = service.getGameInstance();
-                if (gi == null) return;
-
-                String eventMatchId = gameFinished.getMatchId();
-                if (eventMatchId != null && !eventMatchId.isBlank() && !eventMatchId.equals(matchId)) {
-                    return;
-                }
-                if (eventMatchId == null || eventMatchId.isBlank()) {
-                    eventMatchId = matchId;
-                }
-
-                GameRecord playerOneRecord = gameFinished.getPlayerOneRecord();
-                GameRecord playerTwoRecord = gameFinished.getPlayerTwoRecord();
-
-                // Determine winner by iterating all participants in the match.
-                String winnerPlayerId = null;
-                String winnerName = "Empate";
-                int winnerScore = 0;
-                boolean tie = false;
-
-                Map<String, Apalabrazos.backend.model.GameInstance> instances = gi.getPlayerInstancesMap();
-                if (instances != null && !instances.isEmpty()) {
-                    int bestScore = Integer.MIN_VALUE;
-
-                    for (Map.Entry<String, Apalabrazos.backend.model.GameInstance> entry : instances.entrySet()) {
-                        String playerId = entry.getKey();
-                        Apalabrazos.backend.model.GameInstance instance = entry.getValue();
-                        if (playerId == null || instance == null) {
-                            continue;
-                        }
-
-                        int score = instance.getTotalScore();
-                        if (score > bestScore) {
-                            bestScore = score;
-                            winnerPlayerId = playerId;
-                            winnerScore = score;
-                            tie = false;
-                        } else if (score == bestScore) {
-                            tie = true;
-                        }
-                    }
-
-                    if (!tie && winnerPlayerId != null) {
-                        String resolvedName = connectionRegistry.getPlayerNameByPlayerId(winnerPlayerId);
-                        if (resolvedName == null || resolvedName.isBlank()) {
-                            resolvedName = extractNameFromPlayerId(winnerPlayerId);
-                        }
-                        winnerName = (resolvedName == null || resolvedName.isBlank()) ? "Ganador" : resolvedName;
-                    } else {
-                        winnerPlayerId = null;
-                        winnerName = "Empate";
-                    }
-                }
-
-                Map<String, Object> gameFinishedPayload = new LinkedHashMap<>();
-                gameFinishedPayload.put("roomId", eventMatchId);
-                gameFinishedPayload.put("playerOneRecord", playerOneRecord);
-                gameFinishedPayload.put("playerTwoRecord", playerTwoRecord);
-                gameFinishedPayload.put("winnerName", winnerName);
-                gameFinishedPayload.put("winnerScore", winnerScore);
-                gameFinishedPayload.put("winnerPlayerId", winnerPlayerId);
-
-                for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
-                    Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
-                    if (p != null && p.isConnected()) {
-                        p.sendMessage(Map.of(
-                                "type", "GameFinished",
-                                "payload", gameFinishedPayload));
-                    }
-                }
-
-                scheduleFinishedMatchCleanup(eventMatchId, service);
+                sendGameFinishedToPlayers(gameFinished, matchId, service);
             }
         });
         log.info("Network bridge registrado para partida {}", matchId);
+    }
+
+    // ── In-game event senders ─────────────────────────────────────────────────
+
+    /**
+     * Sends a {@link WsMessageType#TIMER_TICK} message to every player in the match
+     * that should currently receive timer updates.
+     */
+    private void sendTimerTickToPlayers(TimerTickEvent tick, String matchId, GameService service) {
+        GameGlobal gi = service.getGameInstance();
+        if (gi == null) return;
+
+        Map<String, Object> msg = Map.of(
+                "type", WsMessageType.TIMER_TICK,
+                "payload", Map.of(
+                        "remaining", tick.getRemainingSeconds(),
+                        "roomId", matchId));
+
+        for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+            if (!service.shouldReceiveTimerTick(pid)) continue;
+            Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+            if (p != null && p.isConnected()) {
+                p.sendMessage(msg);
+            }
+        }
+    }
+
+    /**
+     * Sends a {@link WsMessageType#EXTRA_TIME_SCORE} message to the specific player
+     * who earned the extra-time bonus.
+     */
+    private void sendExtraTimeScoreToPlayer(ExtraTimeScoreEvent event, String matchId) {
+        String targetPlayerId = event.getPlayerId();
+        if (targetPlayerId == null || targetPlayerId.isBlank()) return;
+
+        String eventMatchId = event.getMatchId();
+        if (eventMatchId == null || eventMatchId.isBlank()) {
+            eventMatchId = matchId;
+        }
+        if (!matchId.equals(eventMatchId)) return;
+
+        Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
+        if (target == null || !target.isConnected()) return;
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("roomId", eventMatchId);
+        payload.put("playerId", targetPlayerId);
+        payload.put("remainingSeconds", event.getRemainingSeconds());
+        payload.put("extraTimeScore", event.getExtraTimeScore());
+        payload.put("totalScore", event.getTotalScore());
+
+        target.sendMessage(Map.of(
+                "type", WsMessageType.EXTRA_TIME_SCORE,
+                "payload", payload));
+    }
+
+    /**
+     * Sends a {@link WsMessageType#STANDINGS} message to every player in the match.
+     */
+    private void sendStandingsToPlayers(StandingsEvent event, String matchId, GameService service) {
+        GameGlobal gi = service.getGameInstance();
+        if (gi == null) return;
+
+        String eventMatchId = event.getMatchId();
+        if (eventMatchId == null || eventMatchId.isBlank()) {
+            eventMatchId = matchId;
+        }
+        if (!matchId.equals(eventMatchId)) return;
+
+        List<Map<String, Object>> standings = new ArrayList<>();
+        for (StandingsEvent.StandingEntry entry : event.getTopEntries()) {
+            if (entry == null) continue;
+            String playerId = entry.getPlayerId();
+            if (playerId == null || playerId.isBlank()) continue;
+
+            String playerName = connectionRegistry.getPlayerNameByPlayerId(playerId);
+            if (playerName == null || playerName.isBlank()) {
+                playerName = extractNameFromPlayerId(playerId);
+            }
+            if (playerName == null || playerName.isBlank()) {
+                playerName = playerId;
+            }
+
+            standings.add(Map.of(
+                    "playerId", playerId,
+                    "playerName", playerName,
+                    "score", entry.getScore()));
+        }
+
+        Map<String, Object> msg = Map.of(
+                "type", WsMessageType.STANDINGS,
+                "payload", Map.of(
+                        "roomId", eventMatchId,
+                        "standings", standings));
+
+        for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+            Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+            if (p != null && p.isConnected()) {
+                p.sendMessage(msg);
+            }
+        }
+    }
+
+    /**
+     * Sends an {@link WsMessageType#ANSWER_VALIDATED} message to the player whose
+     * answer was just evaluated.
+     */
+    private void sendAnswerValidatedToPlayer(AnswerValidatedEvent event, String matchId) {
+        String targetPlayerId = event.getPlayerId();
+        if (targetPlayerId == null || targetPlayerId.isBlank()) return;
+
+        Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
+        if (target == null || !target.isConnected()) return;
+
+        Map<String, Object> answerResult = new LinkedHashMap<>();
+        answerResult.put("questionIndex", event.getQuestionIndex());
+        answerResult.put("questionLetter", event.getQuestionLetter());
+        answerResult.put("selectedAnswer", event.getSelectedAnswer());
+        answerResult.put("status", event.getStatus() != null ? event.getStatus().name() : null);
+        answerResult.put("correctAnswer", event.getCorrectAnswer());
+        answerResult.put("score", event.getScore());
+        answerResult.put("totalScore", event.getTotalScore());
+        answerResult.put("totalCorrect", event.getTotalCorrect());
+        answerResult.put("totalIncorrect", event.getTotalIncorrect());
+
+        target.sendMessage(Map.of(
+                "type", WsMessageType.ANSWER_VALIDATED,
+                "payload", Map.of(
+                        "roomId", matchId,
+                        "answerResult", answerResult)));
+    }
+
+    /**
+     * Sends a {@link WsMessageType#QUESTION_CHANGED} message. When the event targets
+     * a specific player the message is unicast; otherwise it is broadcast to every
+     * player in the match.
+     */
+    private void sendQuestionChangedToPlayers(QuestionChangedEvent event, String matchId, GameService service) {
+        GameGlobal gi = service.getGameInstance();
+        if (gi == null) return;
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("roomId", matchId);
+        payload.put("questionIndex", event.getQuestionIndex());
+        payload.put("status", event.getStatus() != null ? event.getStatus().name() : null);
+        payload.put("nextQuestion", event.getNextQuestion());
+        payload.put("totalCorrect", event.getTotalCorrect());
+        payload.put("totalIncorrect", event.getTotalIncorrect());
+
+        String targetPlayerId = event.getPlayerId();
+        if (targetPlayerId != null && !targetPlayerId.isBlank()) {
+            // Unicast to the targeted player
+            Player target = connectionRegistry.findConnectedPlayerByPlayerId(targetPlayerId);
+            if (target != null && target.isConnected()) {
+                target.sendMessage(Map.of(
+                        "type", WsMessageType.QUESTION_CHANGED,
+                        "payload", payload));
+            }
+            return;
+        }
+
+        // Broadcast to all players in the match
+        Map<String, Object> msg = Map.of(
+                "type", WsMessageType.QUESTION_CHANGED,
+                "payload", payload);
+        for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+            Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+            if (p != null && p.isConnected()) {
+                p.sendMessage(msg);
+            }
+        }
+    }
+
+    /**
+     * Sends a {@link WsMessageType#GAME_FINISHED} message to every player in the
+     * match and schedules cleanup of the finished match.
+     */
+    private void sendGameFinishedToPlayers(GameFinishedEvent event, String matchId, GameService service) {
+        GameGlobal gi = service.getGameInstance();
+        if (gi == null) return;
+
+        String eventMatchId = event.getMatchId();
+        if (eventMatchId != null && !eventMatchId.isBlank() && !eventMatchId.equals(matchId)) return;
+        if (eventMatchId == null || eventMatchId.isBlank()) {
+            eventMatchId = matchId;
+        }
+
+        GameRecord playerOneRecord = event.getPlayerOneRecord();
+        GameRecord playerTwoRecord = event.getPlayerTwoRecord();
+
+        // Determine the winner by iterating all participants in the match
+        String winnerPlayerId = null;
+        String winnerName = "Empate";
+        int winnerScore = 0;
+        boolean tie = false;
+
+        Map<String, Apalabrazos.backend.model.GameInstance> instances = gi.getPlayerInstancesMap();
+        if (instances != null && !instances.isEmpty()) {
+            int bestScore = Integer.MIN_VALUE;
+
+            for (Map.Entry<String, Apalabrazos.backend.model.GameInstance> entry : instances.entrySet()) {
+                String playerId = entry.getKey();
+                Apalabrazos.backend.model.GameInstance instance = entry.getValue();
+                if (playerId == null || instance == null) continue;
+
+                int score = instance.getTotalScore();
+                if (score > bestScore) {
+                    bestScore = score;
+                    winnerPlayerId = playerId;
+                    winnerScore = score;
+                    tie = false;
+                } else if (score == bestScore) {
+                    tie = true;
+                }
+            }
+
+            if (!tie && winnerPlayerId != null) {
+                String resolvedName = connectionRegistry.getPlayerNameByPlayerId(winnerPlayerId);
+                if (resolvedName == null || resolvedName.isBlank()) {
+                    resolvedName = extractNameFromPlayerId(winnerPlayerId);
+                }
+                winnerName = (resolvedName == null || resolvedName.isBlank()) ? "Ganador" : resolvedName;
+            } else {
+                winnerPlayerId = null;
+                winnerName = "Empate";
+            }
+        }
+
+        Map<String, Object> gameFinishedPayload = new LinkedHashMap<>();
+        gameFinishedPayload.put("roomId", eventMatchId);
+        gameFinishedPayload.put("playerOneRecord", playerOneRecord);
+        gameFinishedPayload.put("playerTwoRecord", playerTwoRecord);
+        gameFinishedPayload.put("winnerName", winnerName);
+        gameFinishedPayload.put("winnerScore", winnerScore);
+        gameFinishedPayload.put("winnerPlayerId", winnerPlayerId);
+
+        for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+            Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+            if (p != null && p.isConnected()) {
+                p.sendMessage(Map.of(
+                        "type", WsMessageType.GAME_FINISHED,
+                        "payload", gameFinishedPayload));
+            }
+        }
+
+        scheduleFinishedMatchCleanup(eventMatchId, service);
     }
 
     private void scheduleFinishedMatchCleanup(String matchId, GameService service) {
@@ -664,7 +697,7 @@ public class MatchManager implements EventListener {
                 Player affectedPlayer = connectionRegistry.findConnectedPlayerByPlayerId(affectedPlayerId);
                 if (affectedPlayer != null && affectedPlayer.isConnected()) {
                     affectedPlayer.sendMessage(Map.of(
-                            "type", "MatchClosedByCreator",
+                            "type", WsMessageType.MATCH_CLOSED_BY_CREATOR,
                             "payload", Map.of(
                                     "roomId", currentMatchId,
                                     "cause", "El creador abandonó la partida. Has vuelto al lobby.")));
@@ -798,7 +831,7 @@ public class MatchManager implements EventListener {
         if (currentMatchId != null) {
             log.warn("Game creation rejected for {}: already joined in match {}", player.getName(), currentMatchId);
             player.sendMessage(java.util.Map.of(
-                    "type", "GameCreationRequestInvalid",
+                    "type", WsMessageType.GAME_CREATION_REQUEST_INVALID,
                     "payload", java.util.Map.of(
                             "cause", "Ya estás dentro de una partida. Debes salir antes de crear otra.",
                             "roomId", currentMatchId)));
@@ -815,7 +848,7 @@ public class MatchManager implements EventListener {
             // la causa
             if (player != null) {
                 player.sendMessage(java.util.Map.of(
-                        "type", "GameCreationRequestInvalid",
+                        "type", WsMessageType.GAME_CREATION_REQUEST_INVALID,
                         "payload", java.util.Map.of("cause", validationError)));
             }
             return;
@@ -834,7 +867,7 @@ public class MatchManager implements EventListener {
                 removeMatchById(matchIdString);
             }
             player.sendMessage(java.util.Map.of(
-                    "type", "GameCreationRequestInvalid",
+                    "type", WsMessageType.GAME_CREATION_REQUEST_INVALID,
                     "payload", java.util.Map.of("cause", "No se pudo unir al creador a la partida creada.")));
             return;
         }
@@ -863,7 +896,7 @@ public class MatchManager implements EventListener {
                 : event.getConfig().getGameType().name();
 
             player.sendMessage(java.util.Map.of(
-                    "type", "GameCreationRequestValid",
+                    "type", WsMessageType.GAME_CREATION_REQUEST_VALID,
                 "payload", java.util.Map.of(
                     "roomId", matchIdString,
                     "name", gameService.getGameName(),
@@ -913,7 +946,7 @@ public class MatchManager implements EventListener {
             log.error("No se encontró el creador para la sala {}", roomId);
             if (requester != null) {
                 requester.sendMessage(Map.of(
-                        "type", "StartMatchRequestInvalid",
+                        "type", WsMessageType.START_MATCH_REQUEST_INVALID,
                         "payload", Map.of(
                                 "roomId", roomId,
                                 "cause", "No se ha encontrado el creador de la partida.")));
@@ -925,7 +958,7 @@ public class MatchManager implements EventListener {
             log.error("Solo el creador puede iniciar la partida. Creador: {}, Usuario: {}", creator, requesterPlayerId);
             if (requester != null) {
                 requester.sendMessage(Map.of(
-                        "type", "StartMatchRequestInvalid",
+                        "type", WsMessageType.START_MATCH_REQUEST_INVALID,
                         "payload", Map.of(
                                 "roomId", roomId,
                                 "cause", "Solo el creador puede iniciar la partida.")));
@@ -940,7 +973,7 @@ public class MatchManager implements EventListener {
             if (gameInstance == null || gameInstance.getPlayerCount() < 1) {
                 if (requester != null) {
                     requester.sendMessage(Map.of(
-                            "type", "StartMatchRequestInvalid",
+                            "type", WsMessageType.START_MATCH_REQUEST_INVALID,
                             "payload", Map.of(
                                     "roomId", roomId,
                                     "cause", "Se necesita al menos 1 jugador para iniciar la partida.")));
@@ -957,7 +990,7 @@ public class MatchManager implements EventListener {
             log.error("Room with ID {} not found", roomId);
             if (requester != null) {
                 requester.sendMessage(Map.of(
-                        "type", "StartMatchRequestInvalid",
+                        "type", WsMessageType.START_MATCH_REQUEST_INVALID,
                         "payload", Map.of(
                                 "roomId", roomId,
                                 "cause", "La partida ya no existe.")));
@@ -1011,7 +1044,7 @@ public class MatchManager implements EventListener {
                         payload.put("roomId", roomId);
                         payload.put("started", true);
                         joiningPlayer.sendMessage(Map.of(
-                                "type", "MatchStarted",
+                                "type", WsMessageType.MATCH_STARTED,
                                 "payload", payload));
                         log.info("[PLAYER-JOIN] ✅ MatchStarted enviado a jugador que se unió tarde: {}", playerId);
                     }
