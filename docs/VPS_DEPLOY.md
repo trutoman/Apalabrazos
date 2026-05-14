@@ -42,7 +42,6 @@ AI_GENERATOR_MINUTE=0
 AI_GENERATOR_TIMEZONE=Europe/Madrid
 AI_GENERATOR_OUTPUT_DIR=src/main/resources/Apalabrazos/data
 AI_GENERATOR_FILENAME=questions2.json
-AI_GENERATOR_RUN_ON_START=false
 ```
 
 ## 3) Arranque

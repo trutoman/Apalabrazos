@@ -48,7 +48,7 @@ public class AIQuestionGenerator {
     private static final String DEFAULT_MODEL = "gemma4:e2b";
     private static final String DEFAULT_FALLBACK_MODEL = "";
 
-    private static final String DEFAULT_WORD_DICTIONARY_PATH = "Apalabrazos/data/0_palabras_todas.txt";
+    private static final String DEFAULT_WORD_DICTIONARY_PATH = "Apalabrazos/data/dictionary.txt";
 
     private static final int DEFAULT_QUESTIONS_PER_LETTER = 1;
     private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
@@ -113,7 +113,8 @@ public class AIQuestionGenerator {
         this.maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
         this.appName = readEnv("AI_APP_NAME", DEFAULT_APP_NAME);
         this.appUrl = readEnv("AI_APP_URL", DEFAULT_APP_URL);
-        this.wordDictionaryPath = readEnv("AI_WORD_DICTIONARY_PATH", DEFAULT_WORD_DICTIONARY_PATH);
+        String configuredDictionaryPath = readEnv("AI_WORD_DICTIONARY_PATH", DEFAULT_WORD_DICTIONARY_PATH);
+        this.wordDictionaryPath = resolveDictionaryPath(configuredDictionaryPath);
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -128,6 +129,12 @@ public class AIQuestionGenerator {
                 lettersPerBatch, maxAttemptsPerBatch, maxTokens, appName, appUrl);
 
         log.info("Diccionario de palabras configurado en: {}", wordDictionaryPath);
+    }
+
+    private String resolveDictionaryPath(String configuredPath) {
+        return (configuredPath == null || configuredPath.isBlank())
+                ? DEFAULT_WORD_DICTIONARY_PATH
+                : configuredPath.trim();
     }
 
     public int getQuestionsPerLetter() {

@@ -6,6 +6,7 @@ import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.GameRecord;
 import Apalabrazos.backend.model.Player;
 import Apalabrazos.backend.network.WsMessageType;
+import Apalabrazos.backend.tools.AIQuestionScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +55,9 @@ public class MatchManager implements EventListener {
     private final Map<String, List<String>> matchPlayerNames;
 
     private final ScheduledExecutorService matchCleanupScheduler;
+    private final Object aiSchedulerLock = new Object();
+    private AIQuestionScheduler aiQuestionScheduler;
+    private volatile boolean aiSchedulerStarted = false;
 
     /**
      * Private constructor to prevent direct instantiation
@@ -70,6 +74,35 @@ public class MatchManager implements EventListener {
         // Registrarse como listener de eventos
         GlobalAsyncEventBus.addListener(this);
         log.info("MatchManager singleton initialized");
+    }
+
+    private void ensureAiSchedulerStarted() {
+        if (aiSchedulerStarted) {
+            return;
+        }
+
+        synchronized (aiSchedulerLock) {
+            if (aiSchedulerStarted) {
+                return;
+            }
+
+            if (aiQuestionScheduler == null) {
+                aiQuestionScheduler = new AIQuestionScheduler();
+            }
+
+            aiQuestionScheduler.start();
+            aiSchedulerStarted = true;
+            log.info("AI Question Scheduler arrancado diferido tras creación de partida");
+        }
+    }
+
+    public void stopAiQuestionScheduler() {
+        synchronized (aiSchedulerLock) {
+            if (aiQuestionScheduler != null) {
+                aiQuestionScheduler.stop();
+                aiSchedulerStarted = false;
+            }
+        }
     }
 
     /**
@@ -857,6 +890,7 @@ public class MatchManager implements EventListener {
         }
 
         log.info("Game creation requested by {}", player.getName());
+        ensureAiSchedulerStarted();
         GameService gameService = new GameService(event.getConfig());
         gameService.startQuestionPreload();
         // Asignar creador y nombre de partida antes de agregar a registro

@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
  * - AI_GENERATOR_TIMEZONE   → Zona horaria (default: Europe/Madrid)
  * - AI_GENERATOR_OUTPUT_DIR → Directorio donde guardar el JSON generado (default: src/main/resources/Apalabrazos/data)
  * - AI_GENERATOR_FILENAME   → Nombre del archivo de salida (default: questions2.json)
- * - AI_GENERATOR_RUN_ON_START → "true" para ejecutar una vez al arrancar (default: "false")
  */
 public class AIQuestionScheduler {
 
@@ -41,7 +40,6 @@ public class AIQuestionScheduler {
     private final ZoneId zone;
     private final String outputDir;
     private final String filename;
-    private final boolean runOnStart;
 
     public AIQuestionScheduler() {
         this.generator = new AIQuestionGenerator();
@@ -57,7 +55,6 @@ public class AIQuestionScheduler {
         this.zone = ZoneId.of(readEnv("AI_GENERATOR_TIMEZONE", "Europe/Madrid"));
         this.outputDir = readEnv("AI_GENERATOR_OUTPUT_DIR", "src/main/resources/Apalabrazos/data");
         this.filename = readEnv("AI_GENERATOR_FILENAME", "questions2.json");
-        this.runOnStart = readEnvBool("AI_GENERATOR_RUN_ON_START", false);
     }
 
     /**
@@ -70,12 +67,6 @@ public class AIQuestionScheduler {
         }
 
         log.info("AI Question Scheduler INICIADO - Generación diaria a las {}:{} ({})", hour, minute, zone);
-
-        // Ejecutar inmediatamente si está configurado
-        if (runOnStart) {
-            log.info("Ejecución inicial al arrancar habilitada (AI_GENERATOR_RUN_ON_START=true)");
-            scheduler.submit(this::generateAndSave);
-        }
 
         // Calcular el delay hasta la próxima ejecución
         scheduleNextRun();
