@@ -36,7 +36,6 @@ public class MatchManager implements EventListener {
     // Singleton instance
     private static volatile MatchManager instance;
 
-    private final AsyncEventBus eventBus;
     private final ConnectionRegistry connectionRegistry;
 
     // ===== Match Registry =====
@@ -60,7 +59,6 @@ public class MatchManager implements EventListener {
      * Private constructor to prevent direct instantiation
      */
     private MatchManager() {
-        this.eventBus = GlobalAsyncEventBus.getInstance();
         this.connectionRegistry = ConnectionRegistry.getInstance();
         this.activeMatches = new ConcurrentHashMap<>();
         this.matchPlayerNames = new ConcurrentHashMap<>();
@@ -70,7 +68,7 @@ public class MatchManager implements EventListener {
             return thread;
         });
         // Registrarse como listener de eventos
-        eventBus.addListener(this);
+        GlobalAsyncEventBus.addListener(this);
         log.info("MatchManager singleton initialized");
     }
 
@@ -92,6 +90,10 @@ public class MatchManager implements EventListener {
 
     @Override
     public void onEvent(GameEvent event) {
+        if (!GlobalBusEventCatalog.isHandledByMatchManager(event)) {
+            return;
+        }
+
         if (event instanceof GameCreationRequestedEvent) {
             handleGameCreationRequested((GameCreationRequestedEvent) event);
         } else if (event instanceof GetMatchInfoEvent) {
@@ -802,7 +804,7 @@ public class MatchManager implements EventListener {
                 matchId,
                 player.getName());
 
-        eventBus.publishAndWait(joinedEvent);
+        GlobalAsyncEventBus.publishAndWait(joinedEvent);
 
         GameGlobal gameInstance = service.getGameInstance();
         boolean joined = gameInstance != null && gameInstance.hasPlayer(player.getPlayerID());
@@ -913,7 +915,7 @@ public class MatchManager implements EventListener {
         if (matchIdString != null) {
             GameMatchCreatedEvent sessionCreatedEvent =
                 new GameMatchCreatedEvent(tempRoomCode, matchIdString, gameService);
-            eventBus.publish(sessionCreatedEvent);
+            GlobalAsyncEventBus.publish(sessionCreatedEvent);
         }
     }
 
@@ -925,7 +927,7 @@ public class MatchManager implements EventListener {
         GameService service = getMatchById(matchId);
         if (service != null) {
             // Reuse GameMatchCreatedEvent to deliver the GameService reference
-            eventBus.publish(new GameMatchCreatedEvent(matchId, matchId, service));
+            GlobalAsyncEventBus.publish(new GameMatchCreatedEvent(matchId, matchId, service));
         }
     }
 
