@@ -40,7 +40,7 @@ public class JavaWebSocketHandler extends ConnectionHandler {
      * @param username Parámetro del path {username}
      */
     public void onOpen(Object session, String username) {
-        log.info("→ WebSocket OnOpen: {}", username);
+        log.info("[WS-BUS][FE->BE][CONNECT] WebSocket OnOpen: {}", username);
         onClientConnect(session, username, null); // No JWT auth in legacy handler
     }
 
@@ -51,7 +51,7 @@ public class JavaWebSocketHandler extends ConnectionHandler {
      * @param sessionId      El ID de sesión del cliente
      */
     public void onMessage(String messageContent, UUID sessionId) {
-        log.debug("→ WebSocket OnMessage: {}", messageContent);
+        log.debug("[WS-BUS][FE->BE][MESSAGE] WebSocket OnMessage: {}", messageContent);
         onClientMessage(sessionId, messageContent);
     }
 
@@ -61,7 +61,7 @@ public class JavaWebSocketHandler extends ConnectionHandler {
      * @param sessionId El ID de sesión del cliente
      */
     public void onClose(UUID sessionId) {
-        log.info("→ WebSocket OnClose: {}", sessionId);
+        log.info("[WS-BUS][FE->BE][CLOSE] WebSocket OnClose: {}", sessionId);
         onClientDisconnect(sessionId);
     }
 
@@ -72,7 +72,7 @@ public class JavaWebSocketHandler extends ConnectionHandler {
      * @param throwable El error ocurrido
      */
     public void onError(UUID sessionId, Throwable throwable) {
-        log.error("✗ WebSocket Error en sesión {}: {}", sessionId, throwable.getMessage());
+        log.error("❌ WebSocket error in session {}: {}", sessionId, throwable.getMessage());
         // Posible reconexión automática
     }
 }

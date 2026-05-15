@@ -85,7 +85,7 @@ public final class AIQuestionConfig {
         appUrl  = readEnv("AI_APP_URL",  DEFAULT_APP_URL);
 
         log.info(
-                "AIQuestionConfig cargado — apiUrl={}, model={}, fallbackModel={}, questionsPerLetter={}, " +
+                "AIQuestionConfig loaded -- apiUrl={}, model={}, fallbackModel={}, questionsPerLetter={}, " +
                 "questionsToGeneratePerLetterInBatch={}, lettersPerBatch={}, maxAttemptsPerBatch={}, " +
                 "maxTokens={}, appName={}, appUrl={}, wordDictionaryPath={}",
                 apiUrl, model, fallbackModel, questionsPerLetter,
@@ -128,7 +128,7 @@ public final class AIQuestionConfig {
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
-            log.warn("Valor no numérico para {}: '{}'. Usando default={}", key, value, defaultValue);
+            log.warn("Non-numeric value for {}: '{}'. Using default={}", key, value, defaultValue);
             return defaultValue;
         }
     }

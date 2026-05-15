@@ -224,7 +224,7 @@ function handleLogout() {
         LoginUI.focusUsernameInput();
     }
 
-    console.log('✅ Logged out successfully');
+    console.log('Logged out successfully');
 }
 
 function setCreatePendingState(pending) {
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnConfirm = document.getElementById('btn-confirm-create');
     if (btnConfirm) {
         btnConfirm.addEventListener('click', () => {
-            console.log('[CREATE] btn-confirm-create clicked ✅');
+            console.log('[CREATE] btn-confirm-create clicked');
             if (isCreateGamePending) {
                 console.warn('[CREATE] A create request is already pending. Ignoring duplicate click.');
                 return;
@@ -988,7 +988,7 @@ LoginUI.init(
             registerSocketMessageHandlers();
 
             // 5. WebSocket authenticated, switch to lobby
-            console.log("✅ Authentication successful, entering lobby...");
+            console.log("Authentication successful, entering lobby...");
             UIManager.switchView('view-lobby');
             renderLobbyUsername(currentUsername);
 

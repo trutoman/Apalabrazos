@@ -1,21 +1,21 @@
 export const UIManager = {
     switchView(viewId) {
         try {
-            // Ocultar todas las vistas
+            // Hide all views
             document.querySelectorAll('.game-view').forEach(view => {
                 view.classList.add('hidden');
             });
-            
-            // Mostrar la que queremos
+
+            // Show the target view
             const targetView = document.getElementById(viewId);
             if (!targetView) {
-                console.error(`❌ Vista no encontrada: ${viewId}`);
+                console.error(`❌ View not found: ${viewId}`);
                 return;
             }
             targetView.classList.remove('hidden');
-            console.log(`✅ Vista cambiada a: ${viewId}`);
+            console.log(`View changed to: ${viewId}`);
         } catch (error) {
-            console.error('Error al cambiar vista:', error);
+            console.error('Error changing view:', error);
         }
     }
 };

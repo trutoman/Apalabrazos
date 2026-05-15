@@ -28,7 +28,7 @@ public class TimeService {
     public synchronized void start() {
         if (running) return;
         running = true;
-        log.info("TimeService iniciado");
+        log.info("TimeService started");
         worker = new Thread(() -> {
             while (running) {
                 try {
@@ -40,8 +40,8 @@ public class TimeService {
 
                 if (!running)
                     break;
-                log.debug("TimerTickEvent emitido");
-                GlobalAsyncEventBus.publish(new TimerTickEvent(0, matchId)); // GameService gestionará el valor real
+                log.debug("[ASYNC-BUS][SEND][TimeService->GameService] Publishing TimerTickEvent matchId={}", matchId);
+                GlobalAsyncEventBus.publish(new TimerTickEvent(0, matchId)); // GameService manages the real value
             }
         }, "TimeService_Thread");
         worker.setDaemon(true); // No bloquea salida de la app
@@ -56,6 +56,6 @@ public class TimeService {
         if (worker != null) {
             worker.interrupt();
         }
-        log.info("TimeService detenido");
+        log.info("TimeService stopped");
     }
 }

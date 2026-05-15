@@ -89,7 +89,7 @@ public class AIQuestionGenerator {
         this.mapper = new ObjectMapper();
         this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-        log.info("AIQuestionGenerator inicializado desde AIQuestionConfig");
+        log.info("AIQuestionGenerator initialized from AIQuestionConfig");
     }
 
     public int getQuestionsPerLetter() {
@@ -138,7 +138,7 @@ public class AIQuestionGenerator {
         validateConfiguration();
 
         if (targetLetters == null || targetLetters.isEmpty()) {
-            log.info("No hay letras pendientes de generar.");
+            log.info("No pending letters to generate.");
             return new QuestionList(new ArrayList<>(), 0);
         }
 
@@ -182,13 +182,13 @@ public class AIQuestionGenerator {
     private QuestionList buildQuestionListResult(Map<String, List<Question>> acceptedByLetter) {
         List<Question> allQuestions = flattenQuestions(acceptedByLetter.values());
         QuestionList result = new QuestionList(allQuestions, allQuestions.size());
-        log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
+        log.info("Generated {} questions for pending letters", allQuestions.size());
         return result;
     }
 
     private boolean processBatch(List<String> batchLetters, Map<String, List<Question>> acceptedByLetter)
             throws InterruptedException {
-        log.info("Procesando lote de letras pendientes: {}", batchLetters);
+        log.info("Processing pending letters batch: {}", batchLetters);
 
         int attempts = 0;
         boolean quotaExceeded = false;
@@ -199,25 +199,25 @@ public class AIQuestionGenerator {
                 Map<String, CandidateQuestionData> candidatesByLetter = buildCandidatesForBatch(batchLetters);
 
                 if (candidatesByLetter.isEmpty()) {
-                    log.warn("No se pudieron preparar candidatas para el lote {}. Se salta el intento.", batchLetters);
+                    log.warn("Could not prepare candidates for batch {}. Skipping attempt.", batchLetters);
                     break;
                 }
 
-                log.info("Enviando lote {} a la IA con {} candidatas", batchLetters, candidatesByLetter.size());
+                log.info("Sending batch {} to AI with {} candidates", batchLetters, candidatesByLetter.size());
                 String responseBody = callAIForBatch(batchLetters, candidatesByLetter);
                 List<Question> parsed = parseAIResponse(responseBody, batchLetters, candidatesByLetter);
 
                 int acceptedThisAttempt = acceptParsedQuestions(parsed, acceptedByLetter);
 
                 log.info(
-                        "Lote pendiente {} intento {}/{} -> aceptadas en intento: {}",
+                    "Pending batch {} attempt {}/{} -> accepted this attempt: {}",
                         batchLetters,
                         attempts,
                         maxAttemptsPerBatch,
                         acceptedThisAttempt);
 
             } catch (QuotaExceededException e) {
-                log.warn("Cuota agotada mientras se procesaban letras pendientes. Se detiene la generación: {}",
+                log.warn("Quota exceeded while processing pending letters. Stopping generation: {}",
                         e.getMessage());
                 quotaExceeded = true;
                 break;
@@ -236,7 +236,7 @@ public class AIQuestionGenerator {
         for (Question q : parsed) {
             if (!isValidQuestion(q)) {
                 log.warn(
-                        "Pregunta descartada | Letra: {} | Pista: {} | Respuestas: {}",
+                    "Discarded question | Letter: {} | Clue: {} | Responses: {}",
                         q != null ? q.getQuestionLetter() : "null",
                         q != null ? q.getQuestionText() : "null",
                         q != null ? q.getQuestionResponsesList() : "null");
@@ -252,7 +252,7 @@ public class AIQuestionGenerator {
 
             if (isDuplicate(flattenQuestions(acceptedByLetter.values()), q)) {
                 log.warn(
-                        "Pregunta descartada por duplicada | Letra: {} | Pista: {} | Correcta: {}",
+                    "Discarded duplicate question | Letter: {} | Clue: {} | Correct: {}",
                         letter,
                         q.getQuestionText(),
                         q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()));
@@ -262,8 +262,8 @@ public class AIQuestionGenerator {
             acceptedByLetter.get(letter).add(q);
             acceptedThisAttempt++;
 
-            log.info(
-                    "Pregunta aceptada | Letra: {} | Pista: {} | Correcta: {} | Total letra: {}/{}",
+                log.info(
+                    "Accepted question | Letter: {} | Clue: {} | Correct: {} | Letter total: {}/{}",
                     letter,
                     q.getQuestionText(),
                     q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()),
@@ -277,7 +277,7 @@ public class AIQuestionGenerator {
     private void handleBatchAttemptFailure(List<String> batchLetters, int attempts, Exception e)
             throws InterruptedException {
         log.error(
-                "Lote pendiente {} intento {}/{} fallido: {}",
+            "Pending batch {} attempt {}/{} failed: {}",
                 batchLetters,
                 attempts,
                 maxAttemptsPerBatch,
@@ -290,7 +290,7 @@ public class AIQuestionGenerator {
                 waitMs = AIQuestionConfig.DEFAULT_429_WAIT_MS;
             }
 
-            log.warn("Esperando {} ms antes de reintentar lote pendiente {}", waitMs, batchLetters);
+            log.warn("Waiting {} ms before retrying pending batch {}", waitMs, batchLetters);
             Thread.sleep(waitMs);
         }
     }
@@ -323,7 +323,7 @@ public class AIQuestionGenerator {
                 }
 
                 log.warn(
-                        "Lote {} -> intento {} con modelo '{}' fallido por 503. Reintentando en {} ms",
+                    "Batch {} -> attempt {} with model '{}' failed with 503. Retrying in {} ms",
                         batchLetters,
                         attempt,
                         modelToUse,
@@ -340,8 +340,8 @@ public class AIQuestionGenerator {
                 && !fallbackModel.equals(modelToUse)
                 && is503Exception(lastException)) {
 
-            log.warn(
-                    "Lote {} -> fallback de modelo por 503: '{}' -> '{}'",
+                log.warn(
+                    "Batch {} -> model fallback due to 503: '{}' -> '{}'",
                     batchLetters,
                     modelToUse,
                     fallbackModel);
@@ -393,7 +393,7 @@ public class AIQuestionGenerator {
         int status = response.statusCode();
         String body = response.body();
 
-        log.info("HTTP status Ollama para lote {} con modelo '{}': {}", batchLetters, modelToUse, status);
+        log.info("Ollama HTTP status for batch {} with model '{}': {}", batchLetters, modelToUse, status);
 
         if (status == 200) {
             if (body == null || body.isBlank()) {
@@ -403,7 +403,7 @@ public class AIQuestionGenerator {
         }
 
         log.error(
-                "Error de API Anthropic-compatible (status {}) con modelo '{}' para lote {}: {}",
+            "Anthropic-compatible API error (status {}) with model '{}' for batch {}: {}",
                 status,
                 modelToUse,
                 batchLetters,
@@ -497,7 +497,7 @@ public class AIQuestionGenerator {
             throw new RuntimeException("La IA devolvió contenido vacío.");
         }
 
-        log.info("Respuesta cruda IA para lote {}:\n{}", expectedLetters, preview(content, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
+        log.info("Raw AI response for batch {}:\n{}", expectedLetters, preview(content, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
 
         JsonNode questionsNode;
         try {
@@ -559,11 +559,11 @@ public class AIQuestionGenerator {
                 questions.add(q);
 
             } catch (Exception e) {
-                log.warn("Error parseando pregunta IA para lote {}: {}", expectedLetters, e.getMessage());
+                log.warn("Error parsing AI question for batch {}: {}", expectedLetters, e.getMessage());
             }
         }
 
-        log.info("Parseadas {} preguntas candidatas para lote {}", questions.size(), expectedLetters);
+        log.info("Parsed {} candidate questions for batch {}", questions.size(), expectedLetters);
         return questions;
     }
 
@@ -599,7 +599,7 @@ public class AIQuestionGenerator {
             List<String> availableWords = new ArrayList<>(wordsByLetter.getOrDefault(letter, Collections.emptyList()));
 
             if (availableWords.size() < 4) {
-                log.warn("No hay suficientes palabras para la letra '{}'. Disponibles: {}", letter,
+                log.warn("Not enough words for letter '{}'. Available: {}", letter,
                         availableWords.size());
                 continue;
             }
@@ -615,8 +615,8 @@ public class AIQuestionGenerator {
 
             result.put(letter, new CandidateQuestionData(letter, responses, correctIndex, correctWord));
 
-            log.info(
-                    "Candidatas preparadas | Letra: {} | Respuestas: {} | Correcta: {}",
+                log.info(
+                    "Candidates prepared | Letter: {} | Responses: {} | Correct: {}",
                     letter,
                     responses,
                     correctWord);
@@ -640,14 +640,14 @@ public class AIQuestionGenerator {
         java.io.InputStream dictStream = null;
         Path fsPath = Path.of(wordDictionaryPath).toAbsolutePath().normalize();
         if (Files.exists(fsPath)) {
-            log.info("Cargando diccionario desde filesystem: {}", fsPath);
+            log.info("Loading dictionary from filesystem: {}", fsPath);
             dictStream = Files.newInputStream(fsPath);
         } else {
             dictStream = getClass().getClassLoader().getResourceAsStream(wordDictionaryPath);
             if (dictStream == null) {
                 throw new IllegalStateException("No existe el diccionario de palabras: " + wordDictionaryPath);
             }
-            log.info("Cargando diccionario desde classpath: {}", wordDictionaryPath);
+            log.info("Loading dictionary from classpath: {}", wordDictionaryPath);
         }
 
         try (java.io.BufferedReader reader = new java.io.BufferedReader(
@@ -682,10 +682,10 @@ public class AIQuestionGenerator {
 
         wordsByLetterCache = result;
 
-        log.info("Diccionario cargado desde {}. Líneas leídas: {}. Palabras aceptadas: {}", wordDictionaryPath,
+        log.info("Dictionary loaded from {}. Lines read: {}. Words accepted: {}", wordDictionaryPath,
                 totalLines, acceptedWords);
         for (Map.Entry<String, List<String>> entry : wordsByLetterCache.entrySet()) {
-            log.info("Letra '{}' -> {} palabras disponibles", entry.getKey(), entry.getValue().size());
+            log.info("Letter '{}' -> {} words available", entry.getKey(), entry.getValue().size());
         }
 
         return wordsByLetterCache;
@@ -924,9 +924,9 @@ public class AIQuestionGenerator {
         for (String letter : batchLetters) {
             int count = acceptedByLetter.getOrDefault(letter, Collections.emptyList()).size();
             if (count < questionsPerLetter) {
-                log.warn("La letra '{}' quedó incompleta: {}/{}", letter, count, questionsPerLetter);
+                log.warn("Letter '{}' incomplete: {}/{}", letter, count, questionsPerLetter);
             } else {
-                log.info("La letra '{}' quedó completa: {}/{}", letter, count, questionsPerLetter);
+                log.info("Letter '{}' complete: {}/{}", letter, count, questionsPerLetter);
             }
         }
     }
@@ -972,7 +972,7 @@ public class AIQuestionGenerator {
     public void saveToFile(QuestionList questions, String filePath) throws Exception {
         String json = mapper.writeValueAsString(questions);
         Files.writeString(Path.of(filePath), json, StandardCharsets.UTF_8);
-        log.info("Preguntas guardadas en: {}", filePath);
+        log.info("Questions saved to: {}", filePath);
     }
 
     private boolean isQuotaException(Exception e) {

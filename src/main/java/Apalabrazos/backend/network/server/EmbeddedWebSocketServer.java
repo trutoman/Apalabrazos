@@ -304,7 +304,7 @@ public class EmbeddedWebSocketServer {
      * Responsibility: Informative logging only.
      */
     private void logServerStartupInfo() {
-        log.info("✓ WebSocket server running on port {}", port);
+        log.info("WebSocket server running on port {}", port);
         log.info("  Endpoint WebSocket: ws://localhost:{}/ws/game/{username}", port);
         log.info("  Static files: http://localhost:{}/", port);
         log.info("  Status: LISTENING");
@@ -319,7 +319,7 @@ public class EmbeddedWebSocketServer {
                 app.stop();
                 // No need to clear sessionMap because GameSessionManager now handles it
                 // through the handler
-                log.info("✓ WebSocket server stopped");
+                log.info("WebSocket server stopped");
             } catch (Exception e) {
                 log.error("Error stopping WebSocket server: {}", e.getMessage());
             }
@@ -344,7 +344,7 @@ public class EmbeddedWebSocketServer {
             log.info("Press Ctrl+C to stop the server...");
             Thread.currentThread().join();
         } catch (InterruptedException e) {
-            log.error("Interrupción: {}", e.getMessage());
+            log.error("Interrupted: {}", e.getMessage());
         }
     }
 }

@@ -101,6 +101,8 @@ public class AIQuestionService implements EventListener {
             return;
         }
 
+        log.info("[ASYNC-BUS][RECV][GameService->AIQuestionService] Received AIQuestionPreloadRequestedEvent matchId={}",
+                requested.getMatchId());
         preloadExecutor.submit(() -> processPreloadRequest(requested));
     }
 
@@ -209,6 +211,8 @@ public class AIQuestionService implements EventListener {
                     result.questions().getCurrentLength(),
                     result.source());
 
+            log.info("[ASYNC-BUS][SEND][AIQuestionService->GameService] Publishing AIQuestionPreloadCompletedEvent matchId={} source={}",
+                    matchId, result.source());
             GlobalAsyncEventBus.publishAndForget(
                     new AIQuestionPreloadCompletedEvent(matchId, result.questions(), result.source()));
         } catch (Exception e) {
@@ -216,6 +220,8 @@ public class AIQuestionService implements EventListener {
             log.error("[AI-PRELOAD] Failed preload for match {} in {} ms: {}",
                     matchId, elapsedMs, e.getMessage(), e);
 
+            log.warn("[ASYNC-BUS][SEND][AIQuestionService->GameService] Publishing AIQuestionPreloadFailedEvent matchId={} reason=LOAD_FAILED",
+                    matchId);
             GlobalAsyncEventBus.publishAndForget(
                     new AIQuestionPreloadFailedEvent(matchId, e.getMessage(), "LOAD_FAILED"));
         }
