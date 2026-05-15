@@ -12,18 +12,28 @@ export class CountdownScene extends Phaser.Scene {
     constructor() {
         super('CountdownScene');
         this._countdownText = null;
-        this._spinnerRing = null;
-        this._spinnerContainer = null;
+        this._waitingElement = null;
         this._countdownTween = null;
-        this._spinnerRotateTween = null;
-        this._spinnerColorTimer = null;
+        this._waitingElementRotateTween = null;
+        this._waitingElementTimer = null;
         this._isDone = false;
         this._countdownStarted = false;
-        this._onResize = this._handleResize.bind(this);
         this._onQuestionChanged = this._handleQuestionChanged.bind(this);
+        this._elementGroupIndex = 0;
+        this._elementFrameGroups = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [9, 10, 11],
+            [12, 13, 14],
+        ];
+    }
 
-        this._spinnerColors = ['#FF00F4', '#FADF09', '#00F0FF', '#A2FF00'];
-        this._currentColorIndex = 0;
+    preload() {
+        this.load.spritesheet('neobrutalism-elements', 'assets/neobrutalism_elements.png', {
+            frameWidth: 1000,
+            frameHeight: 1000,
+        });
     }
 
     create() {
@@ -35,11 +45,10 @@ export class CountdownScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor(bgColor);
 
-        this._spinnerContainer = this.add.container(w / 2, h / 2);
-        this._spinnerRing = this.add.graphics();
-        this._spinnerContainer.add(this._spinnerRing);
-        this._redrawSpinner();
-        this._startSpinnerAnimation();
+        this._waitingElement = this.add.sprite(w / 2, h / 2, 'neobrutalism-elements', 0)
+            .setOrigin(0.5);
+        this._applyWaitingElementLayout();
+        this._startWaitingElementAnimation();
 
         this._countdownText = this.add.text(w / 2, h / 2, '3', {
             fontFamily: 'Archivo Black, sans-serif',
@@ -49,12 +58,11 @@ export class CountdownScene extends Phaser.Scene {
             stroke: primaryColor,
             strokeThickness: Math.max(12, Math.round(Math.min(w, h) * 0.022)),
         }).setOrigin(0.5);
-        this._countdownText.setShadow(0, 0, primaryColor, 26, false, true);
+        this._applyCountdownTextStyle();
         this._countdownText.setVisible(false);
-        console.log('[SEQ][COUNTDOWN] Spinner visible, waiting for net:questionChanged...');
+        console.log('[SEQ][COUNTDOWN] Waiting element visible, waiting for net:questionChanged...');
 
         PhaserEventBus.on('net:questionChanged', this._onQuestionChanged);
-        this.scale.on('resize', this._onResize);
 
         if (getSticky('net:questionChanged')) {
             console.log('[SEQ][COUNTDOWN] Sticky questionChanged found. Starting numeric countdown now.');
@@ -62,63 +70,56 @@ export class CountdownScene extends Phaser.Scene {
         }
     }
 
-    _drawSpinner(graphics, radius, thickness) {
-        graphics.clear();
-        const color = Phaser.Display.Color.HexStringToColor(
-            this._spinnerColors[this._currentColorIndex]
-        ).color;
+    _startWaitingElementAnimation() {
+        this._showRandomFrameFromCurrentGroup();
 
-        graphics.lineStyle(thickness, color, 1);
-        for (let i = 0; i < 4; i++) {
-            const startAngle = Phaser.Math.DegToRad(i * 90 + 10);
-            const endAngle = Phaser.Math.DegToRad((i + 1) * 90 - 18);
-            graphics.beginPath();
-            graphics.arc(0, 0, radius, startAngle, endAngle, false);
-            graphics.strokePath();
-        }
-    }
-
-    _startSpinnerAnimation() {
-        this._spinnerRotateTween = this.tweens.add({
-            targets: this._spinnerContainer,
+        this._waitingElementRotateTween = this.tweens.add({
+            targets: this._waitingElement,
             rotation: Math.PI * 2,
             duration: 2000,
             ease: 'Linear',
             repeat: -1,
         });
 
-        this._spinnerColorLoop();
+        this._scheduleNextWaitingElementFrame();
     }
 
-    _spinnerColorLoop() {
-        this._spinnerColorTimer = this.time.delayedCall(500, () => {
+    _scheduleNextWaitingElementFrame() {
+        this._waitingElementTimer = this.time.delayedCall(666, () => {
             if (this._countdownStarted || this._isDone) {
                 return;
             }
-            this._currentColorIndex = (this._currentColorIndex + 1) % this._spinnerColors.length;
-            this._redrawSpinner();
-            this._spinnerColorLoop();
+
+            this._elementGroupIndex = (this._elementGroupIndex + 1) % this._elementFrameGroups.length;
+            this._showRandomFrameFromCurrentGroup();
+            this._scheduleNextWaitingElementFrame();
         });
     }
 
-    _redrawSpinner() {
-        if (!this._spinnerRing) {
+    _showRandomFrameFromCurrentGroup() {
+        if (!this._waitingElement) {
             return;
         }
 
-        const w = this.scale.width;
-        const h = this.scale.height;
-        const radius = Math.round(Math.min(w, h) * 0.24);
-        const thickness = Math.max(18, Math.round(Math.min(w, h) * 0.04));
+        const group = this._elementFrameGroups[this._elementGroupIndex];
+        const frame = Phaser.Utils.Array.GetRandom(group);
+        this._waitingElement.setFrame(frame);
+    }
 
-        this._drawSpinner(this._spinnerRing, radius, thickness);
+    _applyWaitingElementLayout() {
+        if (!this._waitingElement) {
+            return;
+        }
+
+        const size = Math.min(500, this.scale.width * 0.72, this.scale.height * 0.72);
+        this._waitingElement.setDisplaySize(size, size);
     }
 
     _handleQuestionChanged() {
         if (this._isDone || this._countdownStarted) {
             return;
         }
-        console.log('[SEQ][COUNTDOWN] net:questionChanged received. Switching spinner -> numeric countdown.');
+        console.log('[SEQ][COUNTDOWN] net:questionChanged received. Switching waiting element -> numeric countdown.');
         this._beginNumericCountdown();
     }
 
@@ -129,17 +130,17 @@ export class CountdownScene extends Phaser.Scene {
 
         this._countdownStarted = true;
 
-        if (this._spinnerRotateTween) {
-            this._spinnerRotateTween.stop();
-            this._spinnerRotateTween = null;
+        if (this._waitingElementRotateTween) {
+            this._waitingElementRotateTween.stop();
+            this._waitingElementRotateTween = null;
         }
-        if (this._spinnerColorTimer) {
-            this._spinnerColorTimer.remove();
-            this._spinnerColorTimer = null;
+        if (this._waitingElementTimer) {
+            this._waitingElementTimer.remove();
+            this._waitingElementTimer = null;
         }
 
-        if (this._spinnerContainer) {
-            this._spinnerContainer.setVisible(false);
+        if (this._waitingElement) {
+            this._waitingElement.setVisible(false);
         }
         if (this._countdownText) {
             this._countdownText.setVisible(true);
@@ -204,6 +205,20 @@ export class CountdownScene extends Phaser.Scene {
         });
     }
 
+    _applyCountdownTextStyle() {
+        if (!this._countdownText) {
+            return;
+        }
+
+        const minSide = Math.min(this.scale.width, this.scale.height);
+        const stroke = Math.max(12, Math.round(minSide * 0.022));
+        const shadowOffset = Math.max(8, Math.round(minSide * 0.016));
+
+        this._countdownText.setStroke('#000000', stroke);
+        // Neobrutalist look: hard offset shadow, no blur, separated from the black stroke.
+        this._countdownText.setShadow(shadowOffset, shadowOffset, '#262626', 0, false, true);
+    }
+
     _finishCountdown() {
         if (this._isDone) {
             return;
@@ -214,13 +229,13 @@ export class CountdownScene extends Phaser.Scene {
             this._countdownTween.stop();
             this._countdownTween = null;
         }
-        if (this._spinnerRotateTween) {
-            this._spinnerRotateTween.stop();
-            this._spinnerRotateTween = null;
+        if (this._waitingElementRotateTween) {
+            this._waitingElementRotateTween.stop();
+            this._waitingElementRotateTween = null;
         }
-        if (this._spinnerColorTimer) {
-            this._spinnerColorTimer.remove();
-            this._spinnerColorTimer = null;
+        if (this._waitingElementTimer) {
+            this._waitingElementTimer.remove();
+            this._waitingElementTimer = null;
         }
 
         const onCountdownComplete = this.registry.get('onCountdownComplete');
@@ -232,37 +247,20 @@ export class CountdownScene extends Phaser.Scene {
         console.log('[SEQ][COUNTDOWN] MainScene started.');
     }
 
-    _handleResize(gameSize) {
-        const w = gameSize.width;
-        const h = gameSize.height;
-
-        if (this._spinnerContainer) {
-            this._spinnerContainer.setPosition(w / 2, h / 2);
-        }
-        if (this._countdownText) {
-            this._countdownText
-                .setPosition(w / 2, h / 2)
-                .setFontSize(Math.round(Math.min(w, h) * 0.42));
-        }
-
-        this._redrawSpinner();
-    }
-
     shutdown() {
         if (this._countdownTween) {
             this._countdownTween.stop();
             this._countdownTween = null;
         }
-        if (this._spinnerRotateTween) {
-            this._spinnerRotateTween.stop();
-            this._spinnerRotateTween = null;
+        if (this._waitingElementRotateTween) {
+            this._waitingElementRotateTween.stop();
+            this._waitingElementRotateTween = null;
         }
-        if (this._spinnerColorTimer) {
-            this._spinnerColorTimer.remove();
-            this._spinnerColorTimer = null;
+        if (this._waitingElementTimer) {
+            this._waitingElementTimer.remove();
+            this._waitingElementTimer = null;
         }
 
         PhaserEventBus.off('net:questionChanged', this._onQuestionChanged);
-        this.scale.off('resize', this._onResize);
     }
 }

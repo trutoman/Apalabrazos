@@ -234,9 +234,11 @@ public class AIQuestionGenerator {
         int acceptedThisAttempt = 0;
 
         for (Question q : parsed) {
-            if (!isValidQuestion(q)) {
+            String invalidReason = getInvalidQuestionReason(q);
+            if (invalidReason != null) {
                 log.warn(
-                    "Discarded question | Letter: {} | Clue: {} | Responses: {}",
+                    "Discarded question | Reason: {} | Letter: {} | Clue: {} | Responses: {}",
+                        invalidReason,
                         q != null ? q.getQuestionLetter() : "null",
                         q != null ? q.getQuestionText() : "null",
                         q != null ? q.getQuestionResponsesList() : "null");
@@ -250,9 +252,11 @@ public class AIQuestionGenerator {
                 continue;
             }
 
-            if (isDuplicate(flattenQuestions(acceptedByLetter.values()), q)) {
+            String duplicateReason = getDuplicateReason(flattenQuestions(acceptedByLetter.values()), q);
+            if (duplicateReason != null) {
                 log.warn(
-                    "Discarded duplicate question | Letter: {} | Clue: {} | Correct: {}",
+                    "Discarded duplicate question | Reason: {} | Letter: {} | Clue: {} | Correct: {}",
+                        duplicateReason,
                         letter,
                         q.getQuestionText(),
                         q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()));
@@ -503,8 +507,14 @@ public class AIQuestionGenerator {
         try {
             questionsNode = mapper.readTree(content);
         } catch (Exception e) {
-            throw new RuntimeException("La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000),
-                    e);
+            String repairedContent = escapeRawNewlinesInsideJsonStrings(content);
+            try {
+                questionsNode = mapper.readTree(repairedContent);
+                log.warn("AI response JSON required newline repair before parsing for batch {}", expectedLetters);
+            } catch (Exception repairException) {
+                throw new RuntimeException("La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000),
+                        e);
+            }
         }
 
         JsonNode listNode = null;
@@ -546,9 +556,13 @@ public class AIQuestionGenerator {
 
                 String finalLetter = normalizeLetter(candidate.letter());
 
+                List<String> capitalizedResponses = candidate.responses().stream()
+                        .map(this::capitalizeWords)
+                        .collect(Collectors.toCollection(ArrayList::new));
+
                 Question q = new Question(
                         text,
-                        new ArrayList<>(candidate.responses()),
+                        capitalizedResponses,
                         candidate.correctIndex(),
                         QuestionStatus.INIT,
                         QuestionLevel.MEDIUM,
@@ -608,6 +622,7 @@ public class AIQuestionGenerator {
 
             List<String> responses = availableWords.stream()
                     .limit(4)
+                    .map(this::capitalizeWords)
                     .collect(Collectors.toCollection(ArrayList::new));
 
             int correctIndex = random.nextInt(4);
@@ -796,17 +811,17 @@ public class AIQuestionGenerator {
             String correctWord) {
     }
 
-    private boolean isValidQuestion(Question q) {
+    private String getInvalidQuestionReason(Question q) {
         if (q == null)
-            return false;
+            return "question is null";
         if (q.getQuestionResponsesList() == null || q.getQuestionResponsesList().size() != 4)
-            return false;
+            return "responses list must contain exactly 4 options";
         if (q.getCorrectQuestionIndex() < 0 || q.getCorrectQuestionIndex() > 3)
-            return false;
+            return "correctQuestionIndex must be between 0 and 3";
         if (q.getQuestionText() == null || q.getQuestionText().isBlank())
-            return false;
+            return "question text is blank";
         if (q.getQuestionLetter() == null || q.getQuestionLetter().isBlank())
-            return false;
+            return "question letter is blank";
 
         String text = normalizeFreeText(repairAndTrim(q.getQuestionText()));
         String letter = normalizeLetter(repairAndTrim(q.getQuestionLetter()));
@@ -818,12 +833,13 @@ public class AIQuestionGenerator {
         boolean containsMode = text.startsWith(expectedContainsPrefix);
 
         if (!startsMode && !containsMode) {
-            return false;
+            return "question text must start with 'Con la " + letter.toUpperCase(Locale.ROOT)
+                    + ":' or 'Contiene la " + letter.toUpperCase(Locale.ROOT) + ":'";
         }
 
         for (String r : q.getQuestionResponsesList()) {
             if (!looksReasonableAnswer(r)) {
-                return false;
+                return "invalid response option: " + repairAndTrim(r);
             }
         }
 
@@ -831,25 +847,25 @@ public class AIQuestionGenerator {
 
         for (String r : q.getQuestionResponsesList()) {
             if (!containsLetter(repairAndTrim(r), letter))
-                return false;
+                return "response does not match letter '" + letter + "': " + repairAndTrim(r);
         }
 
         if (startsMode && !startsWithLetter(correct, letter)) {
-            return false;
+            return "correct response does not start with required letter '" + letter + "': " + correct;
         }
 
         if (containsMode && !containsLetter(correct, letter)) {
-            return false;
+            return "correct response does not contain required letter '" + letter + "': " + correct;
         }
 
         if (hasDuplicateResponses(q.getQuestionResponsesList())) {
-            return false;
+            return "responses list contains duplicates";
         }
 
-        return true;
+        return null;
     }
 
-    private boolean isDuplicate(List<Question> existing, Question candidate) {
+    private String getDuplicateReason(List<Question> existing, Question candidate) {
         String candidateText = normalizeFreeText(repairAndTrim(candidate.getQuestionText()));
         String candidateCorrect = normalizeFreeText(
                 repairAndTrim(candidate.getQuestionResponsesList().get(candidate.getCorrectQuestionIndex())));
@@ -860,12 +876,12 @@ public class AIQuestionGenerator {
                     repairAndTrim(q.getQuestionResponsesList().get(q.getCorrectQuestionIndex())));
 
             if (existingText.equals(candidateText))
-                return true;
+                return "same clue as an already accepted question";
             if (existingCorrect.equals(candidateCorrect))
-                return true;
+                return "same correct response as an already accepted question";
         }
 
-        return false;
+        return null;
     }
 
     private boolean hasDuplicateResponses(List<String> responses) {
@@ -969,6 +985,67 @@ public class AIQuestionGenerator {
         return content.trim();
     }
 
+    /**
+     * Repairs malformed JSON where a raw line break appears inside a quoted string.
+     * Example: "questionText": "foo\nbar" (raw newline) -> "questionText": "foo\\nbar"
+     */
+    private String escapeRawNewlinesInsideJsonStrings(String content) {
+        if (content == null || content.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder repaired = new StringBuilder(content.length() + 32);
+        boolean inString = false;
+        boolean escaped = false;
+
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+
+            if (!inString) {
+                repaired.append(c);
+                if (c == '"') {
+                    inString = true;
+                }
+                continue;
+            }
+
+            if (escaped) {
+                repaired.append(c);
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                repaired.append(c);
+                escaped = true;
+                continue;
+            }
+
+            if (c == '"') {
+                repaired.append(c);
+                inString = false;
+                continue;
+            }
+
+            if (c == '\r') {
+                repaired.append("\\n");
+                if (i + 1 < content.length() && content.charAt(i + 1) == '\n') {
+                    i++;
+                }
+                continue;
+            }
+
+            if (c == '\n') {
+                repaired.append("\\n");
+                continue;
+            }
+
+            repaired.append(c);
+        }
+
+        return repaired.toString();
+    }
+
     public void saveToFile(QuestionList questions, String filePath) throws Exception {
         String json = mapper.writeValueAsString(questions);
         Files.writeString(Path.of(filePath), json, StandardCharsets.UTF_8);
@@ -1046,6 +1123,33 @@ public class AIQuestionGenerator {
                 .replace("__ENYE__", "ñ");
 
         return normalized;
+    }
+
+    /**
+     * Capitalizes the first letter of each word in a string.
+     * Example: "mi respuesta" -> "Mi Respuesta"
+     */
+    private String capitalizeWords(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+
+        StringBuilder result = new StringBuilder();
+        boolean capitalizeNext = true;
+
+        for (char c : text.toCharArray()) {
+            if (Character.isWhitespace(c)) {
+                result.append(c);
+                capitalizeNext = true;
+            } else if (capitalizeNext) {
+                result.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
     }
 
     private boolean startsWithLetter(String word, String letter) {

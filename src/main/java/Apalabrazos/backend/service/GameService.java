@@ -29,7 +29,7 @@ public class GameService implements EventListener {
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
     private static final int BASE_QUESTION_SCORE = 100;
     private static final int SCORE_PENALTY_PER_PASS = 10;
-    private static final int QUESTION_LOAD_TIMEOUT_SECONDS = 30;
+    private static final int QUESTION_LOAD_TIMEOUT_SECONDS = 60;
 
     private final AsyncEventBus externalBus;
     private GameGlobal GlobalGameInstance;

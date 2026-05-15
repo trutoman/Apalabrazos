@@ -16,9 +16,11 @@ export function startGame(containerId, options = {}) {
     const config = {
         type: Phaser.AUTO,
         parent: containerId,
+        width: 1280,
+        height: 720,
         backgroundColor: '#F0F0F0',
         scale: {
-            mode: Phaser.Scale.RESIZE,
+            mode: Phaser.Scale.FIT,
             autoCenter: Phaser.Scale.CENTER_BOTH
         },
         scene: [CountdownScene, MainScene],
