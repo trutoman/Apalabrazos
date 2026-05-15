@@ -101,6 +101,15 @@ function _handleQuestionChanged(data, state) {
     console.log('[GAME] QuestionChanged received:', payload);
 }
 
+function _handleQuestionLoadError(data, state, actions) {
+    const payload = data?.payload || {};
+    const roomId = String(payload?.roomId || '').trim();
+    if (!_isActiveRoom(roomId, state)) return;
+
+    console.warn('[GAME] QuestionLoadError received:', payload);
+    actions.showQuestionLoadErrorModal(payload);
+}
+
 function _handleStandings(data, state) {
     const payload = data?.payload || {};
     const roomId = String(payload?.roomId || '').trim();
@@ -151,7 +160,7 @@ function _handleLobbyMatchRemoved(data, state, actions) {
 
 function _handleMatchClosedByCreator(data, state, actions) {
     const roomId = String(data?.payload?.roomId || '').trim();
-    const cause = data?.payload?.cause || 'El creador abandonó la partida.';
+    const cause = data?.payload?.cause || 'The creator left the match.';
 
     state.pendingJoinRoomIds.delete(roomId);
     state.pendingLeaveRoomIds.delete(roomId);
@@ -185,7 +194,7 @@ function _handleMatchStarted(data, state, actions) {
 }
 
 function _handleStartMatchRequestInvalid(data, _state, actions) {
-    const cause = data?.payload?.cause || 'No se ha podido iniciar la partida.';
+    const cause = data?.payload?.cause || 'Could not start the match.';
     actions.showCreateGameErrors([cause]);
 }
 
@@ -231,7 +240,7 @@ function _handleGameCreationRequestInvalid(data, state, actions) {
         state.createGamePendingTimeout = null;
     }
     actions.setCreatePendingState(false);
-    const cause = data?.payload?.cause || 'Error desconocido al crear la partida.';
+    const cause = data?.payload?.cause || 'Unknown error while creating the match.';
     console.warn('[CREATE] Validation failed:', [cause]);
     actions.showCreateGameErrors([cause]);
 }
@@ -256,7 +265,7 @@ function _handleJoinMatchRequestInvalid(data, state, actions) {
         state.pendingJoinRoomIds.delete(roomId);
         actions.syncAllJoinButtonsState();
     }
-    const cause = data?.payload?.cause || 'No se ha podido unir a la partida.';
+    const cause = data?.payload?.cause || 'Could not join the match.';
     console.warn('[JOIN] Join failed:', cause);
     actions.showCreateGameErrors([cause]);
 }
@@ -279,7 +288,7 @@ function _handleLeaveMatchRequestValid(data, state, actions) {
 
 function _handleLeaveMatchRequestInvalid(data, state, actions) {
     state.pendingLeaveRoomIds.clear();
-    const cause = data?.payload?.cause || 'No se ha podido salir de la partida.';
+    const cause = data?.payload?.cause || 'Could not leave the match.';
     console.warn('[LEAVE] Leave failed:', cause);
     actions.showCreateGameErrors([cause]);
     actions.syncAllJoinButtonsState();
@@ -303,6 +312,7 @@ const _handlers = {
     [WS_MESSAGE_TYPE.EXTRA_TIME_SCORE]:             _handleExtraTimeScore,
     [WS_MESSAGE_TYPE.ANSWER_VALIDATED]:             _handleAnswerValidated,
     [WS_MESSAGE_TYPE.QUESTION_CHANGED]:             _handleQuestionChanged,
+    [WS_MESSAGE_TYPE.QUESTION_LOAD_ERROR]:          _handleQuestionLoadError,
     [WS_MESSAGE_TYPE.STANDINGS]:                    _handleStandings,
     [WS_MESSAGE_TYPE.LOBBY_MATCHES_SNAPSHOT]:       _handleLobbyMatchesSnapshot,
     [WS_MESSAGE_TYPE.LOBBY_MATCH_CREATED]:          _handleLobbyMatchCreated,

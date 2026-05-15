@@ -343,7 +343,7 @@ public class GameGlobal {
         controllerReadyPlayers.add(playerId);
         int confirmed = controllerReadyPlayers.size();
         int total = playerInstances.size();
-        log.info("GameControllerReady recibido de jugador '{}' ({}/{} confirmados)", playerId, confirmed, total);
+        log.info("GameControllerReady received from player '{}' ({}/{} confirmed)", playerId, confirmed, total);
         return total > 0 && controllerReadyPlayers.containsAll(playerInstances.keySet());
     }
 
@@ -362,11 +362,11 @@ public class GameGlobal {
         }
         if (this.state == GameGlobalState.IDLE) {
             this.state = GameGlobalState.CONTROLLER_READY;
-            log.info("State transitioned: IDLE -> CONTROLLER_READY (todos los jugadores confirmaron)");
+            log.info("State transitioned: IDLE -> CONTROLLER_READY (all players confirmed)");
             return false;
         } else if (this.state == GameGlobalState.START_VALIDATED) {
             this.state = GameGlobalState.INITIALIZED;
-            log.info("State transitioned: START_VALIDATED -> INITIALIZED (todos los jugadores confirmaron)");
+            log.info("State transitioned: START_VALIDATED -> INITIALIZED (all players confirmed)");
             return true;
         }
         return false;

@@ -4,6 +4,7 @@ import Apalabrazos.backend.dto.LoginRequest;
 import Apalabrazos.backend.dto.RegisterRequest;
 import Apalabrazos.backend.model.User;
 import Apalabrazos.backend.repository.UserRepository;
+import Apalabrazos.backend.service.AIQuestionService;
 import Apalabrazos.backend.tools.JwtService;
 import Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;
@@ -84,12 +85,13 @@ public class EmbeddedWebSocketServer {
     }
 
     /**
-     * Registers all REST API endpoints (login and register).
+     * Registers all REST API endpoints (login, register and admin).
      * Responsibility: API endpoint registration and initialization.
      */
     private void registerApiEndpoints() {
         registerLoginEndpoint();
         registerRegisterEndpoint();
+        registerAdminEndpoints();
     }
 
     /**
@@ -252,6 +254,24 @@ public class EmbeddedWebSocketServer {
     }
 
     /**
+     * Registers admin API endpoints for AI question generation.
+     * Responsibility: Admin endpoint for manual question generation trigger.
+     */
+    private void registerAdminEndpoints() {
+        app.post("/api/admin/generate-questions", ctx -> {
+            log.info("[ADMIN] Manual question generation triggered");
+            AIQuestionService.getInstance().forceGenerateNow();
+
+            ctx.json(new java.util.HashMap<String, String>() {
+                {
+                    put("status", "ok");
+                    put("message", "AI question generation triggered. Check logs for progress.");
+                }
+            });
+        });
+    }
+
+    /**
      * Registers the WebSocket endpoint /ws/game/{userId}.
      * Responsibility: WebSocket endpoint registration and connection lifecycle
      * management.
@@ -284,7 +304,7 @@ public class EmbeddedWebSocketServer {
      * Responsibility: Informative logging only.
      */
     private void logServerStartupInfo() {
-        log.info("✓ WebSocket server running on port {}", port);
+        log.info("WebSocket server running on port {}", port);
         log.info("  Endpoint WebSocket: ws://localhost:{}/ws/game/{username}", port);
         log.info("  Static files: http://localhost:{}/", port);
         log.info("  Status: LISTENING");
@@ -299,7 +319,7 @@ public class EmbeddedWebSocketServer {
                 app.stop();
                 // No need to clear sessionMap because GameSessionManager now handles it
                 // through the handler
-                log.info("✓ WebSocket server stopped");
+                log.info("WebSocket server stopped");
             } catch (Exception e) {
                 log.error("Error stopping WebSocket server: {}", e.getMessage());
             }
@@ -324,7 +344,7 @@ public class EmbeddedWebSocketServer {
             log.info("Press Ctrl+C to stop the server...");
             Thread.currentThread().join();
         } catch (InterruptedException e) {
-            log.error("Interrupción: {}", e.getMessage());
+            log.error("Interrupted: {}", e.getMessage());
         }
     }
 }

@@ -3,8 +3,8 @@ package Apalabrazos.backend.model;
 import java.util.Map;
 
 /**
- * Immutable map that associates indices (0..26) with letters of the Spanish alphabet.
- * Excludes "ch" and "ll", includes "ñ".
+ * Immutable map that associates indices (0..24) with letters of the Spanish alphabet.
+ * Excludes "ch", "ll", "k" and "w"; includes "ñ".
  * This class is designed for static lookup only.
  */
 public final class AlphabetMap {
@@ -23,28 +23,26 @@ public final class AlphabetMap {
             Map.entry(7, "h"),
             Map.entry(8, "i"),
             Map.entry(9, "j"),
-            Map.entry(10, "k"),
-            Map.entry(11, "l"),
-            Map.entry(12, "m"),
-            Map.entry(13, "n"),
-            Map.entry(14, "ñ"),
-            Map.entry(15, "o"),
-            Map.entry(16, "p"),
-            Map.entry(17, "q"),
-            Map.entry(18, "r"),
-            Map.entry(19, "s"),
-            Map.entry(20, "t"),
-            Map.entry(21, "u"),
-            Map.entry(22, "v"),
-            Map.entry(23, "w"),
-            Map.entry(24, "x"),
-            Map.entry(25, "y"),
-            Map.entry(26, "z")
+            Map.entry(10, "l"),
+            Map.entry(11, "m"),
+            Map.entry(12, "n"),
+            Map.entry(13, "ñ"),
+            Map.entry(14, "o"),
+            Map.entry(15, "p"),
+            Map.entry(16, "q"),
+            Map.entry(17, "r"),
+            Map.entry(18, "s"),
+            Map.entry(19, "t"),
+            Map.entry(20, "u"),
+            Map.entry(21, "v"),
+            Map.entry(22, "x"),
+            Map.entry(23, "y"),
+            Map.entry(24, "z")
     );
 
     /**
      * Get the immutable map of indices to letters
-     * @return The map (0..26 -> letter)
+     * @return The map (0..24 -> letter)
      */
     public static Map<Integer, String> getMap() {
         return MAP;
@@ -52,14 +50,14 @@ public final class AlphabetMap {
 
     /**
      * Get the letter associated with the given index
-     * @param index The index (0..26)
+     * @param index The index (0..24)
      * @return The corresponding letter
      * @throws IndexOutOfBoundsException if index is out of range
      */
     public static String getLetter(int index) {
         String s = MAP.get(index);
         if (s == null) {
-            throw new IndexOutOfBoundsException("Index must be between 0 and 26: " + index);
+            throw new IndexOutOfBoundsException("Index must be between 0 and 24: " + index);
         }
         return s;
     }
@@ -67,7 +65,7 @@ public final class AlphabetMap {
     /**
      * Get the index associated with the given letter
      * @param letter The letter (case-insensitive)
-     * @return The corresponding index (0..26), or -1 if not found
+     * @return The corresponding index (0..24), or -1 if not found
      */
     public static int getIndex(String letter) {
         if (letter == null || letter.isEmpty()) {

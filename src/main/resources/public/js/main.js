@@ -22,6 +22,8 @@ let currentOwnedRoomId = null;
 let currentJoinedRoomPlayers = 0;
 let currentStartedRoomId = null;
 let phaserGame = null;
+// Handler de respuestas del jugador — se guarda para poder eliminarlo al destruir el juego
+let _answerSelectedHandler = null;
 const createdGameRoomIds = new Set();
 const pendingJoinRoomIds = new Set();
 const pendingLeaveRoomIds = new Set();
@@ -99,6 +101,7 @@ function destroyPhaserGame() {
     PhaserEventBus.removeAllListeners();
     clearAllStickyEvents();
     MatchAudio.stopTheme();
+    _answerSelectedHandler = null;
     if (phaserGame) {
         phaserGame.destroy(true);
         phaserGame = null;
@@ -111,19 +114,31 @@ function showMatchStartView(payload = {}) {
     const roomId = String(payload?.roomId || currentJoinedRoomId || '').trim();
 
     UIManager.switchView('view-match-start');
+    console.log('[SEQ][UI] Entered match-start view (spinner stage). roomId=', roomId || '(none)');
+
+    // Confirmar el controller listo en cuanto se abre la pantalla de espera (spinner).
+    // Evita el bloqueo circular: servidor esperando ready mientras cliente espera preguntas.
+    if (roomId && currentStartedRoomId !== roomId) {
+        currentStartedRoomId = roomId;
+        SocketClient.send('GameControllerReady', { roomId });
+        console.log('[SEQ][UI] Sent GameControllerReady immediately on spinner load. roomId=', roomId);
+    }
 
     destroyPhaserGame();
     import('/js/phaser_src/game-launcher.js').then((mod) => {
         phaserGame = mod.startGame('phaser-game-container', {
             onCountdownComplete: () => {
+                console.log('[SEQ][UI] Numeric countdown completed. Starting MainScene + theme loop.');
                 MatchAudio.playThemeLoop();
-                if (roomId && currentStartedRoomId !== roomId) {
-                    currentStartedRoomId = roomId;
-                    SocketClient.send('GameControllerReady', { roomId });
-                }
             },
         });
     });
+
+    _answerSelectedHandler = ({ questionIndex, selectedOption }) => {
+        const roomId = String(currentJoinedRoomId || currentStartedRoomId || '').trim();
+        if (roomId) SocketClient.send('AnswerSubmit', { roomId, questionIndex, selectedOption });
+    };
+    PhaserEventBus.on('ui:answerSelected', _answerSelectedHandler);
 }
 
 function syncStartMatchButtonState() {
@@ -209,7 +224,7 @@ function handleLogout() {
         LoginUI.focusUsernameInput();
     }
 
-    console.log('✅ Logged out successfully');
+    console.log('Logged out successfully');
 }
 
 function setCreatePendingState(pending) {
@@ -325,9 +340,90 @@ function closePlayersModal() {
     }
 }
 
+function showQuestionLoadErrorModal(payload = {}) {
+    const roomId = String(payload?.roomId || currentJoinedRoomId || currentStartedRoomId || '').trim();
+    const errorReason = String(payload?.errorReason || 'LOAD_FAILED').trim();
+    const backendMessage = String(payload?.errorMessage || '').trim();
+
+    const defaultMessage = errorReason === 'TIMEOUT'
+        ? 'No se pudieron cargar las preguntas a tiempo. La partida fue cancelada.'
+        : 'Ocurrió un error al cargar las preguntas. La partida fue cancelada.';
+
+    const message = backendMessage || defaultMessage;
+
+    if (roomId) {
+        pendingJoinRoomIds.delete(roomId);
+        pendingLeaveRoomIds.delete(roomId);
+        removeOnlineGameCard(roomId);
+    }
+
+    currentStartedRoomId = null;
+    currentJoinedRoomId = null;
+    currentJoinedRoomPlayers = 0;
+    if (roomId && currentOwnedRoomId === roomId) {
+        currentOwnedRoomId = null;
+    }
+
+    destroyPhaserGame();
+    MatchAudio.stopTheme();
+    UIManager.switchView('view-lobby');
+    syncAllJoinButtonsState();
+
+    let modal = document.getElementById('question-load-error-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'question-load-error-modal';
+        modal.className = 'question-load-error-modal';
+        modal.innerHTML = `
+            <div class="question-load-error-modal-overlay"></div>
+            <div class="question-load-error-modal-content" role="dialog" aria-modal="true" aria-labelledby="question-load-error-title">
+                <div class="question-load-error-modal-header">
+                    <h3 id="question-load-error-title">Partida cancelada</h3>
+                </div>
+                <div class="question-load-error-modal-body">
+                    <p class="question-load-error-modal-message"></p>
+                    <p class="question-load-error-modal-meta"></p>
+                </div>
+                <div class="question-load-error-modal-actions">
+                    <button type="button" class="question-load-error-modal-btn">Entendido</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const close = () => {
+            modal.style.display = 'none';
+        };
+
+        modal.querySelector('.question-load-error-modal-overlay')?.addEventListener('click', close);
+        modal.querySelector('.question-load-error-modal-btn')?.addEventListener('click', close);
+    }
+
+    const messageNode = modal.querySelector('.question-load-error-modal-message');
+    const metaNode = modal.querySelector('.question-load-error-modal-meta');
+
+    if (messageNode) {
+        messageNode.textContent = message;
+    }
+    if (metaNode) {
+        const roomLabel = roomId ? `Sala: ${roomId}` : 'Sala desconocida';
+        metaNode.textContent = `${roomLabel} · Motivo: ${errorReason}`;
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeQuestionLoadErrorModal() {
+    const modal = document.getElementById('question-load-error-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closePlayersModal();
+        closeQuestionLoadErrorModal();
     }
 });
 
@@ -591,6 +687,7 @@ function registerSocketMessageHandlers() {
             clearCreateGameErrors,
             resetCreateGameForm,
             destroyPhaserGame,
+            showQuestionLoadErrorModal,
             buildRandomCardColors,
             switchView:      (id) => {
                 if (id !== 'view-match-start') {
@@ -613,7 +710,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnConfirm = document.getElementById('btn-confirm-create');
     if (btnConfirm) {
         btnConfirm.addEventListener('click', () => {
-            console.log('[CREATE] btn-confirm-create clicked ✅');
+            console.log('[CREATE] btn-confirm-create clicked');
             if (isCreateGamePending) {
                 console.warn('[CREATE] A create request is already pending. Ignoring duplicate click.');
                 return;
@@ -891,7 +988,7 @@ LoginUI.init(
             registerSocketMessageHandlers();
 
             // 5. WebSocket authenticated, switch to lobby
-            console.log("✅ Authentication successful, entering lobby...");
+            console.log("Authentication successful, entering lobby...");
             UIManager.switchView('view-lobby');
             renderLobbyUsername(currentUsername);
 

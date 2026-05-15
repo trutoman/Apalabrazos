@@ -6,14 +6,34 @@ function getCssColor(variableName, fallback) {
 }
 
 import { MatchAudio } from '../../audio/match-audio.js';
+import { PhaserEventBus, getSticky } from '../phaserEventBus.js';
 
 export class CountdownScene extends Phaser.Scene {
     constructor() {
         super('CountdownScene');
         this._countdownText = null;
-        this._currentTween = null;
+        this._waitingElement = null;
+        this._countdownTween = null;
+        this._waitingElementRotateTween = null;
+        this._waitingElementTimer = null;
         this._isDone = false;
-        this._onResize = this._handleResize.bind(this);
+        this._countdownStarted = false;
+        this._onQuestionChanged = this._handleQuestionChanged.bind(this);
+        this._elementGroupIndex = 0;
+        this._elementFrameGroups = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [9, 10, 11],
+            [12, 13, 14],
+        ];
+    }
+
+    preload() {
+        this.load.spritesheet('neobrutalism-elements', 'assets/neobrutalism_elements.png', {
+            frameWidth: 1000,
+            frameHeight: 1000,
+        });
     }
 
     create() {
@@ -25,6 +45,11 @@ export class CountdownScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor(bgColor);
 
+        this._waitingElement = this.add.sprite(w / 2, h / 2, 'neobrutalism-elements', 0)
+            .setOrigin(0.5);
+        this._applyWaitingElementLayout();
+        this._startWaitingElementAnimation();
+
         this._countdownText = this.add.text(w / 2, h / 2, '3', {
             fontFamily: 'Archivo Black, sans-serif',
             fontSize: `${Math.round(Math.min(w, h) * 0.42)}px`,
@@ -33,10 +58,96 @@ export class CountdownScene extends Phaser.Scene {
             stroke: primaryColor,
             strokeThickness: Math.max(12, Math.round(Math.min(w, h) * 0.022)),
         }).setOrigin(0.5);
+        this._applyCountdownTextStyle();
+        this._countdownText.setVisible(false);
+        console.log('[SEQ][COUNTDOWN] Waiting element visible, waiting for net:questionChanged...');
 
-        this._countdownText.setShadow(0, 0, primaryColor, 26, false, true);
+        PhaserEventBus.on('net:questionChanged', this._onQuestionChanged);
 
-        this.scale.on('resize', this._onResize);
+        if (getSticky('net:questionChanged')) {
+            console.log('[SEQ][COUNTDOWN] Sticky questionChanged found. Starting numeric countdown now.');
+            this._beginNumericCountdown();
+        }
+    }
+
+    _startWaitingElementAnimation() {
+        this._showRandomFrameFromCurrentGroup();
+
+        this._waitingElementRotateTween = this.tweens.add({
+            targets: this._waitingElement,
+            rotation: Math.PI * 2,
+            duration: 2000,
+            ease: 'Linear',
+            repeat: -1,
+        });
+
+        this._scheduleNextWaitingElementFrame();
+    }
+
+    _scheduleNextWaitingElementFrame() {
+        this._waitingElementTimer = this.time.delayedCall(666, () => {
+            if (this._countdownStarted || this._isDone) {
+                return;
+            }
+
+            this._elementGroupIndex = (this._elementGroupIndex + 1) % this._elementFrameGroups.length;
+            this._showRandomFrameFromCurrentGroup();
+            this._scheduleNextWaitingElementFrame();
+        });
+    }
+
+    _showRandomFrameFromCurrentGroup() {
+        if (!this._waitingElement) {
+            return;
+        }
+
+        const group = this._elementFrameGroups[this._elementGroupIndex];
+        const frame = Phaser.Utils.Array.GetRandom(group);
+        this._waitingElement.setFrame(frame);
+    }
+
+    _applyWaitingElementLayout() {
+        if (!this._waitingElement) {
+            return;
+        }
+
+        const size = Math.min(500, this.scale.width * 0.72, this.scale.height * 0.72);
+        this._waitingElement.setDisplaySize(size, size);
+    }
+
+    _handleQuestionChanged() {
+        if (this._isDone || this._countdownStarted) {
+            return;
+        }
+        console.log('[SEQ][COUNTDOWN] net:questionChanged received. Switching waiting element -> numeric countdown.');
+        this._beginNumericCountdown();
+    }
+
+    _beginNumericCountdown() {
+        if (this._countdownStarted || this._isDone) {
+            return;
+        }
+
+        this._countdownStarted = true;
+
+        if (this._waitingElementRotateTween) {
+            this._waitingElementRotateTween.stop();
+            this._waitingElementRotateTween = null;
+        }
+        if (this._waitingElementTimer) {
+            this._waitingElementTimer.remove();
+            this._waitingElementTimer = null;
+        }
+
+        if (this._waitingElement) {
+            this._waitingElement.setVisible(false);
+        }
+        if (this._countdownText) {
+            this._countdownText.setVisible(true);
+        }
+
+        console.log('[SEQ][COUNTDOWN] Numeric countdown started (3,2,1).');
+
         this._playStep(3);
     }
 
@@ -57,6 +168,8 @@ export class CountdownScene extends Phaser.Scene {
             return;
         }
 
+        console.log('[SEQ][COUNTDOWN] Step', value);
+
         this._countdownText
             .setText(String(value))
             .setColor(this._getNumberColor(value));
@@ -65,20 +178,20 @@ export class CountdownScene extends Phaser.Scene {
 
         MatchAudio.playCountdownPumSfx();
 
-        this._currentTween = this.tweens.add({
+        this._countdownTween = this.tweens.add({
             targets: this._countdownText,
             alpha: 1,
             scale: 1.0,
             duration: 220,
             ease: 'Back.Out',
             onComplete: () => {
-                this._currentTween = this.tweens.add({
+                this._countdownTween = this.tweens.add({
                     targets: this._countdownText,
                     scale: 1.32,
                     duration: 260,
                     ease: 'Sine.Out',
                     onComplete: () => {
-                        this._currentTween = this.tweens.add({
+                        this._countdownTween = this.tweens.add({
                             targets: this._countdownText,
                             alpha: 0,
                             scale: 1.55,
@@ -92,11 +205,38 @@ export class CountdownScene extends Phaser.Scene {
         });
     }
 
+    _applyCountdownTextStyle() {
+        if (!this._countdownText) {
+            return;
+        }
+
+        const minSide = Math.min(this.scale.width, this.scale.height);
+        const stroke = Math.max(12, Math.round(minSide * 0.022));
+        const shadowOffset = Math.max(8, Math.round(minSide * 0.016));
+
+        this._countdownText.setStroke('#000000', stroke);
+        // Neobrutalist look: hard offset shadow, no blur, separated from the black stroke.
+        this._countdownText.setShadow(shadowOffset, shadowOffset, '#262626', 0, false, true);
+    }
+
     _finishCountdown() {
         if (this._isDone) {
             return;
         }
         this._isDone = true;
+
+        if (this._countdownTween) {
+            this._countdownTween.stop();
+            this._countdownTween = null;
+        }
+        if (this._waitingElementRotateTween) {
+            this._waitingElementRotateTween.stop();
+            this._waitingElementRotateTween = null;
+        }
+        if (this._waitingElementTimer) {
+            this._waitingElementTimer.remove();
+            this._waitingElementTimer = null;
+        }
 
         const onCountdownComplete = this.registry.get('onCountdownComplete');
         if (typeof onCountdownComplete === 'function') {
@@ -104,25 +244,23 @@ export class CountdownScene extends Phaser.Scene {
         }
 
         this.scene.start('MainScene');
-    }
-
-    _handleResize(gameSize) {
-        if (!this._countdownText) {
-            return;
-        }
-
-        const w = gameSize.width;
-        const h = gameSize.height;
-        this._countdownText
-            .setPosition(w / 2, h / 2)
-            .setFontSize(Math.round(Math.min(w, h) * 0.42));
+        console.log('[SEQ][COUNTDOWN] MainScene started.');
     }
 
     shutdown() {
-        if (this._currentTween) {
-            this._currentTween.stop();
-            this._currentTween = null;
+        if (this._countdownTween) {
+            this._countdownTween.stop();
+            this._countdownTween = null;
         }
-        this.scale.off('resize', this._onResize);
+        if (this._waitingElementRotateTween) {
+            this._waitingElementRotateTween.stop();
+            this._waitingElementRotateTween = null;
+        }
+        if (this._waitingElementTimer) {
+            this._waitingElementTimer.remove();
+            this._waitingElementTimer = null;
+        }
+
+        PhaserEventBus.off('net:questionChanged', this._onQuestionChanged);
     }
 }

@@ -24,16 +24,16 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
     public void onConnect(WsConnectContext ctx) {
         try {
-            log.info("[CONNECT] 🔗 Intento de conexión WebSocket desde: {}", ctx.session.getRemoteAddress());
+            log.info("[CONNECT] WebSocket connection attempt from: {}", ctx.session.getRemoteAddress());
 
             // Extract token from query parameter
             String token = ctx.queryParam("token");
-            log.debug("[CONNECT] Token recibido: {} (primeros 20 chars)",
+            log.debug("[CONNECT] Token received: {} (first 20 chars)",
                     token != null ? token.substring(0, Math.min(20, token.length())) : "null");
 
             // Validar token
             if (token == null || token.trim().isEmpty()) {
-                log.warn("[CONNECT] ❌ Conexión rechazada: No token provided");
+                log.warn("[CONNECT] ❌ Connection rejected: No token provided");
                 ctx.closeSession(4001, "Authentication required");
                 return;
             }
@@ -43,33 +43,33 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
             DecodedJWT jwt = jwtService.verifyToken(token);
             if (jwt == null) {
-                log.warn("[CONNECT] ❌ Conexión rechazada: Invalid token");
+                log.warn("[CONNECT] ❌ Connection rejected: Invalid token");
                 ctx.closeSession(4002, "Invalid authentication token");
                 return;
             }
-            log.debug("[CONNECT] ✓ Token validado correctamente");
+            log.debug("[CONNECT] Token validated correctly");
 
             String userId = ctx.pathParam("userId"); // Changed from username to userId
             String tokenUserId = jwtService.extractUserId(jwt); // Extract userId from token
             String tokenUsername = jwtService.extractUsername(jwt); // Still need username for logging/onClientConnect
-            log.debug("[CONNECT] UserId en URL: {}, UserId en token: {}", userId, tokenUserId);
+            log.debug("[CONNECT] UserId in URL: {}, UserId in token: {}", userId, tokenUserId);
 
             if (tokenUserId == null || !tokenUserId.equalsIgnoreCase(userId)) {
-                log.warn("[CONNECT] ❌ Conexión rechazada: UserId mismatch (URL: {}, Token: {})",
+                log.warn("[CONNECT] ❌ Connection rejected: UserId mismatch (URL: {}, Token: {})",
                         userId, tokenUserId);
                 ctx.closeSession(4003, "User mismatch");
                 return;
             }
 
-            log.info("[CONNECT] ✅ Conexión autenticada para usuario: {} (CosmosUserId: {})", tokenUsername,
+            log.info("[CONNECT] Connection authenticated for user: {} (CosmosUserId: {})", tokenUsername,
                     tokenUserId);
             onClientConnect(ctx, tokenUsername, tokenUserId); // Pass username and userId
         } catch (Exception e) {
-            log.error("[CONNECT] ❌ Error en autenticación de conexión: {}", e.getMessage(), e);
+            log.error("[CONNECT] ❌ Error in connection authentication: {}", e.getMessage(), e);
             try {
                 ctx.closeSession(4500, "Server error during authentication");
             } catch (Exception closeErr) {
-                log.error("[CONNECT] Error al cerrar sesión: {}", closeErr.getMessage());
+                log.error("[CONNECT] ❌ Error closing session: {}", closeErr.getMessage());
             }
         }
     }
@@ -78,19 +78,19 @@ public class JavalinConnectionHandler extends ConnectionHandler {
         try {
             UUID sessionId = ctx.attribute("session-uuid");
             if (sessionId == null) {
-                log.error("[MESSAGE] ❌ Sesión no encontrada en atributos para cliente");
+                log.error("[MESSAGE] ❌ Session not found in attributes for client");
                 return;
             }
 
             String message = ctx.message();
-            log.info("[WS-INBOUND] session={} raw={}", sessionId, message);
-            log.debug("[MESSAGE] 📨 Mensaje recibido de sesión {}: {}", sessionId, message);
+            log.info("[WS-BUS][FE->BE][RECV] session={} raw={}", sessionId, message);
+            log.debug("[WS-BUS][FE->BE] Message received from session {}: {}", sessionId, message);
 
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(message);
                 String type = node.has("type") ? node.get("type").asText() : "";
-                log.info("[WS-INBOUND] session={} parsedType={}", sessionId, type);
+                log.info("[WS-BUS][FE->BE] session={} parsedType={}", sessionId, type);
 
                 // ── CHAT ────────────────────────────────────────────────────
                 if ("chat".equalsIgnoreCase(type)) {
@@ -127,7 +127,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
                     com.fasterxml.jackson.databind.JsonNode data = node.get("data");
                     if (data == null) {
-                        log.warn("[GAME-CREATE] ⚠️ GameCreationRequest sin campo 'data' de '{}'", username);
+                        log.warn("[GAME-CREATE] GameCreationRequest missing 'data' field from '{}'", username);
                     } else {
                         String gameName = data.path("name").asText("?");
                         int players = data.path("players").asInt(0);
@@ -137,7 +137,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         String createdByUserId = player != null ? player.getCosmosUserId() : "Unknown";
                         long requestedAt = data.path("requestedAt").asLong(0);
 
-                        log.info("[GAME-CREATE] 🎮 Solicitud de creación de partida recibida de '{}' (sesión {})",
+                        log.info("[GAME-CREATE] Match creation request received from '{}' (session {})",
                                 username, sessionId);
                         log.info("[GAME-CREATE]   name={}, players={}, type={}, time={}min, difficulty={}",
                                 gameName, players, gameType, time, difficulty);
@@ -164,6 +164,8 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         Apalabrazos.backend.events.GameCreationRequestedEvent creationEvent = new Apalabrazos.backend.events.GameCreationRequestedEvent(
                                 config, gameName);
 
+                        log.info("[ASYNC-BUS][SEND][JavalinConnectionHandler->MatchManager] Publishing GameCreationRequestedEvent for room '{}' by '{}'",
+                                gameName, username);
                         Apalabrazos.backend.events.GlobalAsyncEventBus.publish(creationEvent);
                     }
 
@@ -176,16 +178,16 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     String roomId = data != null ? data.path("roomId").asText("").trim() : "";
 
                     if (player == null) {
-                        log.warn("[GAME-JOIN] ⚠️ JoinMatchRequest received but player was not found for session {}", sessionId);
+                        log.warn("[GAME-JOIN] JoinMatchRequest received but player was not found for session {}", sessionId);
                     } else if (roomId.isEmpty()) {
-                        log.warn("[GAME-JOIN] ⚠️ JoinMatchRequest sin roomId de '{}'", username);
+                        log.warn("[GAME-JOIN] JoinMatchRequest missing roomId from '{}'", username);
                         player.sendMessage(java.util.Map.of(
                                 "type", WsMessageType.JOIN_MATCH_REQUEST_INVALID,
                                 "payload", java.util.Map.of(
                                         "roomId", roomId,
                                         "cause", "No se ha indicado una sala válida.")));
                     } else {
-                        log.info("[GAME-JOIN] 🚪 Solicitud de unión recibida de '{}' para la sala {}", username, roomId);
+                        log.info("[GAME-JOIN] Join request received from '{}' for room {}", username, roomId);
                         boolean joined = matchManager.joinPlayerToMatch(player, roomId);
                         if (joined) {
                             java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>(matchManager.getMatchSummary(roomId));
@@ -209,11 +211,11 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     String username = player != null ? player.getName() : "Unknown";
 
                     if (player == null) {
-                        log.warn("[GAME-LEAVE] ⚠️ LeaveMatchRequest received but player was not found for session {}", sessionId);
+                        log.warn("[GAME-LEAVE] LeaveMatchRequest received but player was not found for session {}", sessionId);
                         return;
                     }
 
-                    log.info("[GAME-LEAVE] 🚪 Solicitud de salida recibida de '{}'", username);
+                    log.info("[GAME-LEAVE] Leave request received from '{}'", username);
                     String leftRoomId = matchManager.leavePlayerFromCurrentMatch(player);
 
                     if (leftRoomId != null && !leftRoomId.isBlank()) {
@@ -234,7 +236,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
                     if (player == null) {
-                        log.warn("[GAME-START] ⚠️ StartMatchRequest received but player was not found for session {}", sessionId);
+                        log.warn("[GAME-START] StartMatchRequest received but player was not found for session {}", sessionId);
                         return;
                     }
 
@@ -250,9 +252,11 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         return;
                     }
 
-                    log.info("[GAME-START] ▶️ Solicitud de inicio recibida de '{}' para la sala {}",
+                    log.info("[GAME-START] Start request received from '{}' for room {}",
                             player.getName(), roomId);
 
+                    log.info("[ASYNC-BUS][SEND][JavalinConnectionHandler->MatchManager] Publishing GameStartedRequestEvent roomId={} playerId={}",
+                            roomId, player.getPlayerID());
                     Apalabrazos.backend.events.GlobalAsyncEventBus.publish(
                             new Apalabrazos.backend.events.GameStartedRequestEvent(roomId, player.getPlayerID()));
 
@@ -261,7 +265,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
                     if (player == null) {
-                        log.warn("[GAME-READY] ⚠️ GameControllerReady received but player was not found for session {}", sessionId);
+                        log.warn("[GAME-READY] GameControllerReady received but player was not found for session {}", sessionId);
                         return;
                     }
 
@@ -269,12 +273,12 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     String roomId = data != null ? data.path("roomId").asText("").trim() : "";
 
                     if (roomId.isEmpty()) {
-                        log.warn("[GAME-READY] ⚠️ GameControllerReady sin roomId de '{}'", player.getName());
+                        log.warn("[GAME-READY] GameControllerReady missing roomId from '{}'", player.getName());
                         return;
                     }
 
                     boolean readyAccepted = matchManager.markMatchControllerReady(roomId, player.getPlayerID());
-                    log.info("[GAME-READY] 🎛️ Controller ready de '{}' para sala {} => {}",
+                    log.info("[GAME-READY] Controller ready from '{}' for room {} => {}",
                             player.getName(), roomId, readyAccepted ? "accepted" : "ignored");
 
                     // ── ANSWER SUBMITTED ───────────────────────────────────────
@@ -282,7 +286,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
                     if (player == null) {
-                        log.warn("[GAME-ANSWER] ⚠️ AnswerSubmitted received but player was not found for session {}", sessionId);
+                        log.warn("[GAME-ANSWER] AnswerSubmitted received but player was not found for session {}", sessionId);
                         return;
                     }
 
@@ -291,36 +295,36 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     int selectedOption = data != null ? data.path("selectedOption").asInt(-999) : -999;
                     long submittedAt = data != null ? data.path("submittedAt").asLong(0) : 0;
 
-                    log.info("[WS-INBOUND][ANSWER] player={} playerId={} session={} qIndex={} option={} submittedAt={}",
+                    log.info("[WS-BUS][FE->BE][RECV][ANSWER] player={} playerId={} session={} qIndex={} option={} submittedAt={}",
                             player.getName(), player.getPlayerID(), sessionId, questionIndex, selectedOption, submittedAt);
 
                     if (questionIndex < 0) {
-                        log.warn("[GAME-ANSWER] ⚠️ AnswerSubmitted with invalid questionIndex from '{}': {}", player.getName(), questionIndex);
+                        log.warn("[GAME-ANSWER] AnswerSubmitted with invalid questionIndex from '{}': {}", player.getName(), questionIndex);
                         return;
                     }
 
                     if ((selectedOption < 0 && selectedOption != -1) || selectedOption > 3) {
-                        log.warn("[GAME-ANSWER] ⚠️ AnswerSubmitted with invalid selectedOption from '{}': {}", player.getName(), selectedOption);
+                        log.warn("[GAME-ANSWER] AnswerSubmitted with invalid selectedOption from '{}': {}", player.getName(), selectedOption);
                         return;
                     }
 
                     boolean accepted = matchManager.submitAnswerForPlayer(player.getPlayerID(), questionIndex, selectedOption);
-                    log.info("[GAME-ANSWER] 🧠 AnswerSubmitted from '{}' q={} option={} => {}",
+                    log.info("[GAME-ANSWER] AnswerSubmitted from '{}' q={} option={} => {}",
                             player.getName(), questionIndex, selectedOption, accepted ? "accepted" : "ignored");
 
                     // ── UNKNOWN ──────────────────────────────────────────────────
                 } else if (!type.isEmpty() && !"PING".equalsIgnoreCase(type)) {
-                    log.warn("[MESSAGE] ⚠️ Tipo de mensaje desconocido: '{}' de sesión {}", type, sessionId);
+                    log.warn("[MESSAGE] Unknown message type: '{}' from session {}", type, sessionId);
                 }
 
             } catch (Exception e) {
-                log.warn("[MESSAGE] ⚠️ No se pudo parsear el mensaje como JSON: {}", e.getMessage());
+                log.warn("[MESSAGE] Could not parse message as JSON: {}", e.getMessage());
             }
 
             super.onClientMessage(sessionId, message);
-            log.debug("[MESSAGE] ✓ Mensaje procesado correctamente");
+            log.debug("[MESSAGE] Message processed correctly");
         } catch (Exception e) {
-            log.error("[MESSAGE] ❌ Error procesando mensaje: {}", e.getMessage(), e);
+            log.error("[MESSAGE] ❌ Error processing message: {}", e.getMessage(), e);
         }
     }
 
@@ -328,17 +332,17 @@ public class JavalinConnectionHandler extends ConnectionHandler {
         try {
             UUID sessionId = ctx.attribute("session-uuid");
             if (sessionId == null) {
-                log.warn("[CLOSE] ⚠️ Desconexión: Sesión no encontrada en atributos");
+                log.warn("[CLOSE] Disconnection: session not found in attributes");
                 return;
             }
 
-            log.info("[CLOSE] 🔌 Cierre de conexión para sesión: {}", sessionId);
-            log.info("[CLOSE] Código de cierre: {}, Razón: {}", ctx.status(), ctx.reason());
+            log.info("[CLOSE] Connection closed for session: {}", sessionId);
+            log.info("[CLOSE] Close code: {}, Reason: {}", ctx.status(), ctx.reason());
 
             super.onClientDisconnect(sessionId);
-            log.info("[CLOSE] ✓ Desconexión procesada correctamente");
+            log.info("[CLOSE] Disconnection processed correctly");
         } catch (Exception e) {
-            log.error("[CLOSE] ❌ Error procesando desconexión: {}", e.getMessage(), e);
+            log.error("[CLOSE] ❌ Error processing disconnection: {}", e.getMessage(), e);
         }
     }
 
@@ -347,11 +351,11 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             UUID sessionId = ctx.attribute("session-uuid");
             String sessionInfo = sessionId != null ? sessionId.toString() : "unknown";
 
-            log.error("[ERROR] ❌ Error WebSocket en sesión {}: {}",
+            log.error("[ERROR] ❌ WebSocket error in session {}: {}",
                     sessionInfo, ctx.error() != null ? ctx.error().getMessage() : "unknown error",
                     ctx.error());
         } catch (Exception e) {
-            log.error("[ERROR] ❌ Error procesando error WebSocket: {}", e.getMessage(), e);
+            log.error("[ERROR] ❌ Error processing WebSocket error: {}", e.getMessage(), e);
         }
     }
 }

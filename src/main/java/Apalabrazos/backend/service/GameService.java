@@ -2,11 +2,8 @@ package Apalabrazos.backend.service;
 
 import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.model.*;
-import Apalabrazos.backend.tools.QuestionFileLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -14,10 +11,13 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Service that manages the game logic and publishes events.
@@ -29,6 +29,7 @@ public class GameService implements EventListener {
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
     private static final int BASE_QUESTION_SCORE = 100;
     private static final int SCORE_PENALTY_PER_PASS = 10;
+    private static final int QUESTION_LOAD_TIMEOUT_SECONDS = 60;
 
     private final AsyncEventBus externalBus;
     private GameGlobal GlobalGameInstance;
@@ -39,6 +40,11 @@ public class GameService implements EventListener {
     // Timeout de espera de GameControllerReady de todos los jugadores
     private final ScheduledExecutorService controllerReadyScheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> controllerReadyTimeout;
+
+    private final Object questionPreloadLock = new Object();
+    private volatile CompletableFuture<QuestionList> questionLoadFuture;
+    private volatile QuestionList preloadedQuestions;
+    private volatile boolean questionPreloadStarted = false;
 
     // Listeners separados para evitar rebotes entre buses
     private final EventListener globalListener = this::onGlobalEvent;
@@ -132,7 +138,7 @@ public class GameService implements EventListener {
         controllerReadyTimeout = controllerReadyScheduler.schedule(() -> {
             if (!GlobalGameInstance.isGameInitialized()
                     && GlobalGameInstance.getState() != GameGlobal.GameGlobalState.PLAYING) {
-                log.warn("Timeout ({} s) esperando GameControllerReady de todos los jugadores. Cancelando partida {}.", timeoutSecs, matchId);
+                log.warn("Timeout ({} s) waiting for GameControllerReady from all players. Cancelling match {}.", timeoutSecs, matchId);
                 cancelGameDueToTimeout();
             }
         }, timeoutSecs, TimeUnit.SECONDS);
@@ -141,14 +147,26 @@ public class GameService implements EventListener {
 
     private void cancelGameDueToTimeout() {
         GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
+        log.info("[EXTERNAL-BUS][SEND][GameService->GameController] Publishing GameFinishedEvent (timeout) matchId={}", matchId);
         externalBus.publish(new GameFinishedEvent(null, null, matchId));
-        log.info("Partida {} cancelada por timeout de GameControllerReady.", matchId);
+        log.info("Match {} cancelled due to GameControllerReady timeout.", matchId);
+    }
+
+    private void finishGameDueToQuestionLoadError(String errorMessage) {
+        if (GlobalGameInstance != null) {
+            GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
+        }
+        if (timeService != null) {
+            timeService.stop();
+        }
+        log.warn("Match {} finished due to question load error: {}", matchId, errorMessage);
     }
 
     /**
      * Initialize a new game - starts the timer and changes state to PLAYING
      */
     public void initGame() {
+        log.info("[SEQ][BACKEND] initGame() entered for match {}", matchId);
         // Inicializar y arrancar el TimeService
         if (this.timeService == null) {
             this.timeService = new TimeService(matchId);
@@ -160,33 +178,96 @@ public class GameService implements EventListener {
             this.GlobalGameInstance.setState(GameGlobal.GameGlobalState.PLAYING);
         }
 
-        // Cargar preguntas para todos y publicar la primera (letra A)
-        loadQuestionsForAllPlayers();
-        publishQuestionForAllPlayers(0, QuestionStatus.INIT);
-
-        log.info("Juego iniciado. TimeService iniciado");
+        // Cargar preguntas para todos con timeout - BLOQUEANTE hasta 30 segundos
+        try {
+            loadQuestionsForAllPlayersWithTimeout();
+            log.info("[SEQ][BACKEND] Questions ready for match {}. Publishing first question now.", matchId);
+            // Solo publicar preguntas si la carga fue exitosa
+            publishQuestionForAllPlayers(0, QuestionStatus.INIT);
+            log.info("Game started. TimeService started");
+        } catch (TimeoutException e) {
+            log.error("Timeout esperando carga de preguntas ({}s). Cancelando partida {}", QUESTION_LOAD_TIMEOUT_SECONDS, matchId);
+            publishExternal(new QuestionLoadErrorEvent(matchId, "Timeout loading questions", "TIMEOUT"));
+            finishGameDueToQuestionLoadError("Timeout loading questions");
+        } catch (Exception e) {
+            log.error("Error cargando preguntas. Cancelando partida {}: {}", matchId, e.getMessage(), e);
+            publishExternal(new QuestionLoadErrorEvent(matchId, e.getMessage(), "LOAD_FAILED"));
+            finishGameDueToQuestionLoadError(e.getMessage());
+        }
     }
 
     /**
-     * Carga las preguntas y las asigna a cada instancia de jugador
+     * Carga las preguntas y las asigna a cada instancia de jugador.
+     * BLOQUEANTE: espera hasta 30 segundos. Si expira el tiempo, lanza TimeoutException.
      */
-    private void loadQuestionsForAllPlayers() {
+    private void loadQuestionsForAllPlayersWithTimeout() throws TimeoutException, Exception {
+        if (!questionPreloadStarted) {
+            startQuestionPreload();
+        }
+
         try {
-            QuestionFileLoader loader = new QuestionFileLoader();
-            int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
+            CompletableFuture<QuestionList> future = questionLoadFuture;
+            if (future == null) {
+                throw new IllegalStateException("Question preload future was not initialized for match " + matchId);
+            }
 
-            // Cargar y limitar la lista de preguntas
-            QuestionList baseQuestionList = loader.loadQuestions(numberOfQuestions);
+            preloadedQuestions = future.get(QUESTION_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-            // Asignar a cada instancia de jugador
+            if (preloadedQuestions == null || preloadedQuestions.getCurrentLength() <= 0) {
+                throw new IllegalStateException("No se pudieron cargar preguntas para la partida " + matchId);
+            }
+
+            // Asignar a cada instancia de jugador solo cuando realmente empieza la partida.
             for (GameInstance instance : GlobalGameInstance.getAllPlayerInstances()) {
-                // Cada jugador debe tener su propia copia para que su progreso sea independiente.
-                instance.setQuestionList(cloneQuestionList(baseQuestionList));
+                instance.setQuestionList(cloneQuestionList(preloadedQuestions));
                 instance.start();
             }
-        } catch (IOException e) {
-            log.error("Error al cargar preguntas: {}", e.getMessage(), e);
+
+            log.info("Questions assigned to players for match {}", matchId);
+        } catch (TimeoutException e) {
+            CompletableFuture<QuestionList> future = questionLoadFuture;
+            if (future != null) {
+                future.completeExceptionally(e);
+            }
+            throw e;
+        } catch (ExecutionException e) {
+            // La tarea lanzó una excepción
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception) {
+                throw (Exception) cause;
+            }
+            throw new Exception(cause);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new Exception("Question loading interrupted", e);
         }
+    }
+
+    /**
+     * Inicia la precarga de preguntas en segundo plano.
+     * Se llama al crear partida para adelantar la latencia antes del start.
+     */
+    public synchronized void startQuestionPreload() {
+        if (questionPreloadStarted) {
+            return;
+        }
+
+        synchronized (questionPreloadLock) {
+            if (questionPreloadStarted) {
+                return;
+            }
+
+            questionPreloadStarted = true;
+            questionLoadFuture = new CompletableFuture<>();
+
+            int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
+            log.info("[ASYNC-BUS][SEND][GameService->AIQuestionService] Publishing AIQuestionPreloadRequestedEvent matchId={} questions={}",
+                    matchId, numberOfQuestions);
+            GlobalAsyncEventBus.publishAndForget(
+                    new AIQuestionPreloadRequestedEvent(matchId, numberOfQuestions, true));
+        }
+
+        log.info("Question preload started for match {}", matchId);
     }
 
     /**
@@ -229,8 +310,8 @@ public class GameService implements EventListener {
         int totalIncorrect = totals[1];
 
         QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion, totalCorrect, totalIncorrect);
-        log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {}, correct: {}, incorrect: {})",
-            questionIndex, playerId, nextQuestion != null ? "sí" : "no", totalCorrect, totalIncorrect);
+        log.info("Publishing question result for player {} questionIndex={} (nextQuestion: {}, correct: {}, incorrect: {})",
+            playerId, questionIndex, nextQuestion != null ? "yes" : "no", totalCorrect, totalIncorrect);
         if (nextQuestion == null) {
             log.warn("[QUESTION-PUBLISH] nextQuestion is null for playerId={}, questionIndex={}, status={}",
                     playerId, questionIndex, status);
@@ -245,6 +326,8 @@ public class GameService implements EventListener {
                     nextQuestion.getQuestionText(),
                     responsesCount);
         }
+        log.info("[EXTERNAL-BUS][SEND][GameService->GameController] Publishing QuestionChangedEvent playerId={} questionIndex={}",
+                playerId, questionIndex);
         externalBus.publish(event);
     }
 
@@ -302,23 +385,23 @@ public class GameService implements EventListener {
      */
     public boolean addPlayerToGame(String playerId, String explicitPlayerName) {
         if (playerId == null || playerId.isEmpty()) {
-            log.warn("addPlayerToGame: playerId inválido");
+            log.warn("addPlayerToGame: invalid playerId");
             return false;
         }
 
         GameGlobal global = this.GlobalGameInstance;
         if (global == null) {
-            log.error("addPlayerToGame: GlobalGameInstance es null");
+            log.error("addPlayerToGame: GlobalGameInstance is null");
             return false;
         }
 
         if (global.hasPlayer(playerId)) {
-            log.info("addPlayerToGame: jugador ya en la partida: {}", playerId);
+            log.info("addPlayerToGame: player already in match: {}", playerId);
             return false;
         }
 
         if (global.getPlayerCount() >= global.getMaxPlayers()) {
-            log.warn("addPlayerToGame: partida llena ({}/{})", global.getPlayerCount(), global.getMaxPlayers());
+            log.warn("addPlayerToGame: match full ({}/{})", global.getPlayerCount(), global.getMaxPlayers());
             return false;
         }
 
@@ -340,7 +423,7 @@ public class GameService implements EventListener {
 
         // Insertar la GameInstance en el mapa playerInstances del GameGlobal usando el playerId original
         global.addPlayerInstance(playerId, instance);
-        log.info("Jugador agregado: {} (nombre: {}, total: {})", playerId, playerName, global.getPlayerCount());
+        log.info("Player added: {} (name: {}, total: {})", playerId, playerName, global.getPlayerCount());
         return true;
     }
 
@@ -388,13 +471,15 @@ public class GameService implements EventListener {
      */
     private void checkAndInitialize() {
         if (GlobalGameInstance.isGameInitialized()) {
-            log.info("Ambas condiciones cumplidas (Controller + Start Validation) - notificando al GameController");
+            log.info("Both conditions met (Controller + Start Validation) - notifying GameController");
+            log.info("[SEQ][BACKEND] checkAndInitialize -> initialized=true, match={}", matchId);
             // Cancelar el timeout ya que todos los jugadores confirmaron a tiempo
             if (controllerReadyTimeout != null && !controllerReadyTimeout.isDone()) {
                 controllerReadyTimeout.cancel(false);
-                log.info("Timeout de GameControllerReady cancelado para partida {}.", matchId);
+                log.info("GameControllerReady timeout cancelled for match {}.", matchId);
             }
             if (!creatorInitEventSent) {
+                log.info("[EXTERNAL-BUS][SEND][GameService->GameController] Publishing CreatorInitGameEvent matchId={}", matchId);
                 externalBus.publish(new CreatorInitGameEvent());
                 creatorInitEventSent = true;
             }
@@ -416,28 +501,78 @@ public class GameService implements EventListener {
             return;
         }
 
-        if (!(event instanceof TimerTickEvent)) {
+        if (event instanceof TimerTickEvent tick) {
+            if (matchId != null && matchId.equals(tick.getMatchId())) {
+                handleTimerTick(tick);
+            }
             return;
         }
 
-        TimerTickEvent tick = (TimerTickEvent) event;
-        if (matchId != null && matchId.equals(tick.getMatchId())) {
-            handleTimerTick(tick);
+        if (event instanceof AIQuestionPreloadCompletedEvent completed) {
+            log.info("[ASYNC-BUS][RECV][AIQuestionService->GameService] Received AIQuestionPreloadCompletedEvent matchId={}",
+                    completed.getMatchId());
+            handleQuestionPreloadCompleted(completed);
+            return;
+        }
+
+        if (event instanceof AIQuestionPreloadFailedEvent failed) {
+            log.warn("[ASYNC-BUS][RECV][AIQuestionService->GameService] Received AIQuestionPreloadFailedEvent matchId={}",
+                    failed.getMatchId());
+            handleQuestionPreloadFailed(failed);
         }
     }
 
-    // Maneja eventos que vienen del bus externo (publicados por GameController)
+    private void handleQuestionPreloadCompleted(AIQuestionPreloadCompletedEvent event) {
+        if (event == null || event.getMatchId() == null || !event.getMatchId().equals(matchId)) {
+            return;
+        }
+
+        QuestionList loaded = event.getQuestions();
+        int count = loaded != null ? loaded.getCurrentLength() : 0;
+        preloadedQuestions = loaded;
+
+        CompletableFuture<QuestionList> future = questionLoadFuture;
+        if (future != null && !future.isDone()) {
+            future.complete(loaded);
+        }
+
+        log.info("Question preload completed for match {} ({} questions, source={})",
+                matchId,
+                count,
+                event.getSource());
+    }
+
+    private void handleQuestionPreloadFailed(AIQuestionPreloadFailedEvent event) {
+        if (event == null || event.getMatchId() == null || !event.getMatchId().equals(matchId)) {
+            return;
+        }
+
+        String reason = event.getErrorReason() != null ? event.getErrorReason() : "LOAD_FAILED";
+        String message = event.getErrorMessage() != null ? event.getErrorMessage() : "Unknown AI preload error";
+
+        CompletableFuture<QuestionList> future = questionLoadFuture;
+        if (future != null && !future.isDone()) {
+            future.completeExceptionally(new IllegalStateException(message));
+        }
+
+        log.error("Question preload failed for match {}: [{}] {}", matchId, reason, message);
+    }
+
+    // Handles events from the external bus (published by GameController)
     private void onExternalEvent(GameEvent event) {
         if (event instanceof GameControllerReady) {
             GameControllerReady ready = (GameControllerReady) event;
-            log.info("GameControllerReady received from playerId: {} (external bus)", ready.getPlayerId());
+            log.info("[EXTERNAL-BUS][RECV][GameController->GameService] Received GameControllerReady playerId={}", ready.getPlayerId());
+            log.info("[SEQ][BACKEND] GameControllerReady received. match={}, playerId={}", matchId, ready.getPlayerId());
             GlobalGameInstance.transitionControllerReady(ready.getPlayerId());
             checkAndInitialize();
         } else if (event instanceof TimerTickEvent) {
-            // No reenviar TimerTickEvent al mismo bus para evitar bucles
+            // Do not forward TimerTickEvent to the same bus to avoid loops
             return;
         } else if (event instanceof AnswerSubmittedEvent) {
             AnswerSubmittedEvent answerEvent = (AnswerSubmittedEvent) event;
+            log.info("[EXTERNAL-BUS][RECV][GameController->GameService] Received AnswerSubmittedEvent playerId={} questionIndex={}",
+                    answerEvent.getPlayerId(), answerEvent.getQuestionIndex());
             handleAnswerSubmitted(answerEvent);
         }
     }
@@ -451,13 +586,13 @@ public class GameService implements EventListener {
             int remaining = GlobalGameInstance.getRemainingSeconds();
 
             // Publicar evento actualizado con tiempo restante
-            log.debug("Tiempo restante: {} segundos", remaining);
+            log.debug("Timer remaining: {} seconds", remaining);
             publishExternal(new TimerTickEvent(remaining, matchId));
             publishExternal(buildStandingsEvent());
 
             // Si el tiempo se agotó, finalizar juego
             if (GlobalGameInstance.isTimeUp()) {
-                log.info("Tiempo agotado. Finalizando juego...");
+                log.info("Time is up. Finishing game...");
                 finishGame();
             }
         }
@@ -504,8 +639,9 @@ public class GameService implements EventListener {
             }
         }
 
+        log.info("[EXTERNAL-BUS][SEND][GameService->GameController] Publishing GameFinishedEvent matchId={}", matchId);
         publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord, matchId));
-        log.info("Juego finalizado");
+        log.info("Game finished");
     }
 
     private GameRecord buildFinalRecord(GameInstance instance) {
@@ -556,20 +692,20 @@ public class GameService implements EventListener {
         int questionIndex = event.getQuestionIndex();
         int selectedOption = event.getSelectedOption();
 
-        log.info("Procesando respuesta - PlayerId: {}, QuestionIndex: {}, SelectedOption: {}",
+        log.info("Processing answer - PlayerId: {}, QuestionIndex: {}, SelectedOption: {}",
                  playerId, questionIndex, selectedOption);
 
         // Obtener la instancia del jugador
         GameInstance playerInstance = GlobalGameInstance.getPlayerInstance(playerId);
         if (playerInstance == null) {
-            log.warn("No se encontró GameInstance para el jugador: {}", playerId);
+            log.warn("No GameInstance found for player: {}", playerId);
             return;
         }
 
         // Obtener la pregunta
         QuestionList questionList = playerInstance.getQuestionList();
         if (questionList == null || questionIndex < 0 || questionIndex >= questionList.getCurrentLength()) {
-            log.warn("Índice de pregunta inválido: {} para jugador: {}", questionIndex, playerId);
+            log.warn("Invalid question index: {} for player: {}", questionIndex, playerId);
             return;
         }
 
@@ -580,11 +716,11 @@ public class GameService implements EventListener {
         if (selectedOption == -1) {
             newStatus = QuestionStatus.PASSED;
             question.incrementPassedCount();
-            log.info("Jugador {} pasó la pregunta {}", playerId, questionIndex);
+            log.info("Player {} passed question {}", playerId, questionIndex);
         } else {
             boolean isCorrect = question.isCorrectIndex(selectedOption);
-            log.info("Respuesta {} para jugador {} en pregunta {} (opción {})",
-                 isCorrect ? "CORRECTA" : "INCORRECTA", playerId, questionIndex, selectedOption);
+            log.info("Answer {} for player {} on question {} (option {})",
+                 isCorrect ? "CORRECT" : "INCORRECT", playerId, questionIndex, selectedOption);
             // Publicar evento de validación de respuesta con la siguiente pregunta
             newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
         }
@@ -745,7 +881,7 @@ public class GameService implements EventListener {
         publishExternal(new ExtraTimeScoreEvent(matchId, playerId, remainingSeconds, extraTimeScore, totalScore));
         publishExternal(buildStandingsEvent());
 
-        log.info("Jugador {} completó rosco. remainingSeconds={}, extraTimeScore={}, totalScore={}",
+        log.info("Player {} completed rosco. remainingSeconds={}, extraTimeScore={}, totalScore={}",
             playerId, remainingSeconds, extraTimeScore, totalScore);
     }
 

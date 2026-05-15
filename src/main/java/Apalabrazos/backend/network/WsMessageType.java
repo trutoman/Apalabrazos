@@ -72,6 +72,9 @@ public final class WsMessageType {
     /** Next question delivered to the player(s). */
     public static final String QUESTION_CHANGED           = "QuestionChanged";
 
+    /** Question preload/loading failure reported before gameplay can continue. */
+    public static final String QUESTION_LOAD_ERROR        = "QuestionLoadError";
+
     /** Current standings / leaderboard broadcast to all players in the match. */
     public static final String STANDINGS                  = "Standings";
 

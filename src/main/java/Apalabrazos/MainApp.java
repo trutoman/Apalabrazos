@@ -1,6 +1,7 @@
 package Apalabrazos;
 
 import Apalabrazos.backend.network.server.EmbeddedWebSocketServer;
+import Apalabrazos.backend.service.MatchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,17 +13,18 @@ public class MainApp {
         EmbeddedWebSocketServer server = new EmbeddedWebSocketServer(8080);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Shutdown signal recibido, deteniendo servidor...");
+            log.info("Shutdown signal received, stopping server...");
+            MatchManager.getInstance().stopAiQuestionService();
             server.stop();
         }));
 
         server.start();
 
         try {
-            log.info("Presiona Ctrl+C para detener la aplicacion...");
+            log.info("Press Ctrl+C to stop the application...");
             Thread.currentThread().join();
         } catch (InterruptedException e) {
-            log.error("Interrupcion: {}", e.getMessage());
+            log.error("Interrupted: {}", e.getMessage());
             Thread.currentThread().interrupt();
         }
     }

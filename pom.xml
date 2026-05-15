@@ -61,24 +61,17 @@
                 <version>3.11.0</version>
                 <configuration>
                     <release>21</release>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.6.3</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <mainClass>Apalabrazos.MainApp</mainClass>
-                </configuration>
-            </plugin>
+        <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.6.3</version>
+        <configuration>
+            <mainClass>Apalabrazos.MainApp</mainClass>
+        </configuration>
+        </plugin>
         </plugins>
     </build>
 </project>

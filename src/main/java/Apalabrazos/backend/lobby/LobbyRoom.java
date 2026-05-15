@@ -68,7 +68,7 @@ public class LobbyRoom {
     public void broadcastChat(String usernameOriginator, String text, MatchManager matchManager) {
         try {
             ConnectionRegistry connectionRegistry = ConnectionRegistry.getInstance();
-            
+
             // Build: { "type": "chat_message", "payload": { "text": "...",
             // "username_originator": "..." } }
             ObjectNode payload = mapper.createObjectNode();
@@ -80,7 +80,7 @@ public class LobbyRoom {
             message.set("payload", payload);
 
             String json = mapper.writeValueAsString(message);
-            log.info("[LOBBY-CHAT] Broadcasting from '{}': {} → {} recipients", usernameOriginator, text,
+            log.info("[LOBBY-CHAT] Broadcasting from '{}': {} -> {} recipients", usernameOriginator, text,
                     sessions.size());
 
             for (UUID sessionId : sessions) {
@@ -127,7 +127,7 @@ public class LobbyRoom {
 
         try {
             ConnectionRegistry connectionRegistry = ConnectionRegistry.getInstance();
-            
+
             ObjectNode message = mapper.createObjectNode();
             message.put("type", type);
             message.set("payload", mapper.valueToTree(matchSummary));

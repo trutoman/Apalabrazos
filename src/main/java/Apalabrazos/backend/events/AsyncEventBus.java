@@ -36,7 +36,7 @@ public class AsyncEventBus {
     public void addListener(EventListener listener) {
         if (!listeners.contains(listener)) {
             listeners.add(listener);
-            log.debug("Listener añadido: {}", listener.getClass().getSimpleName());
+            log.debug("[ASYNC-BUS] Listener added: {}", listener.getClass().getSimpleName());
         }
     }
 
@@ -45,7 +45,7 @@ public class AsyncEventBus {
      */
     public void removeListener(EventListener listener) {
         listeners.remove(listener);
-        log.debug("Listener removido: {}", listener.getClass().getSimpleName());
+        log.debug("[ASYNC-BUS] Listener removed: {}", listener.getClass().getSimpleName());
     }
 
     /**
@@ -54,7 +54,7 @@ public class AsyncEventBus {
      * @return CompletableFuture que completa cuando TODOS los listeners terminan
      */
     public CompletableFuture<Void> publish(GameEvent event) {
-        log.debug("Publicando evento: {} a {} listeners",
+        log.debug("[ASYNC-BUS][DISPATCH] Publishing event: {} to {} listener(s)",
                  event.getClass().getSimpleName(),
                  listeners.size());
 
@@ -65,7 +65,7 @@ public class AsyncEventBus {
                     // Se ejecuta en un virtual thread separado
                     listener.onEvent(event);
                 } catch (Exception e) {
-                    log.error("Error procesando evento {} en listener {}: {}",
+                    log.error("[ASYNC-BUS] ❌ Error processing event {} in listener {}: {}",
                              event.getClass().getSimpleName(),
                              listener.getClass().getSimpleName(),
                              e.getMessage(), e);
@@ -94,7 +94,7 @@ public class AsyncEventBus {
         try {
             publish(event).join(); // Bloquea hasta completar
         } catch (Exception e) {
-            log.error("Error esperando completar publicación de evento: {}", e.getMessage());
+            log.error("[ASYNC-BUS] ❌ Error waiting for event publication to complete: {}", e.getMessage());
         }
     }
 
@@ -104,6 +104,6 @@ public class AsyncEventBus {
     public void shutdown() {
         listeners.clear();
         executor.shutdown();
-        log.info("AsyncEventBus cerrado");
+        log.info("[ASYNC-BUS] AsyncEventBus shut down");
     }
 }

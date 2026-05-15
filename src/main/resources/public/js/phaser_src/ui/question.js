@@ -97,7 +97,7 @@ export class Question {
         const r     = this.answerRadius;
 
         if (!pos) {
-            console.warn('[GAME][QUESTION] Índice de respuesta sin posición:', answer.index, answer);
+            console.warn('[GAME][QUESTION] Answer index without position:', answer.index, answer);
             return;
         }
 

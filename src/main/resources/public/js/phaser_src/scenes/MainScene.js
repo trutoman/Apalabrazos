@@ -46,12 +46,25 @@ export class MainScene extends Phaser.Scene {
         this.load.spritesheet('buttons', 'assets/buttons_sprite.png',
             { frameWidth: 250, frameHeight: 250 }
         );
-        this.load.image('background', 'assets/background_squares.png');
     }
 
-    create() {
+    create(data = {}) {
+        if (data?.savedState) {
+            this._savedState = {
+                ...this._savedState,
+                ...data.savedState,
+                letterStates: new Map(data.savedState.letterStates || []),
+            };
+        }
+        if (Number.isFinite(data?.currentQuestionIndex)) {
+            this.currentQuestionIndex = data.currentQuestionIndex;
+        }
+        if (Number.isFinite(data?.lastSubmittedQuestionIndex)) {
+            this.lastSubmittedQuestionIndex = data.lastSubmittedQuestionIndex;
+        }
+
+        this.cameras.main.setBackgroundColor('#F0F0F0');
         this._buildLayout(this.scale.width, this.scale.height);
-        this.scale.on('resize', this._onResize, this);
         PhaserEventBus.on('net:questionChanged', this._onNetQuestionChanged);
         PhaserEventBus.on('net:answerValidated', this._onNetAnswerValidated);
         PhaserEventBus.on('net:standings', this._onNetStandings);
@@ -88,7 +101,7 @@ export class MainScene extends Phaser.Scene {
         this._syncCounter(payload?.totalCorrect, payload?.totalIncorrect);
 
         if (!questionData || !this.question) {
-            console.warn('[GAME][SCENE] Ignorando QuestionChanged por falta de datos o UI no lista', {
+            console.warn('[GAME][SCENE] Ignoring QuestionChanged due to missing data or UI not ready', {
                 hasQuestionData: Boolean(questionData),
                 hasQuestionUI: Boolean(this.question),
                 questionIndex: this.currentQuestionIndex,
@@ -102,7 +115,7 @@ export class MainScene extends Phaser.Scene {
             : [];
 
         if (!questionText || responses.length < 4) {
-            console.warn('[GAME][SCENE] QuestionChanged inválido para render', {
+            console.warn('[GAME][SCENE] Invalid QuestionChanged payload for render', {
                 questionIndex: this.currentQuestionIndex,
                 questionText,
                 responsesLength: responses.length,
@@ -111,12 +124,16 @@ export class MainScene extends Phaser.Scene {
             return;
         }
 
-        console.log('[GAME][SCENE] Renderizando pregunta', {
+        console.log('[GAME][SCENE] Rendering question', {
             questionIndex: this.currentQuestionIndex,
             questionText,
             responsesLength: responses.length,
         });
 
+        this._savedState.questionData = {
+            questionText,
+            responses: [...responses],
+        };
         this.question.setContent(questionText, responses);
     }
 
@@ -138,7 +155,7 @@ export class MainScene extends Phaser.Scene {
             }
         }
 
-        console.log('[GAME][SCENE] Resultado de respuesta recibido', answerResult);
+        console.log('[GAME][SCENE] Answer result received', answerResult);
     }
 
     _handleGameFinished(gameFinishedPayload = {}) {
@@ -225,22 +242,6 @@ export class MainScene extends Phaser.Scene {
         }
     }
 
-    _onResize(gameSize) {
-        // Debounce: wait 80 ms after the last resize event before rebuilding
-        if (this._resizeTimer) clearTimeout(this._resizeTimer);
-
-        // Guardar estado antes de destruir
-        this._saveGameState();
-
-        this._resizeTimer = setTimeout(() => {
-            this._resizeTimer = null;
-            this._destroyLayout();
-            this._buildLayout(gameSize.width, gameSize.height);
-            // Restaurar estado después de reconstruir
-            this._restoreGameState();
-        }, 80);
-    }
-
     _saveGameState() {
         // Guardar estados de las letras
         if (this.rosco && this.rosco.letterButtons) {
@@ -274,6 +275,15 @@ export class MainScene extends Phaser.Scene {
 
         // Guardar estado mute del tema
         // (this._savedState.themeMuted se actualiza en el callback del botón, no hay que hacer nada)
+
+        if (this.question) {
+            this._savedState.questionData = {
+                questionText: String(this.question.questionText || '').trim(),
+                responses: Array.isArray(this.question.answers)
+                    ? this.question.answers.map((answer) => String(answer?.text || '').trim())
+                    : [],
+            };
+        }
     }
 
     _restoreGameState() {
@@ -304,11 +314,19 @@ export class MainScene extends Phaser.Scene {
         if (this.scoreboard && this._savedState.score > 0) {
             this.scoreboard.setScore(this._savedState.score);
         }
+
+        if (this.question && this._savedState.questionData?.questionText) {
+            this.question.setContent(
+                this._savedState.questionData.questionText,
+                this._savedState.questionData.responses || []
+            );
+        }
     }
 
     _buildLayout(w, h) {
-        this.bg = this.add.image(w / 2, h / 2, 'background');
-        this.bg.setScale(Math.max(w / this.bg.width, h / this.bg.height));
+        this.bg = this.add.rectangle(w / 2, h / 2, w, h, 0xF0F0F0)
+            .setDepth(-1000)
+            .setScrollFactor(0);
 
         const roscoRadius  = Math.min(210, Math.max(190, Math.round(h * 0.22)));
         const layoutCenter = { x: w / 2, y: h * 0.40 };
@@ -436,7 +454,7 @@ export class MainScene extends Phaser.Scene {
 
         const questionIndex = Number(this.currentQuestionIndex);
         if (!Number.isFinite(questionIndex) || questionIndex < 0) {
-            console.warn('[GAME] Ignorando pasar: no hay pregunta activa');
+            console.warn('[GAME] Ignoring pass: no active question');
             return;
         }
 
@@ -454,13 +472,13 @@ export class MainScene extends Phaser.Scene {
         }
 
         if (selectedOption < 0 || selectedOption > 3) {
-            console.warn('[GAME] Ignorando respuesta: opción fuera de rango', selectedOption);
+            console.warn('[GAME] Ignoring answer: option out of range', selectedOption);
             return;
         }
 
         const questionIndex = Number(this.currentQuestionIndex);
         if (!Number.isFinite(questionIndex) || questionIndex < 0) {
-            console.warn('[GAME] Ignorando respuesta: no hay pregunta activa');
+            console.warn('[GAME] Ignoring answer: no active question');
             return;
         }
 
@@ -497,8 +515,6 @@ export class MainScene extends Phaser.Scene {
         PhaserEventBus.off('net:standings', this._onNetStandings);
         PhaserEventBus.off('net:gameFinished', this._onNetGameFinished);
         PhaserEventBus.off('net:extraTimeScore', this._onNetExtraTimeScore);
-        this.scale.off('resize', this._onResize, this);
-        if (this._resizeTimer) { clearTimeout(this._resizeTimer); this._resizeTimer = null; }
         this._destroyLayout();
     }
 
