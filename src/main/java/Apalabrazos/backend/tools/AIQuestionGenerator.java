@@ -51,16 +51,6 @@ public class AIQuestionGenerator {
             Charset.forName("windows-1252"),
             StandardCharsets.ISO_8859_1);
 
-    /**
-     * Palabras de apoyo SOLO para letras difíciles.
-     * El resto de letras sigue usando el diccionario completo para mantener
-     * aleatoriedad.
-     */
-    private static final Map<String, List<String>> SAFE_WORDS_BY_LETTER = Map.of(
-            "x", List.of("xilofono", "xenofobia", "xerografia", "xilografia", "xenon", "xilema"),
-            "ñ", List.of("niño", "señal", "montaña", "pañuelo", "caña", "bañera", "sueño", "araña"),
-            "y", List.of("yate", "yema", "yogur", "yerno", "yunque", "yegua"));
-
     private final String apiKey;
     private final String apiUrl;
     private final String model;
@@ -584,20 +574,7 @@ public class AIQuestionGenerator {
 
         for (String rawLetter : batchLetters) {
             String letter = normalizeLetter(rawLetter);
-
-            List<String> availableWords;
-
-            // Para letras difíciles usamos una bolsa de apoyo estable, porque el
-            // diccionario bruto
-            // suele tener muy pocas palabras jugables. Para el resto mantenemos
-            // aleatoriedad total.
-            List<String> safeWords = SAFE_WORDS_BY_LETTER.get(letter);
-            if (isDifficultLetter(letter) && safeWords != null && safeWords.size() >= 4) {
-                availableWords = new ArrayList<>(safeWords);
-                log.info("Usando bolsa de apoyo para letra '{}': {}", letter, safeWords);
-            } else {
-                availableWords = new ArrayList<>(wordsByLetter.getOrDefault(letter, Collections.emptyList()));
-            }
+            List<String> availableWords = new ArrayList<>(wordsByLetter.getOrDefault(letter, Collections.emptyList()));
 
             if (availableWords.size() < 4) {
                 log.warn("No hay suficientes palabras para la letra '{}'. Disponibles: {}", letter,
@@ -698,7 +675,6 @@ public class AIQuestionGenerator {
 
         String repaired = repairAndTrim(word);
         String normalized = normalizeFreeText(repaired);
-        String firstLetter = getDictionaryKeyForWord(repaired);
 
         if (repaired.isBlank())
             return false;
@@ -713,23 +689,14 @@ public class AIQuestionGenerator {
         if (!repaired.matches("^[A-Za-zÁÉÍÓÚáéíóúÑñÜü]+$"))
             return false;
 
-        // Evita palabras raras con k/w en letras normales, pero permite K y W.
-        if (!"k".equals(firstLetter) && !"w".equals(firstLetter)) {
-            if (normalized.contains("k") || normalized.contains("w")) {
-                return false;
-            }
+        if (normalized.contains("k") || normalized.contains("w")) {
+            return false;
         }
 
         if (isLikelyBadConjugation(normalized))
             return false;
 
         return true;
-    }
-
-    private boolean isDifficultLetter(String letter) {
-        return "x".equals(letter)
-                || "ñ".equals(letter)
-                || "y".equals(letter);
     }
 
     private boolean isLikelyBadConjugation(String normalized) {
