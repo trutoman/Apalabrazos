@@ -4,7 +4,7 @@ import Apalabrazos.backend.dto.LoginRequest;
 import Apalabrazos.backend.dto.RegisterRequest;
 import Apalabrazos.backend.model.User;
 import Apalabrazos.backend.repository.UserRepository;
-import Apalabrazos.backend.tools.AIQuestionScheduler;
+import Apalabrazos.backend.service.AIQuestionService;
 import Apalabrazos.backend.tools.JwtService;
 import Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;
@@ -40,7 +40,6 @@ public class EmbeddedWebSocketServer {
     private final JavalinConnectionHandler connectionHandler = new JavalinConnectionHandler();
     private final UserRepository userRepository = new UserRepository();
     private final JwtService jwtService = new JwtService();
-    private AIQuestionScheduler aiQuestionScheduler;
 
     /**
      * Creates an embedded WebSocket server.
@@ -83,13 +82,6 @@ public class EmbeddedWebSocketServer {
             });
         }).start(port);
         log.info("[SERVER] HTTP server started on port {}", port);
-    }
-
-    /**
-     * Sets the AI Question Scheduler (inyectado desde MainApp).
-     */
-    public void setAiQuestionScheduler(AIQuestionScheduler scheduler) {
-        this.aiQuestionScheduler = scheduler;
     }
 
     /**
@@ -267,18 +259,8 @@ public class EmbeddedWebSocketServer {
      */
     private void registerAdminEndpoints() {
         app.post("/api/admin/generate-questions", ctx -> {
-            if (aiQuestionScheduler == null) {
-                ctx.status(503).json(new java.util.HashMap<String, String>() {
-                    {
-                        put("status", "error");
-                        put("message", "AI Question Scheduler not initialized");
-                    }
-                });
-                return;
-            }
-
             log.info("[ADMIN] Manual question generation triggered");
-            aiQuestionScheduler.forceGenerate();
+            AIQuestionService.getInstance().forceGenerateNow();
 
             ctx.json(new java.util.HashMap<String, String>() {
                 {

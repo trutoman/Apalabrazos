@@ -1,5 +1,6 @@
 package Apalabrazos.backend.tools;
 
+import Apalabrazos.backend.config.AIQuestionConfig;
 import Apalabrazos.backend.model.AlphabetMap;
 import Apalabrazos.backend.model.Question;
 import Apalabrazos.backend.model.QuestionLevel;
@@ -43,26 +44,6 @@ public class AIQuestionGenerator {
 
     private static final String ENYE = "ñ";
     private static final String ENYE_UPPER = "Ñ";
-    // METODO DE CONEXION A LA IA COMPATIBLE CON ANTHROPIC (OLLAMA, ETC.)
-    private static final String DEFAULT_API_URL = "http://100.93.139.92:11434/api/chat";
-    private static final String DEFAULT_MODEL = "gemma4:e2b";
-    private static final String DEFAULT_FALLBACK_MODEL = "";
-
-    private static final String DEFAULT_WORD_DICTIONARY_PATH = "Apalabrazos/data/dictionary.txt";
-
-    private static final int DEFAULT_QUESTIONS_PER_LETTER = 1;
-    private static final int DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
-    private static final int DEFAULT_LETTERS_PER_BATCH = 25;
-    private static final int DEFAULT_MAX_ATTEMPTS_PER_BATCH = 1;
-    private static final int DEFAULT_MAX_TOKENS = 6000;
-
-    private static final String DEFAULT_APP_NAME = "Apalabrazos";
-    private static final String DEFAULT_APP_URL = "https://github.com/Apalabrazos";
-
-    private static final int DEFAULT_LOG_PREVIEW = 4000;
-    private static final int MAX_RETRIES_ON_503 = 2;
-    private static final long INITIAL_RETRY_DELAY_MS = 1500L;
-    private static final long DEFAULT_429_WAIT_MS = 45000L;
 
     private static final List<Charset> MOJIBAKE_SOURCE_CHARSETS = List.of(
             Charset.forName("CP437"),
@@ -76,8 +57,6 @@ public class AIQuestionGenerator {
      * aleatoriedad.
      */
     private static final Map<String, List<String>> SAFE_WORDS_BY_LETTER = Map.of(
-            "k", List.of("kilo", "kiwi", "karate", "kayak", "kebab", "koala"),
-            "w", List.of("wifi", "wok", "waterpolo", "whisky", "windsurf", "web"),
             "x", List.of("xilofono", "xenofobia", "xerografia", "xilografia", "xenon", "xilema"),
             "ñ", List.of("niño", "señal", "montaña", "pañuelo", "caña", "bañera", "sueño", "araña"),
             "y", List.of("yate", "yema", "yogur", "yerno", "yunque", "yegua"));
@@ -100,21 +79,18 @@ public class AIQuestionGenerator {
     private Map<String, List<String>> wordsByLetterCache;
 
     public AIQuestionGenerator() {
-        this.apiKey = readEnv("AI_API_KEY", "");
-        this.apiUrl = readEnv("AI_API_URL", DEFAULT_API_URL).trim();
-        this.model = readEnv("AI_MODEL", DEFAULT_MODEL);
-        this.fallbackModel = readEnv("AI_FALLBACK_MODEL", DEFAULT_FALLBACK_MODEL);
-        this.questionsPerLetter = readEnvInt("AI_QUESTIONS_PER_LETTER", DEFAULT_QUESTIONS_PER_LETTER);
-        this.questionsToGeneratePerLetterInBatch = readEnvInt(
-                "AI_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH",
-                DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH);
-        this.lettersPerBatch = readEnvInt("AI_LETTERS_PER_BATCH", DEFAULT_LETTERS_PER_BATCH);
-        this.maxAttemptsPerBatch = readEnvInt("AI_MAX_ATTEMPTS_PER_BATCH", DEFAULT_MAX_ATTEMPTS_PER_BATCH);
-        this.maxTokens = readEnvInt("AI_MAX_TOKENS", DEFAULT_MAX_TOKENS);
-        this.appName = readEnv("AI_APP_NAME", DEFAULT_APP_NAME);
-        this.appUrl = readEnv("AI_APP_URL", DEFAULT_APP_URL);
-        String configuredDictionaryPath = readEnv("AI_WORD_DICTIONARY_PATH", DEFAULT_WORD_DICTIONARY_PATH);
-        this.wordDictionaryPath = resolveDictionaryPath(configuredDictionaryPath);
+        this.apiKey       = AIQuestionConfig.getApiKey();
+        this.apiUrl       = AIQuestionConfig.getApiUrl();
+        this.model        = AIQuestionConfig.getModel();
+        this.fallbackModel = AIQuestionConfig.getFallbackModel();
+        this.questionsPerLetter                  = AIQuestionConfig.getQuestionsPerLetter();
+        this.questionsToGeneratePerLetterInBatch = AIQuestionConfig.getQuestionsToGeneratePerLetterInBatch();
+        this.lettersPerBatch                     = AIQuestionConfig.getLettersPerBatch();
+        this.maxAttemptsPerBatch                 = AIQuestionConfig.getMaxAttemptsPerBatch();
+        this.maxTokens                           = AIQuestionConfig.getMaxTokens();
+        this.appName           = AIQuestionConfig.getAppName();
+        this.appUrl            = AIQuestionConfig.getAppUrl();
+        this.wordDictionaryPath = AIQuestionConfig.getWordDictionaryPath();
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -123,18 +99,7 @@ public class AIQuestionGenerator {
         this.mapper = new ObjectMapper();
         this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-        log.info(
-                "AIQuestionGenerator configurado para Anthropic-compatible. apiUrl={}, modelo={}, fallbackModel={}, questionsPerLetter={}, questionsToGeneratePerLetterInBatch={}, lettersPerBatch={}, maxAttemptsPerBatch={}, maxTokens={}, appName={}, appUrl={}",
-                apiUrl, model, fallbackModel, questionsPerLetter, questionsToGeneratePerLetterInBatch,
-                lettersPerBatch, maxAttemptsPerBatch, maxTokens, appName, appUrl);
-
-        log.info("Diccionario de palabras configurado en: {}", wordDictionaryPath);
-    }
-
-    private String resolveDictionaryPath(String configuredPath) {
-        return (configuredPath == null || configuredPath.isBlank())
-                ? DEFAULT_WORD_DICTIONARY_PATH
-                : configuredPath.trim();
+        log.info("AIQuestionGenerator inicializado desde AIQuestionConfig");
     }
 
     public int getQuestionsPerLetter() {
@@ -300,7 +265,7 @@ public class AIQuestionGenerator {
                     if (isQuotaException(e)) {
                         long waitMs = extractRetryDelayMillis(e.getMessage());
                         if (waitMs <= 0) {
-                            waitMs = DEFAULT_429_WAIT_MS;
+                            waitMs = AIQuestionConfig.DEFAULT_429_WAIT_MS;
                         }
 
                         log.warn("Esperando {} ms antes de reintentar lote pendiente {}", waitMs, batchLetters);
@@ -332,16 +297,16 @@ public class AIQuestionGenerator {
         String prompt = buildBatchPrompt(batchLetters, candidatesByLetter);
         String requestBody = buildRequestBody(prompt, modelToUse);
 
-        long delayMs = INITIAL_RETRY_DELAY_MS;
+        long delayMs = AIQuestionConfig.INITIAL_RETRY_DELAY_MS;
         Exception lastException = null;
 
-        for (int attempt = 1; attempt <= MAX_RETRIES_ON_503 + 1; attempt++) {
+        for (int attempt = 1; attempt <= AIQuestionConfig.MAX_RETRIES_ON_503 + 1; attempt++) {
             try {
                 return executeMessagesRequest(batchLetters, modelToUse, requestBody);
             } catch (Exception e) {
                 lastException = e;
 
-                if (!is503Exception(e) || attempt > MAX_RETRIES_ON_503) {
+                if (!is503Exception(e) || attempt > AIQuestionConfig.MAX_RETRIES_ON_503) {
                     break;
                 }
 
@@ -430,7 +395,7 @@ public class AIQuestionGenerator {
                 status,
                 modelToUse,
                 batchLetters,
-                preview(body, DEFAULT_LOG_PREVIEW));
+                preview(body, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
 
         String detailedMessage = extractApiErrorMessage(body);
 
@@ -520,7 +485,7 @@ public class AIQuestionGenerator {
             throw new RuntimeException("La IA devolvió contenido vacío.");
         }
 
-        log.info("Respuesta cruda IA para lote {}:\n{}", expectedLetters, preview(content, DEFAULT_LOG_PREVIEW));
+        log.info("Respuesta cruda IA para lote {}:\n{}", expectedLetters, preview(content, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
 
         JsonNode questionsNode;
         try {
@@ -762,9 +727,7 @@ public class AIQuestionGenerator {
     }
 
     private boolean isDifficultLetter(String letter) {
-        return "k".equals(letter)
-                || "w".equals(letter)
-                || "x".equals(letter)
+        return "x".equals(letter)
                 || "ñ".equals(letter)
                 || "y".equals(letter);
     }
@@ -1267,26 +1230,6 @@ public class AIQuestionGenerator {
             return "";
         }
         return repairMojibakeIfNeeded(text).trim();
-    }
-
-    private static String readEnv(String key, String defaultValue) {
-        String value = System.getenv(key);
-        if (value == null || value.trim().isEmpty()) {
-            return defaultValue;
-        }
-        return value.trim();
-    }
-
-    private static int readEnvInt(String key, int defaultValue) {
-        String value = System.getenv(key);
-        if (value == null || value.trim().isEmpty()) {
-            return defaultValue;
-        }
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
     }
 
     private static class QuotaExceededException extends RuntimeException {

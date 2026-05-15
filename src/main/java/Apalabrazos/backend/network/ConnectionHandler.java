@@ -2,7 +2,6 @@ package Apalabrazos.backend.network;
 
 import Apalabrazos.backend.lobby.LobbyRoom;
 import Apalabrazos.backend.model.Player;
-import Apalabrazos.backend.network.WsMessageType;
 import Apalabrazos.backend.service.MatchManager;
 import Apalabrazos.backend.service.ConnectionRegistry;
 import org.slf4j.Logger;

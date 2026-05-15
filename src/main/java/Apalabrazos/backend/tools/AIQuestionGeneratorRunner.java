@@ -1,6 +1,5 @@
 package Apalabrazos.backend.tools;
 
-import Apalabrazos.backend.model.AlphabetMap;
 import Apalabrazos.backend.model.Question;
 import Apalabrazos.backend.model.QuestionList;
 import org.slf4j.Logger;
@@ -18,8 +17,6 @@ import java.util.stream.Collectors;
 public class AIQuestionGeneratorRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AIQuestionGeneratorRunner.class);
-
-    private static final String ENYE = "ñ";
 
     private static final List<Charset> MOJIBAKE_SOURCE_CHARSETS = List.of(
             Charset.forName("CP437"),

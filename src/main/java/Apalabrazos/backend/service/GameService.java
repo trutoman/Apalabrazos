@@ -11,9 +11,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -42,9 +41,8 @@ public class GameService implements EventListener {
     private final ScheduledExecutorService controllerReadyScheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> controllerReadyTimeout;
 
-    // Executor para cargar preguntas con timeout
-    private final ExecutorService questionLoadExecutor = Executors.newSingleThreadExecutor();
-    private Future<?> questionLoadFuture;
+    private final Object questionPreloadLock = new Object();
+    private volatile CompletableFuture<QuestionList> questionLoadFuture;
     private volatile QuestionList preloadedQuestions;
     private volatile boolean questionPreloadStarted = false;
 
@@ -205,11 +203,14 @@ public class GameService implements EventListener {
         if (!questionPreloadStarted) {
             startQuestionPreload();
         }
+
         try {
-            // Bloquear hasta 30 segundos esperando que termine la carga
-            if (questionLoadFuture != null) {
-                questionLoadFuture.get(QUESTION_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            CompletableFuture<QuestionList> future = questionLoadFuture;
+            if (future == null) {
+                throw new IllegalStateException("Question preload future was not initialized for match " + matchId);
             }
+
+            preloadedQuestions = future.get(QUESTION_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             if (preloadedQuestions == null || preloadedQuestions.getCurrentLength() <= 0) {
                 throw new IllegalStateException("No se pudieron cargar preguntas para la partida " + matchId);
@@ -223,8 +224,9 @@ public class GameService implements EventListener {
 
             log.info("Preguntas asignadas a jugadores para partida {}", matchId);
         } catch (TimeoutException e) {
-            if (questionLoadFuture != null) {
-                questionLoadFuture.cancel(true);
+            CompletableFuture<QuestionList> future = questionLoadFuture;
+            if (future != null) {
+                future.completeExceptionally(e);
             }
             throw e;
         } catch (ExecutionException e) {
@@ -249,20 +251,18 @@ public class GameService implements EventListener {
             return;
         }
 
-        questionPreloadStarted = true;
-        questionLoadFuture = questionLoadExecutor.submit((java.util.concurrent.Callable<Void>) () -> {
+        synchronized (questionPreloadLock) {
+            if (questionPreloadStarted) {
+                return;
+            }
+
+            questionPreloadStarted = true;
+            questionLoadFuture = new CompletableFuture<>();
+
             int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
-
-            // Generar una bateria nueva por IA para cada partida.
-            // Si la IA no esta disponible, AIQuestionApiService usa el JSON local como fallback.
-            preloadedQuestions = AIQuestionApiService.getInstance()
-                    .generateQuestionsForNewGame(numberOfQuestions, true);
-
-            log.info("Precarga de preguntas completada para partida {} ({} preguntas)",
-                    matchId,
-                    preloadedQuestions != null ? preloadedQuestions.getCurrentLength() : 0);
-            return null;
-        });
+            GlobalAsyncEventBus.publishAndForget(
+                    new AIQuestionPreloadRequestedEvent(matchId, numberOfQuestions, true));
+        }
 
         log.info("Precarga de preguntas iniciada para partida {}", matchId);
     }
@@ -495,14 +495,57 @@ public class GameService implements EventListener {
             return;
         }
 
-        if (!(event instanceof TimerTickEvent)) {
+        if (event instanceof TimerTickEvent tick) {
+            if (matchId != null && matchId.equals(tick.getMatchId())) {
+                handleTimerTick(tick);
+            }
             return;
         }
 
-        TimerTickEvent tick = (TimerTickEvent) event;
-        if (matchId != null && matchId.equals(tick.getMatchId())) {
-            handleTimerTick(tick);
+        if (event instanceof AIQuestionPreloadCompletedEvent completed) {
+            handleQuestionPreloadCompleted(completed);
+            return;
         }
+
+        if (event instanceof AIQuestionPreloadFailedEvent failed) {
+            handleQuestionPreloadFailed(failed);
+        }
+    }
+
+    private void handleQuestionPreloadCompleted(AIQuestionPreloadCompletedEvent event) {
+        if (event == null || event.getMatchId() == null || !event.getMatchId().equals(matchId)) {
+            return;
+        }
+
+        QuestionList loaded = event.getQuestions();
+        int count = loaded != null ? loaded.getCurrentLength() : 0;
+        preloadedQuestions = loaded;
+
+        CompletableFuture<QuestionList> future = questionLoadFuture;
+        if (future != null && !future.isDone()) {
+            future.complete(loaded);
+        }
+
+        log.info("Precarga de preguntas completada para partida {} ({} preguntas, source={})",
+                matchId,
+                count,
+                event.getSource());
+    }
+
+    private void handleQuestionPreloadFailed(AIQuestionPreloadFailedEvent event) {
+        if (event == null || event.getMatchId() == null || !event.getMatchId().equals(matchId)) {
+            return;
+        }
+
+        String reason = event.getErrorReason() != null ? event.getErrorReason() : "LOAD_FAILED";
+        String message = event.getErrorMessage() != null ? event.getErrorMessage() : "Unknown AI preload error";
+
+        CompletableFuture<QuestionList> future = questionLoadFuture;
+        if (future != null && !future.isDone()) {
+            future.completeExceptionally(new IllegalStateException(message));
+        }
+
+        log.error("Precarga de preguntas fallida para partida {}: [{}] {}", matchId, reason, message);
     }
 
     // Maneja eventos que vienen del bus externo (publicados por GameController)

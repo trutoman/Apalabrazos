@@ -6,7 +6,6 @@ import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.GameRecord;
 import Apalabrazos.backend.model.Player;
 import Apalabrazos.backend.network.WsMessageType;
-import Apalabrazos.backend.tools.AIQuestionScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,9 +54,6 @@ public class MatchManager implements EventListener {
     private final Map<String, List<String>> matchPlayerNames;
 
     private final ScheduledExecutorService matchCleanupScheduler;
-    private final Object aiSchedulerLock = new Object();
-    private AIQuestionScheduler aiQuestionScheduler;
-    private volatile boolean aiSchedulerStarted = false;
 
     /**
      * Private constructor to prevent direct instantiation
@@ -73,36 +69,20 @@ public class MatchManager implements EventListener {
         });
         // Registrarse como listener de eventos
         GlobalAsyncEventBus.addListener(this);
+        AIQuestionService.getInstance().startScheduledGeneration();
         log.info("MatchManager singleton initialized");
     }
 
-    private void ensureAiSchedulerStarted() {
-        if (aiSchedulerStarted) {
-            return;
-        }
-
-        synchronized (aiSchedulerLock) {
-            if (aiSchedulerStarted) {
-                return;
-            }
-
-            if (aiQuestionScheduler == null) {
-                aiQuestionScheduler = new AIQuestionScheduler();
-            }
-
-            aiQuestionScheduler.start();
-            aiSchedulerStarted = true;
-            log.info("AI Question Scheduler arrancado diferido tras creación de partida");
-        }
+    public void stopAiQuestionService() {
+        AIQuestionService.getInstance().stop();
     }
 
+    /**
+     * Backward-compatible alias kept while callers migrate to stopAiQuestionService().
+     */
+    @Deprecated
     public void stopAiQuestionScheduler() {
-        synchronized (aiSchedulerLock) {
-            if (aiQuestionScheduler != null) {
-                aiQuestionScheduler.stop();
-                aiSchedulerStarted = false;
-            }
-        }
+        stopAiQuestionService();
     }
 
     /**
@@ -381,6 +361,8 @@ public class MatchManager implements EventListener {
                 sendAnswerValidatedToPlayer(answerValidated, matchId);
             } else if (gameEvent instanceof QuestionChangedEvent questionChanged) {
                 sendQuestionChangedToPlayers(questionChanged, matchId, service);
+            } else if (gameEvent instanceof QuestionLoadErrorEvent loadErrorEvent) {
+                sendQuestionLoadErrorToPlayers(loadErrorEvent, matchId, service);
             } else if (gameEvent instanceof GameFinishedEvent gameFinished) {
                 sendGameFinishedToPlayers(gameFinished, matchId, service);
             }
@@ -551,6 +533,31 @@ public class MatchManager implements EventListener {
         Map<String, Object> msg = Map.of(
                 "type", WsMessageType.QUESTION_CHANGED,
                 "payload", payload);
+        for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
+            Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
+            if (p != null && p.isConnected()) {
+                p.sendMessage(msg);
+            }
+        }
+    }
+
+    /**
+     * Sends a {@link WsMessageType#QUESTION_LOAD_ERROR} message to every player in
+     * the match when question preload fails.
+     */
+    private void sendQuestionLoadErrorToPlayers(QuestionLoadErrorEvent event, String matchId, GameService service) {
+        GameGlobal gi = service.getGameInstance();
+        if (gi == null) return;
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("roomId", matchId);
+        payload.put("errorMessage", event.getErrorMessage());
+        payload.put("errorReason", event.getErrorReason());
+
+        Map<String, Object> msg = Map.of(
+                "type", WsMessageType.QUESTION_LOAD_ERROR,
+                "payload", payload);
+
         for (String pid : new ArrayList<>(gi.getAllPlayerIds())) {
             Player p = connectionRegistry.findConnectedPlayerByPlayerId(pid);
             if (p != null && p.isConnected()) {
@@ -890,7 +897,7 @@ public class MatchManager implements EventListener {
         }
 
         log.info("Game creation requested by {}", player.getName());
-        ensureAiSchedulerStarted();
+        AIQuestionService.getInstance().startScheduledGeneration();
         GameService gameService = new GameService(event.getConfig());
         gameService.startQuestionPreload();
         // Asignar creador y nombre de partida antes de agregar a registro

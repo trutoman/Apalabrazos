@@ -101,6 +101,15 @@ function _handleQuestionChanged(data, state) {
     console.log('[GAME] QuestionChanged received:', payload);
 }
 
+function _handleQuestionLoadError(data, state, actions) {
+    const payload = data?.payload || {};
+    const roomId = String(payload?.roomId || '').trim();
+    if (!_isActiveRoom(roomId, state)) return;
+
+    console.warn('[GAME] QuestionLoadError received:', payload);
+    actions.showQuestionLoadErrorModal(payload);
+}
+
 function _handleStandings(data, state) {
     const payload = data?.payload || {};
     const roomId = String(payload?.roomId || '').trim();
@@ -303,6 +312,7 @@ const _handlers = {
     [WS_MESSAGE_TYPE.EXTRA_TIME_SCORE]:             _handleExtraTimeScore,
     [WS_MESSAGE_TYPE.ANSWER_VALIDATED]:             _handleAnswerValidated,
     [WS_MESSAGE_TYPE.QUESTION_CHANGED]:             _handleQuestionChanged,
+    [WS_MESSAGE_TYPE.QUESTION_LOAD_ERROR]:          _handleQuestionLoadError,
     [WS_MESSAGE_TYPE.STANDINGS]:                    _handleStandings,
     [WS_MESSAGE_TYPE.LOBBY_MATCHES_SNAPSHOT]:       _handleLobbyMatchesSnapshot,
     [WS_MESSAGE_TYPE.LOBBY_MATCH_CREATED]:          _handleLobbyMatchCreated,

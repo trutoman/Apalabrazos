@@ -18,7 +18,8 @@ public final class GlobalBusEventCatalog {
         MATCH_COMMAND,
         MATCH_QUERY,
         MATCH_TIMER,
-        MATCH_NOTIFICATION
+                MATCH_NOTIFICATION,
+                AI_QUESTION
     }
 
     /**
@@ -34,6 +35,7 @@ public final class GlobalBusEventCatalog {
 
     private static final String MATCH_MANAGER = "MatchManager";
     private static final String GAME_SERVICE = "GameService";
+        private static final String AI_QUESTION_SERVICE = "AIQuestionService";
 
     private static final Map<Class<? extends GameEvent>, Route> ROUTES = Map.of(
             GameCreationRequestedEvent.class,
@@ -71,7 +73,25 @@ public final class GlobalBusEventCatalog {
                     Category.MATCH_NOTIFICATION,
                     List.of("MatchManager"),
                     List.of(),
-                    "Notificación interna publicada en el bus global; actualmente no tiene consumidor backend registrado"));
+                    "Notificación interna publicada en el bus global; actualmente no tiene consumidor backend registrado"),
+            AIQuestionPreloadRequestedEvent.class,
+            new Route(
+                    Category.AI_QUESTION,
+                    List.of(GAME_SERVICE),
+                    List.of(AI_QUESTION_SERVICE),
+                    "Solicitud asíncrona de precarga de preguntas para una partida"),
+            AIQuestionPreloadCompletedEvent.class,
+            new Route(
+                    Category.AI_QUESTION,
+                    List.of(AI_QUESTION_SERVICE),
+                    List.of(GAME_SERVICE),
+                    "Resultado exitoso de la precarga de preguntas"),
+            AIQuestionPreloadFailedEvent.class,
+            new Route(
+                    Category.AI_QUESTION,
+                    List.of(AI_QUESTION_SERVICE),
+                    List.of(GAME_SERVICE),
+                    "Error durante la precarga de preguntas"));
 
     private GlobalBusEventCatalog() {
     }
@@ -98,4 +118,10 @@ public final class GlobalBusEventCatalog {
                 .map(route -> route.receivers().contains(GAME_SERVICE))
                 .orElse(false);
     }
+
+        public static boolean isHandledByAIQuestionService(GameEvent event) {
+                return describe(event)
+                                .map(route -> route.receivers().contains(AI_QUESTION_SERVICE))
+                                .orElse(false);
+        }
 }

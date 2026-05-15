@@ -68,6 +68,9 @@ export const WS_MESSAGE_TYPE = Object.freeze({
     /** Next question for the player(s). */
     QUESTION_CHANGED:                'QuestionChanged',
 
+    /** Question preload/loading failure before gameplay starts. */
+    QUESTION_LOAD_ERROR:             'QuestionLoadError',
+
     /** Current standings / leaderboard. */
     STANDINGS:                       'Standings',
 

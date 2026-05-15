@@ -14,7 +14,7 @@ public class MainApp {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("Shutdown signal recibido, deteniendo servidor...");
-            MatchManager.getInstance().stopAiQuestionScheduler();
+            MatchManager.getInstance().stopAiQuestionService();
             server.stop();
         }));
 
