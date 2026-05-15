@@ -740,7 +740,12 @@ function showCreateGameErrors(errors) {
         // Append to body so it's never clipped by parent overflow
         document.body.appendChild(box);
     }
-    box.innerHTML = errors.map(e => `<span>${e}</span>`).join('');
+    box.replaceChildren();
+    errors.forEach((errorText) => {
+        const item = document.createElement('span');
+        item.textContent = String(errorText);
+        box.appendChild(item);
+    });
     box.style.display = 'flex';
     // Auto-hide after 4 seconds
     clearTimeout(box._hideTimer);

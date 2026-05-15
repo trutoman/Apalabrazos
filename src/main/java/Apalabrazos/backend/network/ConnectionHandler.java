@@ -72,7 +72,7 @@ public abstract class ConnectionHandler {
                 // Auto-join the global lobby room
                 LobbyRoom.getInstance().join(sessionId);
                 log.debug("[CLIENT-CONNECT] Sending welcome message");
-                String welcomeMessage = "{\"type\":\"system\",\"message\":\"¡Bienvenido "
+                String welcomeMessage = "{\"type\":\"system\",\"message\":\"Welcome "
                         + username
                         + "! Connection established.\"}";
                 player.sendMessage(welcomeMessage);

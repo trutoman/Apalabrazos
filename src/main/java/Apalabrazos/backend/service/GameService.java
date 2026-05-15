@@ -230,7 +230,7 @@ public class GameService implements EventListener {
 
         QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion, totalCorrect, totalIncorrect);
         log.info("Sending previous result and publishing question {} for player {} (nextQuestion: {}, correct: {}, incorrect: {})",
-            questionIndex, playerId, nextQuestion != null ? "sí" : "no", totalCorrect, totalIncorrect);
+            questionIndex, playerId, nextQuestion != null ? "yes" : "no", totalCorrect, totalIncorrect);
         if (nextQuestion == null) {
             log.warn("[QUESTION-PUBLISH] nextQuestion is null for playerId={}, questionIndex={}, status={}",
                     playerId, questionIndex, status);
