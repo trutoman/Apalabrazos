@@ -64,22 +64,22 @@ public class ConnectionRegistry {
     public boolean registerConnection(Player player) {
         try {
             if (player == null || player.getSessionId() == null) {
-                log.error("[REGISTER] ❌ No se puede registrar: Player null o sin sessionId");
+                log.error("[REGISTER] Cannot register: player is null or missing sessionId");
                 return false;
             }
 
-            log.info("[REGISTER] 🔐 Registrando jugador: {} con SessionID: {}",
+            log.info("[REGISTER] Registering player: {} with SessionID: {}",
                     player.getName(), player.getSessionId());
 
             activeConnections.put(player.getSessionId(), player);
 
-            log.info("[REGISTER] ✅ Jugador registrado exitosamente: {} (SessionID: {}). Conexiones activas: {}",
+            log.info("[REGISTER] Player registered successfully: {} (SessionID: {}). Active connections: {}",
                     player.getName(), player.getSessionId(), activeConnections.size());
-            log.debug("[REGISTER] Estado del jugador: {}", player.getState());
+            log.debug("[REGISTER] Player state: {}", player.getState());
 
             return true;
         } catch (Exception e) {
-            log.error("[REGISTER] ❌ Error registrando jugador: {}", e.getMessage(), e);
+            log.error("[REGISTER] Error registering player: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -93,24 +93,24 @@ public class ConnectionRegistry {
      */
     public Player unregisterConnection(UUID sessionId) {
         try {
-            log.debug("[UNREGISTER] 🔍 Buscando jugador con SessionID: {}", sessionId);
+            log.debug("[UNREGISTER] Looking up player with SessionID: {}", sessionId);
 
             Player player = activeConnections.remove(sessionId);
 
             if (player != null) {
-                log.debug("[UNREGISTER] 📤 Desconectando jugador: {}", player.getName());
+                log.debug("[UNREGISTER] Disconnecting player: {}", player.getName());
                 player.disconnect();
                 log.info(
-                        "[UNREGISTER] ✅ Jugador desregistrado exitosamente: {} (SessionID: {}). Conexiones restantes: {}",
+                        "[UNREGISTER] Player unregistered successfully: {} (SessionID: {}). Remaining connections: {}",
                         player.getName(), sessionId, activeConnections.size());
-                log.debug("[UNREGISTER] Estado final del jugador: {}", player.getState());
+                log.debug("[UNREGISTER] Final player state: {}", player.getState());
             } else {
-                log.warn("[UNREGISTER] ⚠️ Intento de desregistrar SessionID no encontrada: {}", sessionId);
+                log.warn("[UNREGISTER] Attempt to unregister unknown SessionID: {}", sessionId);
             }
 
             return player;
         } catch (Exception e) {
-            log.error("[UNREGISTER] ❌ Error desregistrando SessionID {}: {}", sessionId, e.getMessage(), e);
+            log.error("[UNREGISTER] Error unregistering SessionID {}: {}", sessionId, e.getMessage(), e);
             return null;
         }
     }
@@ -125,13 +125,13 @@ public class ConnectionRegistry {
         try {
             Player player = activeConnections.get(sessionId);
             if (player == null) {
-                log.warn("[GET-PLAYER] ⚠️ Jugador no encontrado para SessionID: {}", sessionId);
+                log.warn("[GET-PLAYER] Player not found for SessionID: {}", sessionId);
             } else {
-                log.debug("[GET-PLAYER] ✓ Jugador encontrado: {} (SessionID: {})", player.getName(), sessionId);
+                log.debug("[GET-PLAYER] Player found: {} (SessionID: {})", player.getName(), sessionId);
             }
             return player;
         } catch (Exception e) {
-            log.error("[GET-PLAYER] ❌ Error obteniendo jugador para SessionID {}: {}", sessionId, e.getMessage(), e);
+            log.error("[GET-PLAYER] Error retrieving player for SessionID {}: {}", sessionId, e.getMessage(), e);
             return null;
         }
     }
@@ -187,10 +187,10 @@ public class ConnectionRegistry {
     public List<Player> getAllConnectedPlayers() {
         try {
             List<Player> players = new ArrayList<>(activeConnections.values());
-            log.debug("[GET-ALL-PLAYERS] 📊 Obteniendo lista de {} jugadores conectados", players.size());
+            log.debug("[GET-ALL-PLAYERS] Retrieving list of {} connected players", players.size());
             return players;
         } catch (Exception e) {
-            log.error("[GET-ALL-PLAYERS] ❌ Error obteniendo lista de jugadores: {}", e.getMessage(), e);
+            log.error("[GET-ALL-PLAYERS] Error retrieving player list: {}", e.getMessage(), e);
             return new ArrayList<>();
         }
     }
@@ -202,7 +202,7 @@ public class ConnectionRegistry {
      */
     public int getActiveConnectionCount() {
         int count = activeConnections.size();
-        log.debug("[CONNECTION-COUNT] 📊 Total de conexiones activas: {}", count);
+        log.debug("[CONNECTION-COUNT] Total active connections: {}", count);
         return count;
     }
 

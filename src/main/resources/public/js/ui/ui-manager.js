@@ -9,13 +9,13 @@ export const UIManager = {
             // Mostrar la que queremos
             const targetView = document.getElementById(viewId);
             if (!targetView) {
-                console.error(`❌ Vista no encontrada: ${viewId}`);
+                console.error(`View not found: ${viewId}`);
                 return;
             }
             targetView.classList.remove('hidden');
-            console.log(`✅ Vista cambiada a: ${viewId}`);
+            console.log(`View switched to: ${viewId}`);
         } catch (error) {
-            console.error('Error al cambiar vista:', error);
+            console.error('Error switching view:', error);
         }
     }
 };

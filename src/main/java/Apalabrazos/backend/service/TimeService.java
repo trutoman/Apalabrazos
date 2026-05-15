@@ -28,19 +28,19 @@ public class TimeService {
     public synchronized void start() {
         if (running) return;
         running = true;
-        log.info("TimeService iniciado");
+        log.info("TimeService started");
         worker = new Thread(() -> {
             while (running) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
-                    // Si interrumpen el hilo, salimos del bucle
+                    log.warn("TimeService worker interrupted for matchId={}", matchId, e);
                     break;
                 }
 
                 if (!running)
                     break;
-                log.debug("TimerTickEvent emitido");
+                log.debug("TimerTickEvent published");
                 GlobalAsyncEventBus.publish(new TimerTickEvent(0, matchId)); // GameService gestionará el valor real
             }
         }, "TimeService_Thread");
@@ -56,6 +56,6 @@ public class TimeService {
         if (worker != null) {
             worker.interrupt();
         }
-        log.info("TimeService detenido");
+        log.info("TimeService stopped");
     }
 }

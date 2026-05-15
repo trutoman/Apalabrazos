@@ -88,7 +88,7 @@ export class MainScene extends Phaser.Scene {
         this._syncCounter(payload?.totalCorrect, payload?.totalIncorrect);
 
         if (!questionData || !this.question) {
-            console.warn('[GAME][SCENE] Ignorando QuestionChanged por falta de datos o UI no lista', {
+            console.warn('[GAME][SCENE] Ignoring QuestionChanged due to missing data or UI not ready', {
                 hasQuestionData: Boolean(questionData),
                 hasQuestionUI: Boolean(this.question),
                 questionIndex: this.currentQuestionIndex,
@@ -102,7 +102,7 @@ export class MainScene extends Phaser.Scene {
             : [];
 
         if (!questionText || responses.length < 4) {
-            console.warn('[GAME][SCENE] QuestionChanged inválido para render', {
+            console.warn('[GAME][SCENE] Invalid QuestionChanged for rendering', {
                 questionIndex: this.currentQuestionIndex,
                 questionText,
                 responsesLength: responses.length,
@@ -111,7 +111,7 @@ export class MainScene extends Phaser.Scene {
             return;
         }
 
-        console.log('[GAME][SCENE] Renderizando pregunta', {
+        console.log('[GAME][SCENE] Rendering question', {
             questionIndex: this.currentQuestionIndex,
             questionText,
             responsesLength: responses.length,
@@ -138,7 +138,7 @@ export class MainScene extends Phaser.Scene {
             }
         }
 
-        console.log('[GAME][SCENE] Resultado de respuesta recibido', answerResult);
+        console.log('[GAME][SCENE] Answer result received', answerResult);
     }
 
     _handleGameFinished(gameFinishedPayload = {}) {
@@ -436,7 +436,7 @@ export class MainScene extends Phaser.Scene {
 
         const questionIndex = Number(this.currentQuestionIndex);
         if (!Number.isFinite(questionIndex) || questionIndex < 0) {
-            console.warn('[GAME] Ignorando pasar: no hay pregunta activa');
+            console.warn('[GAME] Ignoring pass: no active question');
             return;
         }
 
@@ -454,13 +454,13 @@ export class MainScene extends Phaser.Scene {
         }
 
         if (selectedOption < 0 || selectedOption > 3) {
-            console.warn('[GAME] Ignorando respuesta: opción fuera de rango', selectedOption);
+            console.warn('[GAME] Ignoring answer: option out of range', selectedOption);
             return;
         }
 
         const questionIndex = Number(this.currentQuestionIndex);
         if (!Number.isFinite(questionIndex) || questionIndex < 0) {
-            console.warn('[GAME] Ignorando respuesta: no hay pregunta activa');
+            console.warn('[GAME] Ignoring answer: no active question');
             return;
         }
 

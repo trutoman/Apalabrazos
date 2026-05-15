@@ -2,6 +2,8 @@ package Apalabrazos.backend.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
@@ -10,6 +12,8 @@ import java.util.Arrays;
  * de la clase Question usando Jackson.
  */
 public class QuestionJsonTest {
+    private static final Logger log = LoggerFactory.getLogger(QuestionJsonTest.class);
+
     public static void main(String[] args) {
         try {
             String r1 = "Respuesta A";
@@ -35,7 +39,7 @@ public class QuestionJsonTest {
                 throw new IllegalStateException("Deserialized object is not equal to original");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("QuestionJsonTest failed: {}", e.getMessage(), e);
             System.exit(1);
         }
     }

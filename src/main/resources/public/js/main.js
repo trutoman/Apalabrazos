@@ -164,7 +164,7 @@ function updateCurrentRoomState(roomId, players = null) {
 }
 
 function handleLogout() {
-    console.log('🚪 Logging out...');
+    console.log('Logging out...');
 
     // Disconnect WebSocket
     SocketClient.disconnect();
@@ -209,7 +209,7 @@ function handleLogout() {
         LoginUI.focusUsernameInput();
     }
 
-    console.log('✅ Logged out successfully');
+    console.log('Logged out successfully');
 }
 
 function setCreatePendingState(pending) {
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnConfirm = document.getElementById('btn-confirm-create');
     if (btnConfirm) {
         btnConfirm.addEventListener('click', () => {
-            console.log('[CREATE] btn-confirm-create clicked ✅');
+            console.log('[CREATE] btn-confirm-create clicked');
             if (isCreateGamePending) {
                 console.warn('[CREATE] A create request is already pending. Ignoring duplicate click.');
                 return;
@@ -657,7 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 10000);
         });
     } else {
-        console.error('[CREATE] ❌ btn-confirm-create NOT FOUND in DOM');
+        console.error('[CREATE] btn-confirm-create NOT FOUND in DOM');
     }
 
     document.addEventListener('click', (event) => {
@@ -740,7 +740,7 @@ function showCreateGameErrors(errors) {
         // Append to body so it's never clipped by parent overflow
         document.body.appendChild(box);
     }
-    box.innerHTML = errors.map(e => `<span>⚠️ ${e}</span>`).join('');
+    box.innerHTML = errors.map(e => `<span>${e}</span>`).join('');
     box.style.display = 'flex';
     // Auto-hide after 4 seconds
     clearTimeout(box._hideTimer);
@@ -882,7 +882,7 @@ LoginUI.init(
                 await SocketClient.connect(serverUrl, token);
             } catch (wsError) {
                 console.error("WebSocket connection error:", wsError);
-                LoginUI.showError("Error al conectar con el servidor WebSocket. Verifica que el servidor esté en línea.");
+                LoginUI.showError("Error connecting to the WebSocket server. Verify that the server is online.");
                 return;
             }
 
@@ -891,7 +891,7 @@ LoginUI.init(
             registerSocketMessageHandlers();
 
             // 5. WebSocket authenticated, switch to lobby
-            console.log("✅ Authentication successful, entering lobby...");
+            console.log("Authentication successful, entering lobby...");
             UIManager.switchView('view-lobby');
             renderLobbyUsername(currentUsername);
 
@@ -920,7 +920,7 @@ LoginUI.init(
 
         } catch (error) {
             console.error("Login error:", error);
-            LoginUI.showError("No se pudo conectar con el servidor.");
+            LoginUI.showError("Could not connect to the server.");
         }
     },
     // onRegisterAttempt callback
@@ -955,7 +955,7 @@ LoginUI.init(
             }
         } catch (error) {
             console.error("Registration error:", error);
-            LoginUI.showError(error.message || "No se pudo conectar con el servidor.");
+            LoginUI.showError(error.message || "Could not connect to the server.");
         }
     }
 );

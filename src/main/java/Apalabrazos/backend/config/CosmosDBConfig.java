@@ -77,7 +77,7 @@ public class CosmosDBConfig {
 
         CosmosContainer resolved = database.getContainer(containerName);
         containers.put(containerName, resolved);
-        log.info("✓ Connected to Cosmos DB Container: {}", containerName);
+        log.info("Connected to Cosmos DB container: {}", containerName);
         return resolved;
     }
 

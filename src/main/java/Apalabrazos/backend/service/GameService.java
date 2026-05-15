@@ -132,7 +132,7 @@ public class GameService implements EventListener {
         controllerReadyTimeout = controllerReadyScheduler.schedule(() -> {
             if (!GlobalGameInstance.isGameInitialized()
                     && GlobalGameInstance.getState() != GameGlobal.GameGlobalState.PLAYING) {
-                log.warn("Timeout ({} s) esperando GameControllerReady de todos los jugadores. Cancelando partida {}.", timeoutSecs, matchId);
+                log.warn("Timeout ({} s) waiting for GameControllerReady from all players. Cancelling match {}.", timeoutSecs, matchId);
                 cancelGameDueToTimeout();
             }
         }, timeoutSecs, TimeUnit.SECONDS);
@@ -142,7 +142,7 @@ public class GameService implements EventListener {
     private void cancelGameDueToTimeout() {
         GlobalGameInstance.setState(GameGlobal.GameGlobalState.POST);
         externalBus.publish(new GameFinishedEvent(null, null, matchId));
-        log.info("Partida {} cancelada por timeout de GameControllerReady.", matchId);
+        log.info("Match {} cancelled due to GameControllerReady timeout.", matchId);
     }
 
     /**
@@ -164,7 +164,7 @@ public class GameService implements EventListener {
         loadQuestionsForAllPlayers();
         publishQuestionForAllPlayers(0, QuestionStatus.INIT);
 
-        log.info("Juego iniciado. TimeService iniciado");
+        log.info("Game started. TimeService started");
     }
 
     /**
@@ -185,7 +185,7 @@ public class GameService implements EventListener {
                 instance.start();
             }
         } catch (IOException e) {
-            log.error("Error al cargar preguntas: {}", e.getMessage(), e);
+            log.error("Error loading questions: {}", e.getMessage(), e);
         }
     }
 
@@ -229,7 +229,7 @@ public class GameService implements EventListener {
         int totalIncorrect = totals[1];
 
         QuestionChangedEvent event = new QuestionChangedEvent(questionIndex, status, playerId, nextQuestion, totalCorrect, totalIncorrect);
-        log.info("Dando Resultado anterior y Publicando Pregunta {} para jugador {} (nextQuestion: {}, correct: {}, incorrect: {})",
+        log.info("Sending previous result and publishing question {} for player {} (nextQuestion: {}, correct: {}, incorrect: {})",
             questionIndex, playerId, nextQuestion != null ? "sí" : "no", totalCorrect, totalIncorrect);
         if (nextQuestion == null) {
             log.warn("[QUESTION-PUBLISH] nextQuestion is null for playerId={}, questionIndex={}, status={}",
@@ -302,23 +302,23 @@ public class GameService implements EventListener {
      */
     public boolean addPlayerToGame(String playerId, String explicitPlayerName) {
         if (playerId == null || playerId.isEmpty()) {
-            log.warn("addPlayerToGame: playerId inválido");
+            log.warn("addPlayerToGame: invalid playerId");
             return false;
         }
 
         GameGlobal global = this.GlobalGameInstance;
         if (global == null) {
-            log.error("addPlayerToGame: GlobalGameInstance es null");
+            log.error("addPlayerToGame: GlobalGameInstance is null");
             return false;
         }
 
         if (global.hasPlayer(playerId)) {
-            log.info("addPlayerToGame: jugador ya en la partida: {}", playerId);
+            log.info("addPlayerToGame: player already in match: {}", playerId);
             return false;
         }
 
         if (global.getPlayerCount() >= global.getMaxPlayers()) {
-            log.warn("addPlayerToGame: partida llena ({}/{})", global.getPlayerCount(), global.getMaxPlayers());
+            log.warn("addPlayerToGame: match is full ({}/{})", global.getPlayerCount(), global.getMaxPlayers());
             return false;
         }
 
@@ -340,7 +340,7 @@ public class GameService implements EventListener {
 
         // Insertar la GameInstance en el mapa playerInstances del GameGlobal usando el playerId original
         global.addPlayerInstance(playerId, instance);
-        log.info("Jugador agregado: {} (nombre: {}, total: {})", playerId, playerName, global.getPlayerCount());
+        log.info("Player added: {} (name: {}, total: {})", playerId, playerName, global.getPlayerCount());
         return true;
     }
 
@@ -388,11 +388,11 @@ public class GameService implements EventListener {
      */
     private void checkAndInitialize() {
         if (GlobalGameInstance.isGameInitialized()) {
-            log.info("Ambas condiciones cumplidas (Controller + Start Validation) - notificando al GameController");
+            log.info("Both conditions met (Controller + Start Validation) - notifying GameController");
             // Cancelar el timeout ya que todos los jugadores confirmaron a tiempo
             if (controllerReadyTimeout != null && !controllerReadyTimeout.isDone()) {
                 controllerReadyTimeout.cancel(false);
-                log.info("Timeout de GameControllerReady cancelado para partida {}.", matchId);
+                log.info("GameControllerReady timeout cancelled for match {}.", matchId);
             }
             if (!creatorInitEventSent) {
                 externalBus.publish(new CreatorInitGameEvent());
@@ -451,13 +451,13 @@ public class GameService implements EventListener {
             int remaining = GlobalGameInstance.getRemainingSeconds();
 
             // Publicar evento actualizado con tiempo restante
-            log.debug("Tiempo restante: {} segundos", remaining);
+            log.debug("Remaining time: {} seconds", remaining);
             publishExternal(new TimerTickEvent(remaining, matchId));
             publishExternal(buildStandingsEvent());
 
             // Si el tiempo se agotó, finalizar juego
             if (GlobalGameInstance.isTimeUp()) {
-                log.info("Tiempo agotado. Finalizando juego...");
+                log.info("Time exhausted. Finishing game...");
                 finishGame();
             }
         }
@@ -505,7 +505,7 @@ public class GameService implements EventListener {
         }
 
         publishExternal(new GameFinishedEvent(playerOneRecord, playerTwoRecord, matchId));
-        log.info("Juego finalizado");
+        log.info("Game finished");
     }
 
     private GameRecord buildFinalRecord(GameInstance instance) {
@@ -556,20 +556,20 @@ public class GameService implements EventListener {
         int questionIndex = event.getQuestionIndex();
         int selectedOption = event.getSelectedOption();
 
-        log.info("Procesando respuesta - PlayerId: {}, QuestionIndex: {}, SelectedOption: {}",
+        log.info("Processing answer - PlayerId: {}, QuestionIndex: {}, SelectedOption: {}",
                  playerId, questionIndex, selectedOption);
 
         // Obtener la instancia del jugador
         GameInstance playerInstance = GlobalGameInstance.getPlayerInstance(playerId);
         if (playerInstance == null) {
-            log.warn("No se encontró GameInstance para el jugador: {}", playerId);
+            log.warn("GameInstance not found for player: {}", playerId);
             return;
         }
 
         // Obtener la pregunta
         QuestionList questionList = playerInstance.getQuestionList();
         if (questionList == null || questionIndex < 0 || questionIndex >= questionList.getCurrentLength()) {
-            log.warn("Índice de pregunta inválido: {} para jugador: {}", questionIndex, playerId);
+            log.warn("Invalid question index: {} for player: {}", questionIndex, playerId);
             return;
         }
 
@@ -580,10 +580,10 @@ public class GameService implements EventListener {
         if (selectedOption == -1) {
             newStatus = QuestionStatus.PASSED;
             question.incrementPassedCount();
-            log.info("Jugador {} pasó la pregunta {}", playerId, questionIndex);
+            log.info("Player {} passed question {}", playerId, questionIndex);
         } else {
             boolean isCorrect = question.isCorrectIndex(selectedOption);
-            log.info("Respuesta {} para jugador {} en pregunta {} (opción {})",
+            log.info("Answer {} for player {} in question {} (option {})",
                  isCorrect ? "CORRECTA" : "INCORRECTA", playerId, questionIndex, selectedOption);
             // Publicar evento de validación de respuesta con la siguiente pregunta
             newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
@@ -745,7 +745,7 @@ public class GameService implements EventListener {
         publishExternal(new ExtraTimeScoreEvent(matchId, playerId, remainingSeconds, extraTimeScore, totalScore));
         publishExternal(buildStandingsEvent());
 
-        log.info("Jugador {} completó rosco. remainingSeconds={}, extraTimeScore={}, totalScore={}",
+        log.info("Player {} completed the wheel. remainingSeconds={}, extraTimeScore={}, totalScore={}",
             playerId, remainingSeconds, extraTimeScore, totalScore);
     }
 

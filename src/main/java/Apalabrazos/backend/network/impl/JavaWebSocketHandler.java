@@ -72,7 +72,7 @@ public class JavaWebSocketHandler extends ConnectionHandler {
      * @param throwable El error ocurrido
      */
     public void onError(UUID sessionId, Throwable throwable) {
-        log.error("✗ WebSocket Error en sesión {}: {}", sessionId, throwable.getMessage());
+        log.error("WebSocket error in session {}: {}", sessionId, throwable.getMessage(), throwable);
         // Posible reconexión automática
     }
 }

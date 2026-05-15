@@ -12,17 +12,17 @@ public class MainApp {
         EmbeddedWebSocketServer server = new EmbeddedWebSocketServer(8080);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            log.info("Shutdown signal recibido, deteniendo servidor...");
+            log.info("Shutdown signal received, stopping server...");
             server.stop();
         }));
 
         server.start();
 
         try {
-            log.info("Presiona Ctrl+C para detener la aplicacion...");
+            log.info("Press Ctrl+C to stop the application...");
             Thread.currentThread().join();
         } catch (InterruptedException e) {
-            log.error("Interrupcion: {}", e.getMessage());
+            log.error("Interrupted: {}", e.getMessage(), e);
             Thread.currentThread().interrupt();
         }
     }

@@ -41,51 +41,51 @@ public abstract class ConnectionHandler {
      */
     public void onClientConnect(Object session, String username, String cosmosUserId) {
         try {
-            log.info("[CLIENT-CONNECT] Iniciando proceso de conexión para: {} (CosmosUserId: {})", username,
+            log.info("[CLIENT-CONNECT] Starting connection process for: {} (CosmosUserId: {})", username,
                     cosmosUserId);
 
             // 1. Nivel 1: Crear abstracción de la conexión física
             UUID sessionId = UUID.randomUUID();
-            log.debug("[CLIENT-CONNECT] SessionID generado: {}", sessionId);
+            log.debug("[CLIENT-CONNECT] Generated SessionID: {}", sessionId);
 
             // Intento de guardar el ID en la propia sesión si es soportado (caso Javalin)
             if (session instanceof io.javalin.websocket.WsContext) {
                 ((io.javalin.websocket.WsContext) session).attribute("session-uuid", sessionId);
-                log.debug("[CLIENT-CONNECT] SessionID guardado en WsContext");
+                log.debug("[CLIENT-CONNECT] SessionID stored in WsContext");
             } else {
-                log.warn("[CLIENT-CONNECT] Sesión no es WsContext, tipo: {}", session.getClass().getName());
+                log.warn("[CLIENT-CONNECT] Session is not WsContext, type: {}", session.getClass().getName());
             }
 
-            log.debug("[CLIENT-CONNECT] Creando WebSocketMessageSender para cliente: {}", sessionId);
+            log.debug("[CLIENT-CONNECT] Creating WebSocketMessageSender for client: {}", sessionId);
             WebSocketMessageSender messageSender = new WebSocketMessageSender(session, sessionId.toString());
 
             // 2. Nivel 2: Crear el Player (el ancla) — linked to Cosmos DB user
-            log.debug("[CLIENT-CONNECT] Creando Player para usuario: {} (CosmosUserId: {})", username, cosmosUserId);
+            log.debug("[CLIENT-CONNECT] Creating Player for user: {} (CosmosUserId: {})", username, cosmosUserId);
             Player player = new Player(sessionId, username, cosmosUserId, messageSender);
 
             // 3. Registrar en ConnectionRegistry
-            log.debug("[CLIENT-CONNECT] Registrando conexión en ConnectionRegistry");
+            log.debug("[CLIENT-CONNECT] Registering connection in ConnectionRegistry");
             boolean registered = connectionRegistry.registerConnection(player);
 
             if (registered) {
-                log.info("[CLIENT-CONNECT] ✓ Cliente conectado exitosamente: {} (SessionID: {})", username, sessionId);
+                log.info("[CLIENT-CONNECT] Client connected successfully: {} (SessionID: {})", username, sessionId);
                 // Auto-join the global lobby room
                 LobbyRoom.getInstance().join(sessionId);
-                log.debug("[CLIENT-CONNECT] Enviando mensaje de bienvenida");
+                log.debug("[CLIENT-CONNECT] Sending welcome message");
                 String welcomeMessage = "{\"type\":\"system\",\"message\":\"¡Bienvenido "
                         + username
-                        + "! Conexión establecida.\"}";
+                        + "! Connection established.\"}";
                 player.sendMessage(welcomeMessage);
                 sendLobbyMatchesSnapshot(player);
-                log.debug("[CLIENT-CONNECT] Mensaje de bienvenida y snapshot del lobby enviados");
+                log.debug("[CLIENT-CONNECT] Welcome message and lobby snapshot sent");
             } else {
-                log.error("[CLIENT-CONNECT] ❌ No se pudo registrar el jugador: {} en GameSessionManager", username);
+                log.error("[CLIENT-CONNECT] Failed to register player: {} in GameSessionManager", username);
                 messageSender.close();
-                log.info("[CLIENT-CONNECT] MessageSender cerrado");
+                log.info("[CLIENT-CONNECT] MessageSender closed");
             }
 
         } catch (Exception e) {
-            log.error("[CLIENT-CONNECT] ❌ Error procesando nueva conexión para {}: {}", username, e.getMessage(), e);
+            log.error("[CLIENT-CONNECT] Error processing new connection for {}: {}", username, e.getMessage(), e);
         }
     }
 
@@ -97,22 +97,22 @@ public abstract class ConnectionHandler {
      */
     public void onClientMessage(UUID sessionId, String messageContent) {
         try {
-            log.debug("[CLIENT-MESSAGE] Buscando player para sesión: {}", sessionId);
+            log.debug("[CLIENT-MESSAGE] Looking up player for session: {}", sessionId);
             Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
             if (player == null) {
-                log.error("[CLIENT-MESSAGE] ❌ Sesión no encontrada: {}", sessionId);
+                log.error("[CLIENT-MESSAGE] Session not found: {}", sessionId);
                 return;
             }
 
-            log.debug("[CLIENT-MESSAGE] 📨 Mensaje recibido de {}: {}", player.getName(), messageContent);
+            log.debug("[WS-INBOUND] Message received from {}: {}", player.getName(), messageContent);
 
             // Aquí iría la lógica de procesar el mensaje
             // Por ahora solo lo registramos
-            log.debug("[CLIENT-MESSAGE] ✓ Mensaje procesado");
+            log.debug("[CLIENT-MESSAGE] Message processed");
 
         } catch (Exception e) {
-            log.error("[CLIENT-MESSAGE] ❌ Error procesando mensaje para sesión {}: {}", sessionId, e.getMessage(), e);
+            log.error("[CLIENT-MESSAGE] Error processing message for session {}: {}", sessionId, e.getMessage(), e);
         }
     }
 
@@ -123,7 +123,7 @@ public abstract class ConnectionHandler {
      */
     public void onClientDisconnect(UUID sessionId) {
         try {
-            log.info("[CLIENT-DISCONNECT] 🔌 Procesando desconexión para sesión: {}", sessionId);
+            log.info("[CLIENT-DISCONNECT] Processing disconnect for session: {}", sessionId);
             Player player = connectionRegistry.unregisterConnection(sessionId);
 
             // Always leave the lobby, regardless of whether the player was found
@@ -137,15 +137,15 @@ public abstract class ConnectionHandler {
                             player.getPlayerID(), leftMatchId);
                 }
 
-                log.info("[CLIENT-DISCONNECT] ✓ Cliente desconectado exitosamente: {} (SessionID: {})",
+                log.info("[CLIENT-DISCONNECT] Client disconnected successfully: {} (SessionID: {})",
                         player.getName(), sessionId);
-                log.debug("[CLIENT-DISCONNECT] Estado final del jugador: {}", player.getState());
+                log.debug("[CLIENT-DISCONNECT] Final player state: {}", player.getState());
             } else {
-                log.warn("[CLIENT-DISCONNECT] ⚠️ Intento de desconectar sesión no registrada: {}", sessionId);
+                log.warn("[CLIENT-DISCONNECT] Attempt to disconnect unregistered session: {}", sessionId);
             }
 
         } catch (Exception e) {
-            log.error("[CLIENT-DISCONNECT] ❌ Error procesando desconexión para sesión {}: {}", sessionId,
+            log.error("[CLIENT-DISCONNECT] Error processing disconnect for session {}: {}", sessionId,
                     e.getMessage(), e);
         }
     }
@@ -161,18 +161,18 @@ public abstract class ConnectionHandler {
             Player player = connectionRegistry.getPlayerBySessionId(sessionId);
 
             if (player == null) {
-                log.warn("Sesión a reconectar no encontrada: {}", sessionId);
+                log.warn("Session to reconnect not found: {}", sessionId);
                 return;
             }
 
             ((WebSocketMessageSender) player.getSender()).reconnect();
 
-            log.info("✓ Cliente reconectado: {} (SessionID: {})",
+            log.info("Client reconnected: {} (SessionID: {})",
                     player.getName(), sessionId);
-            player.sendMessage("Reconexión establecida");
+            player.sendMessage("Reconnection established");
 
         } catch (Exception e) {
-            log.error("Error procesando reconexión: {}", e.getMessage(), e);
+            log.error("Error processing reconnection: {}", e.getMessage(), e);
         }
     }
 
@@ -193,10 +193,10 @@ public abstract class ConnectionHandler {
             message.put("payload", payload);
 
             player.sendMessage(message);
-            log.info("[CLIENT-CONNECT] 🧩 Snapshot del lobby enviado a {} con {} partidas activas",
+            log.info("[CLIENT-CONNECT] Lobby snapshot sent to {} with {} active matches",
                     player.getName(), matchManager.getActiveMatchCount());
         } catch (Exception e) {
-            log.error("[CLIENT-CONNECT] ❌ Error enviando snapshot del lobby a {}: {}",
+            log.error("[CLIENT-CONNECT] Error sending lobby snapshot to {}: {}",
                     player.getName(), e.getMessage(), e);
         }
     }

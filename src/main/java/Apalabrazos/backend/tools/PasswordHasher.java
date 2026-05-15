@@ -6,11 +6,15 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for password hashing using PBKDF2 with HMAC-SHA256.
  */
 public class PasswordHasher {
+
+    private static final Logger log = LoggerFactory.getLogger(PasswordHasher.class);
 
     private static final int ITERATIONS = 10000;
     private static final int KEY_LENGTH = 256;
@@ -45,6 +49,7 @@ public class PasswordHasher {
             byte[] hash = factory.generateSecret(spec).getEncoded();
             return Base64.getEncoder().encodeToString(hash);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            log.error("Error hashing password", e);
             throw new RuntimeException("Error hashing password", e);
         }
     }

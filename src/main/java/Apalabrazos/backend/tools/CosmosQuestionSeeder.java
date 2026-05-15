@@ -32,9 +32,9 @@ public class CosmosQuestionSeeder {
     public static void main(String[] args) {
         try {
             int upserts = seedQuestions();
-            log.info("Question seeding finalizado. Total upserts: {}", upserts);
+            log.info("Question seeding finished. Total upserts: {}", upserts);
         } catch (Exception e) {
-            log.error("Error ejecutando seeding de preguntas: {}", e.getMessage(), e);
+            log.error("Error running question seeding: {}", e.getMessage(), e);
             System.exit(1);
         }
     }
@@ -68,7 +68,7 @@ public class CosmosQuestionSeeder {
             String classpathPath = source.substring("classpath:".length());
             try (InputStream in = CosmosQuestionSeeder.class.getResourceAsStream(classpathPath)) {
                 if (in == null) {
-                    throw new IllegalStateException("No se encontró recurso en classpath: " + classpathPath);
+                    throw new IllegalStateException("Resource not found in classpath: " + classpathPath);
                 }
                 return mapper.readValue(in, QuestionList.class);
             }
@@ -92,6 +92,7 @@ public class CosmosQuestionSeeder {
             byte[] digest = md.digest(base.getBytes(StandardCharsets.UTF_8));
             return "q_" + HexFormat.of().formatHex(digest, 0, 12);
         } catch (Exception ex) {
+            log.warn("Falling back to hashCode-based question id due to SHA-256 failure", ex);
             return "q_" + Math.abs((q.getQuestionLetter() + q.getQuestionText()).hashCode());
         }
     }

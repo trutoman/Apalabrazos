@@ -7,11 +7,15 @@ import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.Date;
 
 public class JwtService {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
 
     private final Algorithm algorithm;
     private final JWTVerifier verifier;
@@ -43,6 +47,7 @@ public class JwtService {
         try {
             return verifier.verify(token);
         } catch (JWTVerificationException ex) {
+            log.warn("JWT verification failed: {}", ex.getMessage());
             return null;
         }
     }
