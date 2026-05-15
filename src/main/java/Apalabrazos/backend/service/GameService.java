@@ -584,7 +584,7 @@ public class GameService implements EventListener {
         } else {
             boolean isCorrect = question.isCorrectIndex(selectedOption);
             log.info("Answer {} for player {} in question {} (option {})",
-                 isCorrect ? "CORRECTA" : "INCORRECTA", playerId, questionIndex, selectedOption);
+                    isCorrect ? "CORRECT" : "INCORRECT", playerId, questionIndex, selectedOption);
             // Publicar evento de validación de respuesta con la siguiente pregunta
             newStatus = isCorrect ? QuestionStatus.RESPONDED_OK : QuestionStatus.RESPONDED_FAIL;
         }

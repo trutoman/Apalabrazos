@@ -69,7 +69,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
             try {
                 ctx.closeSession(4500, "Server error during authentication");
             } catch (Exception closeErr) {
-                log.error("[CONNECT] Error closing session: {}", closeErr.getMessage(), closeErr);
+                log.error("[CONNECT] Error closing session", closeErr);
             }
         }
     }
