@@ -142,27 +142,14 @@ public class AIQuestionGenerator {
             return new QuestionList(new ArrayList<>(), 0);
         }
 
-        List<String> normalizedTargetLetters = targetLetters.stream()
-                .map(this::normalizeLetter)
-                .filter(s -> s != null && !s.isBlank())
-                .distinct()
-                .collect(Collectors.toList());
+        List<String> normalizedTargetLetters = normalizeTargetLetters(targetLetters);
+        Map<String, List<Question>> acceptedByLetter = initializeAcceptedByLetter(normalizedTargetLetters);
 
-        Map<String, List<Question>> acceptedByLetter = new LinkedHashMap<>();
-        for (String letter : normalizedTargetLetters) {
-            acceptedByLetter.put(letter, new ArrayList<>());
-        }
-        // Ahora TODAS las letras (incluida la ñ) van a la IA
-        List<String> lettersForAI = new ArrayList<>(normalizedTargetLetters);
-
-        if (lettersForAI.isEmpty()) {
-            List<Question> allQuestions = flattenQuestions(acceptedByLetter.values());
-            QuestionList result = new QuestionList(allQuestions, allQuestions.size());
-            log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
-            return result;
+        if (normalizedTargetLetters.isEmpty()) {
+            return buildQuestionListResult(acceptedByLetter);
         }
 
-        List<List<String>> batches = partitionLetters(lettersForAI, lettersPerBatch);
+        List<List<String>> batches = partitionLetters(normalizedTargetLetters, lettersPerBatch);
         boolean quotaExceeded = false;
 
         for (List<String> batchLetters : batches) {
@@ -170,107 +157,142 @@ public class AIQuestionGenerator {
                 break;
             }
 
-            log.info("Procesando lote de letras pendientes: {}", batchLetters);
-
-            int attempts = 0;
-
-            while (attempts < maxAttemptsPerBatch && !areBatchLettersComplete(batchLetters, acceptedByLetter)) {
-                attempts++;
-
-                try {
-                    Map<String, CandidateQuestionData> candidatesByLetter = buildCandidatesForBatch(batchLetters);
-
-                    if (candidatesByLetter.isEmpty()) {
-                        log.warn("No se pudieron preparar candidatas para el lote {}. Se salta el intento.",
-                                batchLetters);
-                        break;
-                    }
-
-                    log.info("Enviando lote {} a la IA con {} candidatas", batchLetters, candidatesByLetter.size());
-                    String responseBody = callAIForBatch(batchLetters, candidatesByLetter);
-                    List<Question> parsed = parseAIResponse(responseBody, batchLetters, candidatesByLetter);
-
-                    int acceptedThisAttempt = 0;
-
-                    for (Question q : parsed) {
-                        if (!isValidQuestion(q)) {
-                            log.warn(
-                                    "Pregunta descartada | Letra: {} | Pista: {} | Respuestas: {}",
-                                    q != null ? q.getQuestionLetter() : "null",
-                                    q != null ? q.getQuestionText() : "null",
-                                    q != null ? q.getQuestionResponsesList() : "null");
-                            continue;
-                        }
-
-                        String letter = normalizeLetter(q.getQuestionLetter());
-                        List<Question> existingForLetter = acceptedByLetter.getOrDefault(letter,
-                                Collections.emptyList());
-
-                        if (existingForLetter.size() >= questionsPerLetter) {
-                            continue;
-                        }
-
-                        if (isDuplicate(flattenQuestions(acceptedByLetter.values()), q)) {
-                            log.warn(
-                                    "Pregunta descartada por duplicada | Letra: {} | Pista: {} | Correcta: {}",
-                                    letter,
-                                    q.getQuestionText(),
-                                    q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()));
-                            continue;
-                        }
-
-                        acceptedByLetter.get(letter).add(q);
-                        acceptedThisAttempt++;
-
-                        log.info(
-                                "Pregunta aceptada | Letra: {} | Pista: {} | Correcta: {} | Total letra: {}/{}",
-                                letter,
-                                q.getQuestionText(),
-                                q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()),
-                                acceptedByLetter.get(letter).size(),
-                                questionsPerLetter);
-                    }
-
-                    log.info(
-                            "Lote pendiente {} intento {}/{} -> aceptadas en intento: {}",
-                            batchLetters,
-                            attempts,
-                            maxAttemptsPerBatch,
-                            acceptedThisAttempt);
-
-                } catch (QuotaExceededException e) {
-                    log.warn("Cuota agotada mientras se procesaban letras pendientes. Se detiene la generación: {}",
-                            e.getMessage());
-                    quotaExceeded = true;
-                    break;
-                } catch (Exception e) {
-                    log.error(
-                            "Lote pendiente {} intento {}/{} fallido: {}",
-                            batchLetters,
-                            attempts,
-                            maxAttemptsPerBatch,
-                            e.getMessage(),
-                            e);
-
-                    if (isQuotaException(e)) {
-                        long waitMs = extractRetryDelayMillis(e.getMessage());
-                        if (waitMs <= 0) {
-                            waitMs = AIQuestionConfig.DEFAULT_429_WAIT_MS;
-                        }
-
-                        log.warn("Esperando {} ms antes de reintentar lote pendiente {}", waitMs, batchLetters);
-                        Thread.sleep(waitMs);
-                    }
-                }
-            }
-
-            logBatchStatus(batchLetters, acceptedByLetter);
+            quotaExceeded = processBatch(batchLetters, acceptedByLetter);
         }
 
+        return buildQuestionListResult(acceptedByLetter);
+    }
+
+    private List<String> normalizeTargetLetters(List<String> targetLetters) {
+        return targetLetters.stream()
+                .map(this::normalizeLetter)
+                .filter(s -> s != null && !s.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private Map<String, List<Question>> initializeAcceptedByLetter(List<String> normalizedTargetLetters) {
+        Map<String, List<Question>> acceptedByLetter = new LinkedHashMap<>();
+        for (String letter : normalizedTargetLetters) {
+            acceptedByLetter.put(letter, new ArrayList<>());
+        }
+        return acceptedByLetter;
+    }
+
+    private QuestionList buildQuestionListResult(Map<String, List<Question>> acceptedByLetter) {
         List<Question> allQuestions = flattenQuestions(acceptedByLetter.values());
         QuestionList result = new QuestionList(allQuestions, allQuestions.size());
         log.info("Generadas {} preguntas para letras pendientes", allQuestions.size());
         return result;
+    }
+
+    private boolean processBatch(List<String> batchLetters, Map<String, List<Question>> acceptedByLetter)
+            throws InterruptedException {
+        log.info("Procesando lote de letras pendientes: {}", batchLetters);
+
+        int attempts = 0;
+        boolean quotaExceeded = false;
+
+        while (attempts < maxAttemptsPerBatch && !areBatchLettersComplete(batchLetters, acceptedByLetter)) {
+            attempts++;
+            try {
+                Map<String, CandidateQuestionData> candidatesByLetter = buildCandidatesForBatch(batchLetters);
+
+                if (candidatesByLetter.isEmpty()) {
+                    log.warn("No se pudieron preparar candidatas para el lote {}. Se salta el intento.", batchLetters);
+                    break;
+                }
+
+                log.info("Enviando lote {} a la IA con {} candidatas", batchLetters, candidatesByLetter.size());
+                String responseBody = callAIForBatch(batchLetters, candidatesByLetter);
+                List<Question> parsed = parseAIResponse(responseBody, batchLetters, candidatesByLetter);
+
+                int acceptedThisAttempt = acceptParsedQuestions(parsed, acceptedByLetter);
+
+                log.info(
+                        "Lote pendiente {} intento {}/{} -> aceptadas en intento: {}",
+                        batchLetters,
+                        attempts,
+                        maxAttemptsPerBatch,
+                        acceptedThisAttempt);
+
+            } catch (QuotaExceededException e) {
+                log.warn("Cuota agotada mientras se procesaban letras pendientes. Se detiene la generación: {}",
+                        e.getMessage());
+                quotaExceeded = true;
+                break;
+            } catch (Exception e) {
+                handleBatchAttemptFailure(batchLetters, attempts, e);
+            }
+        }
+
+        logBatchStatus(batchLetters, acceptedByLetter);
+        return quotaExceeded;
+    }
+
+    private int acceptParsedQuestions(List<Question> parsed, Map<String, List<Question>> acceptedByLetter) {
+        int acceptedThisAttempt = 0;
+
+        for (Question q : parsed) {
+            if (!isValidQuestion(q)) {
+                log.warn(
+                        "Pregunta descartada | Letra: {} | Pista: {} | Respuestas: {}",
+                        q != null ? q.getQuestionLetter() : "null",
+                        q != null ? q.getQuestionText() : "null",
+                        q != null ? q.getQuestionResponsesList() : "null");
+                continue;
+            }
+
+            String letter = normalizeLetter(q.getQuestionLetter());
+            List<Question> existingForLetter = acceptedByLetter.getOrDefault(letter, Collections.emptyList());
+
+            if (existingForLetter.size() >= questionsPerLetter) {
+                continue;
+            }
+
+            if (isDuplicate(flattenQuestions(acceptedByLetter.values()), q)) {
+                log.warn(
+                        "Pregunta descartada por duplicada | Letra: {} | Pista: {} | Correcta: {}",
+                        letter,
+                        q.getQuestionText(),
+                        q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()));
+                continue;
+            }
+
+            acceptedByLetter.get(letter).add(q);
+            acceptedThisAttempt++;
+
+            log.info(
+                    "Pregunta aceptada | Letra: {} | Pista: {} | Correcta: {} | Total letra: {}/{}",
+                    letter,
+                    q.getQuestionText(),
+                    q.getQuestionResponsesList().get(q.getCorrectQuestionIndex()),
+                    acceptedByLetter.get(letter).size(),
+                    questionsPerLetter);
+        }
+
+        return acceptedThisAttempt;
+    }
+
+    private void handleBatchAttemptFailure(List<String> batchLetters, int attempts, Exception e)
+            throws InterruptedException {
+        log.error(
+                "Lote pendiente {} intento {}/{} fallido: {}",
+                batchLetters,
+                attempts,
+                maxAttemptsPerBatch,
+                e.getMessage(),
+                e);
+
+        if (isQuotaException(e)) {
+            long waitMs = extractRetryDelayMillis(e.getMessage());
+            if (waitMs <= 0) {
+                waitMs = AIQuestionConfig.DEFAULT_429_WAIT_MS;
+            }
+
+            log.warn("Esperando {} ms antes de reintentar lote pendiente {}", waitMs, batchLetters);
+            Thread.sleep(waitMs);
+        }
     }
 
     private String callAIForBatch(
