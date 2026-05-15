@@ -1,4 +1,4 @@
-package Apalabrazos.backend.tools;
+package Apalabrazos.backend.AIQuestion;
 
 import Apalabrazos.backend.config.AIQuestionConfig;
 import Apalabrazos.backend.model.AlphabetMap;

@@ -10,8 +10,8 @@ import Apalabrazos.backend.events.GlobalBusEventCatalog;
 import Apalabrazos.backend.model.AlphabetMap;
 import Apalabrazos.backend.model.Question;
 import Apalabrazos.backend.model.QuestionList;
-import Apalabrazos.backend.tools.AIQuestionGenerator;
-import Apalabrazos.backend.tools.QuestionFileLoader;
+import Apalabrazos.backend.AIQuestion.AIQuestionGenerator;
+import Apalabrazos.backend.AIQuestion.QuestionFileLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

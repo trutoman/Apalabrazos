@@ -1,4 +1,4 @@
-package Apalabrazos.backend.tools;
+package Apalabrazos.backend.AIQuestion;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
