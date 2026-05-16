@@ -69,17 +69,17 @@ public class AIQuestionGenerator {
     private Map<String, List<String>> wordsByLetterCache;
 
     public AIQuestionGenerator() {
-        this.apiKey       = AIQuestionConfig.getApiKey();
-        this.apiUrl       = AIQuestionConfig.getApiUrl();
-        this.model        = AIQuestionConfig.getModel();
+        this.apiKey = AIQuestionConfig.getApiKey();
+        this.apiUrl = AIQuestionConfig.getApiUrl();
+        this.model = AIQuestionConfig.getModel();
         this.fallbackModel = AIQuestionConfig.getFallbackModel();
-        this.questionsPerLetter                  = AIQuestionConfig.getQuestionsPerLetter();
+        this.questionsPerLetter = AIQuestionConfig.getQuestionsPerLetter();
         this.questionsToGeneratePerLetterInBatch = AIQuestionConfig.getQuestionsToGeneratePerLetterInBatch();
-        this.lettersPerBatch                     = AIQuestionConfig.getLettersPerBatch();
-        this.maxAttemptsPerBatch                 = AIQuestionConfig.getMaxAttemptsPerBatch();
-        this.maxTokens                           = AIQuestionConfig.getMaxTokens();
-        this.appName           = AIQuestionConfig.getAppName();
-        this.appUrl            = AIQuestionConfig.getAppUrl();
+        this.lettersPerBatch = AIQuestionConfig.getLettersPerBatch();
+        this.maxAttemptsPerBatch = AIQuestionConfig.getMaxAttemptsPerBatch();
+        this.maxTokens = AIQuestionConfig.getMaxTokens();
+        this.appName = AIQuestionConfig.getAppName();
+        this.appUrl = AIQuestionConfig.getAppUrl();
         this.wordDictionaryPath = AIQuestionConfig.getWordDictionaryPath();
 
         this.httpClient = HttpClient.newBuilder()
@@ -98,7 +98,8 @@ public class AIQuestionGenerator {
 
     /**
      * Carga el modelo en VRAM enviando un prompt mínimo con keep_alive=-1.
-     * Se llama al arrancar la app para eliminar el cold start de la primera partida.
+     * Se llama al arrancar la app para eliminar el cold start de la primera
+     * partida.
      */
     public void warmup() {
         // El warmup solo tiene sentido con Ollama (mantener modelo en VRAM).
@@ -248,7 +249,7 @@ public class AIQuestionGenerator {
                 int acceptedThisAttempt = acceptParsedQuestions(parsed, acceptedByLetter);
 
                 log.info(
-                    "Pending batch {} attempt {}/{} -> accepted this attempt: {}",
+                        "Pending batch {} attempt {}/{} -> accepted this attempt: {}",
                         batchLetters,
                         attempts,
                         maxAttemptsPerBatch,
@@ -275,7 +276,7 @@ public class AIQuestionGenerator {
             String invalidReason = getInvalidQuestionReason(q);
             if (invalidReason != null) {
                 log.warn(
-                    "Discarded question | Reason: {} | Letter: {} | Clue: {} | Responses: {}",
+                        "Discarded question | Reason: {} | Letter: {} | Clue: {} | Responses: {}",
                         invalidReason,
                         q != null ? q.getQuestionLetter() : "null",
                         q != null ? q.getQuestionText() : "null",
@@ -293,7 +294,7 @@ public class AIQuestionGenerator {
             String duplicateReason = getDuplicateReason(flattenQuestions(acceptedByLetter.values()), q);
             if (duplicateReason != null) {
                 log.warn(
-                    "Discarded duplicate question | Reason: {} | Letter: {} | Clue: {} | Correct: {}",
+                        "Discarded duplicate question | Reason: {} | Letter: {} | Clue: {} | Correct: {}",
                         duplicateReason,
                         letter,
                         q.getQuestionText(),
@@ -304,7 +305,7 @@ public class AIQuestionGenerator {
             acceptedByLetter.get(letter).add(q);
             acceptedThisAttempt++;
 
-                log.info(
+            log.info(
                     "Accepted question | Letter: {} | Clue: {} | Correct: {} | Letter total: {}/{}",
                     letter,
                     q.getQuestionText(),
@@ -319,7 +320,7 @@ public class AIQuestionGenerator {
     private void handleBatchAttemptFailure(List<String> batchLetters, int attempts, Exception e)
             throws InterruptedException {
         log.error(
-            "Pending batch {} attempt {}/{} failed: {}",
+                "Pending batch {} attempt {}/{} failed: {}",
                 batchLetters,
                 attempts,
                 maxAttemptsPerBatch,
@@ -365,7 +366,7 @@ public class AIQuestionGenerator {
                 }
 
                 log.warn(
-                    "Batch {} -> attempt {} with model '{}' failed with 503. Retrying in {} ms",
+                        "Batch {} -> attempt {} with model '{}' failed with 503. Retrying in {} ms",
                         batchLetters,
                         attempt,
                         modelToUse,
@@ -382,7 +383,7 @@ public class AIQuestionGenerator {
                 && !fallbackModel.equals(modelToUse)
                 && is503Exception(lastException)) {
 
-                log.warn(
+            log.warn(
                     "Batch {} -> model fallback due to 503: '{}' -> '{}'",
                     batchLetters,
                     modelToUse,
@@ -458,7 +459,7 @@ public class AIQuestionGenerator {
         }
 
         log.error(
-            "Anthropic-compatible API error (status {}) with model '{}' for batch {}: {}",
+                "Anthropic-compatible API error (status {}) with model '{}' for batch {}: {}",
                 status,
                 modelToUse,
                 batchLetters,
@@ -552,7 +553,8 @@ public class AIQuestionGenerator {
             throw new RuntimeException("La IA devolvió contenido vacío.");
         }
 
-        log.info("Raw AI response for batch {}:\n{}", expectedLetters, preview(content, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
+        log.info("Raw AI response for batch {}:\n{}", expectedLetters,
+                preview(content, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
 
         JsonNode questionsNode;
         try {
@@ -563,7 +565,8 @@ public class AIQuestionGenerator {
                 questionsNode = mapper.readTree(repairedContent);
                 log.warn("AI response JSON required newline repair before parsing for batch {}", expectedLetters);
             } catch (Exception repairException) {
-                throw new RuntimeException("La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000),
+                throw new RuntimeException(
+                        "La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000),
                         e);
             }
         }
@@ -690,7 +693,7 @@ public class AIQuestionGenerator {
 
             result.put(letter, new CandidateQuestionData(letter, responses, correctIndex, correctWord));
 
-                log.info(
+            log.info(
                     "Candidates prepared | Letter: {} | Responses: {} | Correct: {}",
                     letter,
                     responses,
@@ -1047,7 +1050,8 @@ public class AIQuestionGenerator {
 
     /**
      * Repairs malformed JSON where a raw line break appears inside a quoted string.
-     * Example: "questionText": "foo\nbar" (raw newline) -> "questionText": "foo\\nbar"
+     * Example: "questionText": "foo\nbar" (raw newline) -> "questionText":
+     * "foo\\nbar"
      */
     private String escapeRawNewlinesInsideJsonStrings(String content) {
         if (content == null || content.isEmpty()) {
