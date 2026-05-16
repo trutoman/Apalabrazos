@@ -101,6 +101,11 @@ public class AIQuestionGenerator {
      * Se llama al arrancar la app para eliminar el cold start de la primera partida.
      */
     public void warmup() {
+        // El warmup solo tiene sentido con Ollama (mantener modelo en VRAM).
+        if (isOpenAiCompatibleEndpoint()) {
+            log.info("API OpenAI-compatible detectada — warmup no necesario");
+            return;
+        }
         try {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("model", model);
@@ -393,20 +398,32 @@ public class AIQuestionGenerator {
         throw new RuntimeException("No se pudo obtener respuesta de la IA.");
     }
 
+    // Detecta si el endpoint es OpenAI-compatible (Gemini, etc.) o Ollama nativo.
+    private boolean isOpenAiCompatibleEndpoint() {
+        return apiUrl != null && apiUrl.contains("chat/completions");
+    }
+
     private String buildRequestBody(String prompt, String modelToUse) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", modelToUse);
         body.put("stream", false);
-        body.put("keep_alive", -1);
-        body.put("options", Map.of("num_predict", maxTokens));
 
         List<Map<String, Object>> messages = new ArrayList<>();
         Map<String, Object> userMessage = new LinkedHashMap<>();
         userMessage.put("role", "user");
         userMessage.put("content", prompt);
         messages.add(userMessage);
-
         body.put("messages", messages);
+
+        if (isOpenAiCompatibleEndpoint()) {
+            // Formato OpenAI / Gemini: max_tokens en el body raíz.
+            body.put("max_tokens", maxTokens);
+        } else {
+            // Formato Ollama: keep_alive para mantener el modelo en VRAM,
+            // num_predict dentro de options.
+            body.put("keep_alive", -1);
+            body.put("options", Map.of("num_predict", maxTokens));
+        }
 
         return mapper.writeValueAsString(body);
     }
@@ -622,18 +639,27 @@ public class AIQuestionGenerator {
 
         JsonNode root = mapper.readTree(responseBody);
 
-        // Ollama /api/chat: {"message": {"role": "assistant", "content": "..."},
-        // "done": true}
-        JsonNode messageNode = root.path("message");
-        if (!messageNode.isMissingNode()) {
-            String text = messageNode.path("content").asText("").trim();
+        // Formato OpenAI / Gemini: {"choices": [{"message": {"content": "..."}}]}
+        JsonNode choicesNode = root.path("choices");
+        if (!choicesNode.isMissingNode() && choicesNode.isArray() && choicesNode.size() > 0) {
+            String text = choicesNode.get(0).path("message").path("content").asText("").trim();
             if (text.isBlank()) {
-                throw new RuntimeException("La respuesta Ollama contiene 'message' pero 'content' está vacío.");
+                throw new RuntimeException("Respuesta OpenAI-compatible: 'choices[0].message.content' está vacío.");
             }
             return sanitizeContent(repairMojibakeIfNeeded(text));
         }
 
-        throw new RuntimeException("Respuesta inesperada de Ollama — no se encontró 'message.content'. Body: "
+        // Formato Ollama nativo: {"message": {"content": "..."}, "done": true}
+        JsonNode messageNode = root.path("message");
+        if (!messageNode.isMissingNode()) {
+            String text = messageNode.path("content").asText("").trim();
+            if (text.isBlank()) {
+                throw new RuntimeException("Respuesta Ollama: 'message.content' está vacío.");
+            }
+            return sanitizeContent(repairMojibakeIfNeeded(text));
+        }
+
+        throw new RuntimeException("Formato de respuesta no reconocido (ni Ollama ni OpenAI). Body: "
                 + responseBody.substring(0, Math.min(500, responseBody.length())));
     }
 
