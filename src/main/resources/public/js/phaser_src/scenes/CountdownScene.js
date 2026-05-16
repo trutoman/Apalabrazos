@@ -66,6 +66,8 @@ export class CountdownScene extends Phaser.Scene {
 
         if (getSticky('net:questionChanged')) {
             console.log('[SEQ][COUNTDOWN] Sticky questionChanged found. Skipping countdown, starting game now.');
+            // Se eliminó la cuenta atrás 3-2-1 para reducir la espera al iniciar partida.
+            // Para restaurarla: sustituir _finishCountdown() por _beginNumericCountdown().
             // this._beginNumericCountdown();
             this._finishCountdown();
         }
@@ -121,6 +123,8 @@ export class CountdownScene extends Phaser.Scene {
             return;
         }
         console.log('[SEQ][COUNTDOWN] net:questionChanged received. Skipping countdown, starting game directly.');
+        // Se eliminó la cuenta atrás 3-2-1 para reducir la espera al iniciar partida.
+        // Para restaurarla: sustituir _finishCountdown() por _beginNumericCountdown().
         // this._beginNumericCountdown();
         this._finishCountdown();
     }
