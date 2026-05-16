@@ -65,8 +65,9 @@ export class CountdownScene extends Phaser.Scene {
         PhaserEventBus.on('net:questionChanged', this._onQuestionChanged);
 
         if (getSticky('net:questionChanged')) {
-            console.log('[SEQ][COUNTDOWN] Sticky questionChanged found. Starting numeric countdown now.');
-            this._beginNumericCountdown();
+            console.log('[SEQ][COUNTDOWN] Sticky questionChanged found. Skipping countdown, starting game now.');
+            // this._beginNumericCountdown();
+            this._finishCountdown();
         }
     }
 
@@ -119,8 +120,9 @@ export class CountdownScene extends Phaser.Scene {
         if (this._isDone || this._countdownStarted) {
             return;
         }
-        console.log('[SEQ][COUNTDOWN] net:questionChanged received. Switching waiting element -> numeric countdown.');
-        this._beginNumericCountdown();
+        console.log('[SEQ][COUNTDOWN] net:questionChanged received. Skipping countdown, starting game directly.');
+        // this._beginNumericCountdown();
+        this._finishCountdown();
     }
 
     _beginNumericCountdown() {
