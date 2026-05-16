@@ -96,6 +96,39 @@ public class AIQuestionGenerator {
         return questionsPerLetter;
     }
 
+    /**
+     * Carga el modelo en VRAM enviando un prompt mínimo con keep_alive=-1.
+     * Se llama al arrancar la app para eliminar el cold start de la primera partida.
+     */
+    public void warmup() {
+        try {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("model", model);
+            body.put("stream", false);
+            body.put("keep_alive", -1);
+            body.put("options", Map.of("num_predict", 1));
+            body.put("messages", List.of(Map.of("role", "user", "content", "ok")));
+
+            String requestBody = mapper.writeValueAsString(body);
+
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
+                    .timeout(Duration.ofSeconds(120));
+
+            if (apiKey != null && !apiKey.isBlank()) {
+                requestBuilder.header("Authorization", "Bearer " + apiKey);
+            }
+
+            httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            log.info("AI model warmup completed — model loaded in VRAM");
+        } catch (Exception e) {
+            log.warn("AI model warmup failed (non-fatal): {}", e.getMessage());
+        }
+    }
+
     public void validateConfiguration() {
         if (apiUrl == null || apiUrl.isBlank()) {
             throw new IllegalStateException("AI_API_URL no configurada.");

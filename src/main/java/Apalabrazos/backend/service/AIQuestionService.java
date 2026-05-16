@@ -85,6 +85,15 @@ public class AIQuestionService implements EventListener {
         GlobalAsyncEventBus.addListener(this);
         log.info("AIQuestionService initialized. schedulerEnabled={}, schedule={}:{}, zone={}",
                 schedulerEnabled, schedulerHour, schedulerMinute, schedulerZone);
+
+        // Precarga el modelo en VRAM al arrancar la app para eliminar el cold start de la primera partida.
+        preloadExecutor.submit(() -> {
+            try {
+                new AIQuestionGenerator().warmup();
+            } catch (Exception e) {
+                log.warn("Startup warmup failed (non-fatal): {}", e.getMessage());
+            }
+        });
     }
 
     public static AIQuestionService getInstance() {
