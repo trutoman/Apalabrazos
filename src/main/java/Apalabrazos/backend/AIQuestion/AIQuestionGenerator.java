@@ -364,6 +364,7 @@ public class AIQuestionGenerator {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", modelToUse);
         body.put("stream", false);
+        body.put("keep_alive", -1);
         body.put("options", Map.of("num_predict", maxTokens));
 
         List<Map<String, Object>> messages = new ArrayList<>();
