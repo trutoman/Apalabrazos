@@ -69,17 +69,17 @@ public class AIQuestionGenerator {
     private Map<String, List<String>> wordsByLetterCache;
 
     public AIQuestionGenerator() {
-        this.apiKey       = AIQuestionConfig.getApiKey();
-        this.apiUrl       = AIQuestionConfig.getApiUrl();
-        this.model        = AIQuestionConfig.getModel();
+        this.apiKey = AIQuestionConfig.getApiKey();
+        this.apiUrl = AIQuestionConfig.getApiUrl();
+        this.model = AIQuestionConfig.getModel();
         this.fallbackModel = AIQuestionConfig.getFallbackModel();
-        this.questionsPerLetter                  = AIQuestionConfig.getQuestionsPerLetter();
+        this.questionsPerLetter = AIQuestionConfig.getQuestionsPerLetter();
         this.questionsToGeneratePerLetterInBatch = AIQuestionConfig.getQuestionsToGeneratePerLetterInBatch();
-        this.lettersPerBatch                     = AIQuestionConfig.getLettersPerBatch();
-        this.maxAttemptsPerBatch                 = AIQuestionConfig.getMaxAttemptsPerBatch();
-        this.maxTokens                           = AIQuestionConfig.getMaxTokens();
-        this.appName           = AIQuestionConfig.getAppName();
-        this.appUrl            = AIQuestionConfig.getAppUrl();
+        this.lettersPerBatch = AIQuestionConfig.getLettersPerBatch();
+        this.maxAttemptsPerBatch = AIQuestionConfig.getMaxAttemptsPerBatch();
+        this.maxTokens = AIQuestionConfig.getMaxTokens();
+        this.appName = AIQuestionConfig.getAppName();
+        this.appUrl = AIQuestionConfig.getAppUrl();
         this.wordDictionaryPath = AIQuestionConfig.getWordDictionaryPath();
 
         this.httpClient = HttpClient.newBuilder()
@@ -94,6 +94,45 @@ public class AIQuestionGenerator {
 
     public int getQuestionsPerLetter() {
         return questionsPerLetter;
+    }
+
+    /**
+     * Carga el modelo en VRAM enviando un prompt mínimo con keep_alive=-1.
+     * Se llama al arrancar la app para eliminar el cold start de la primera
+     * partida.
+     */
+    public void warmup() {
+        // El warmup solo tiene sentido con Ollama (mantener modelo en VRAM).
+        if (isOpenAiCompatibleEndpoint()) {
+            log.info("API OpenAI-compatible detectada — warmup no necesario");
+            return;
+        }
+        try {
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("model", model);
+            body.put("stream", false);
+            body.put("keep_alive", -1);
+            body.put("options", Map.of("num_predict", 1));
+            body.put("messages", List.of(Map.of("role", "user", "content", "ok")));
+
+            String requestBody = mapper.writeValueAsString(body);
+
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
+                    .timeout(Duration.ofSeconds(120));
+
+            if (apiKey != null && !apiKey.isBlank()) {
+                requestBuilder.header("Authorization", "Bearer " + apiKey);
+            }
+
+            httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            log.info("AI model warmup completed — model loaded in VRAM");
+        } catch (Exception e) {
+            log.warn("AI model warmup failed (non-fatal): {}", e.getMessage());
+        }
     }
 
     public void validateConfiguration() {
@@ -210,7 +249,7 @@ public class AIQuestionGenerator {
                 int acceptedThisAttempt = acceptParsedQuestions(parsed, acceptedByLetter);
 
                 log.info(
-                    "Pending batch {} attempt {}/{} -> accepted this attempt: {}",
+                        "Pending batch {} attempt {}/{} -> accepted this attempt: {}",
                         batchLetters,
                         attempts,
                         maxAttemptsPerBatch,
@@ -237,7 +276,7 @@ public class AIQuestionGenerator {
             String invalidReason = getInvalidQuestionReason(q);
             if (invalidReason != null) {
                 log.warn(
-                    "Discarded question | Reason: {} | Letter: {} | Clue: {} | Responses: {}",
+                        "Discarded question | Reason: {} | Letter: {} | Clue: {} | Responses: {}",
                         invalidReason,
                         q != null ? q.getQuestionLetter() : "null",
                         q != null ? q.getQuestionText() : "null",
@@ -255,7 +294,7 @@ public class AIQuestionGenerator {
             String duplicateReason = getDuplicateReason(flattenQuestions(acceptedByLetter.values()), q);
             if (duplicateReason != null) {
                 log.warn(
-                    "Discarded duplicate question | Reason: {} | Letter: {} | Clue: {} | Correct: {}",
+                        "Discarded duplicate question | Reason: {} | Letter: {} | Clue: {} | Correct: {}",
                         duplicateReason,
                         letter,
                         q.getQuestionText(),
@@ -266,7 +305,7 @@ public class AIQuestionGenerator {
             acceptedByLetter.get(letter).add(q);
             acceptedThisAttempt++;
 
-                log.info(
+            log.info(
                     "Accepted question | Letter: {} | Clue: {} | Correct: {} | Letter total: {}/{}",
                     letter,
                     q.getQuestionText(),
@@ -281,7 +320,7 @@ public class AIQuestionGenerator {
     private void handleBatchAttemptFailure(List<String> batchLetters, int attempts, Exception e)
             throws InterruptedException {
         log.error(
-            "Pending batch {} attempt {}/{} failed: {}",
+                "Pending batch {} attempt {}/{} failed: {}",
                 batchLetters,
                 attempts,
                 maxAttemptsPerBatch,
@@ -327,7 +366,7 @@ public class AIQuestionGenerator {
                 }
 
                 log.warn(
-                    "Batch {} -> attempt {} with model '{}' failed with 503. Retrying in {} ms",
+                        "Batch {} -> attempt {} with model '{}' failed with 503. Retrying in {} ms",
                         batchLetters,
                         attempt,
                         modelToUse,
@@ -344,7 +383,7 @@ public class AIQuestionGenerator {
                 && !fallbackModel.equals(modelToUse)
                 && is503Exception(lastException)) {
 
-                log.warn(
+            log.warn(
                     "Batch {} -> model fallback due to 503: '{}' -> '{}'",
                     batchLetters,
                     modelToUse,
@@ -360,19 +399,32 @@ public class AIQuestionGenerator {
         throw new RuntimeException("No se pudo obtener respuesta de la IA.");
     }
 
+    // Detecta si el endpoint es OpenAI-compatible (Gemini, etc.) o Ollama nativo.
+    private boolean isOpenAiCompatibleEndpoint() {
+        return apiUrl != null && apiUrl.contains("chat/completions");
+    }
+
     private String buildRequestBody(String prompt, String modelToUse) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", modelToUse);
         body.put("stream", false);
-        body.put("options", Map.of("num_predict", maxTokens));
 
         List<Map<String, Object>> messages = new ArrayList<>();
         Map<String, Object> userMessage = new LinkedHashMap<>();
         userMessage.put("role", "user");
         userMessage.put("content", prompt);
         messages.add(userMessage);
-
         body.put("messages", messages);
+
+        if (isOpenAiCompatibleEndpoint()) {
+            // Formato OpenAI / Gemini: max_tokens en el body raíz.
+            body.put("max_tokens", maxTokens);
+        } else {
+            // Formato Ollama: keep_alive para mantener el modelo en VRAM,
+            // num_predict dentro de options.
+            body.put("keep_alive", -1);
+            body.put("options", Map.of("num_predict", maxTokens));
+        }
 
         return mapper.writeValueAsString(body);
     }
@@ -407,7 +459,7 @@ public class AIQuestionGenerator {
         }
 
         log.error(
-            "Anthropic-compatible API error (status {}) with model '{}' for batch {}: {}",
+                "Anthropic-compatible API error (status {}) with model '{}' for batch {}: {}",
                 status,
                 modelToUse,
                 batchLetters,
@@ -501,7 +553,8 @@ public class AIQuestionGenerator {
             throw new RuntimeException("La IA devolvió contenido vacío.");
         }
 
-        log.info("Raw AI response for batch {}:\n{}", expectedLetters, preview(content, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
+        log.info("Raw AI response for batch {}:\n{}", expectedLetters,
+                preview(content, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
 
         JsonNode questionsNode;
         try {
@@ -512,7 +565,8 @@ public class AIQuestionGenerator {
                 questionsNode = mapper.readTree(repairedContent);
                 log.warn("AI response JSON required newline repair before parsing for batch {}", expectedLetters);
             } catch (Exception repairException) {
-                throw new RuntimeException("La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000),
+                throw new RuntimeException(
+                        "La IA no devolvió JSON válido. Contenido recibido: " + preview(content, 1000),
                         e);
             }
         }
@@ -588,18 +642,27 @@ public class AIQuestionGenerator {
 
         JsonNode root = mapper.readTree(responseBody);
 
-        // Ollama /api/chat: {"message": {"role": "assistant", "content": "..."},
-        // "done": true}
-        JsonNode messageNode = root.path("message");
-        if (!messageNode.isMissingNode()) {
-            String text = messageNode.path("content").asText("").trim();
+        // Formato OpenAI / Gemini: {"choices": [{"message": {"content": "..."}}]}
+        JsonNode choicesNode = root.path("choices");
+        if (!choicesNode.isMissingNode() && choicesNode.isArray() && choicesNode.size() > 0) {
+            String text = choicesNode.get(0).path("message").path("content").asText("").trim();
             if (text.isBlank()) {
-                throw new RuntimeException("La respuesta Ollama contiene 'message' pero 'content' está vacío.");
+                throw new RuntimeException("Respuesta OpenAI-compatible: 'choices[0].message.content' está vacío.");
             }
             return sanitizeContent(repairMojibakeIfNeeded(text));
         }
 
-        throw new RuntimeException("Respuesta inesperada de Ollama — no se encontró 'message.content'. Body: "
+        // Formato Ollama nativo: {"message": {"content": "..."}, "done": true}
+        JsonNode messageNode = root.path("message");
+        if (!messageNode.isMissingNode()) {
+            String text = messageNode.path("content").asText("").trim();
+            if (text.isBlank()) {
+                throw new RuntimeException("Respuesta Ollama: 'message.content' está vacío.");
+            }
+            return sanitizeContent(repairMojibakeIfNeeded(text));
+        }
+
+        throw new RuntimeException("Formato de respuesta no reconocido (ni Ollama ni OpenAI). Body: "
                 + responseBody.substring(0, Math.min(500, responseBody.length())));
     }
 
@@ -630,7 +693,7 @@ public class AIQuestionGenerator {
 
             result.put(letter, new CandidateQuestionData(letter, responses, correctIndex, correctWord));
 
-                log.info(
+            log.info(
                     "Candidates prepared | Letter: {} | Responses: {} | Correct: {}",
                     letter,
                     responses,
@@ -987,7 +1050,8 @@ public class AIQuestionGenerator {
 
     /**
      * Repairs malformed JSON where a raw line break appears inside a quoted string.
-     * Example: "questionText": "foo\nbar" (raw newline) -> "questionText": "foo\\nbar"
+     * Example: "questionText": "foo\nbar" (raw newline) -> "questionText":
+     * "foo\\nbar"
      */
     private String escapeRawNewlinesInsideJsonStrings(String content) {
         if (content == null || content.isEmpty()) {

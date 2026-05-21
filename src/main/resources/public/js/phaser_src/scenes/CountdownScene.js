@@ -48,7 +48,10 @@ export class CountdownScene extends Phaser.Scene {
         this._waitingElement = this.add.sprite(w / 2, h / 2, 'neobrutalism-elements', 0)
             .setOrigin(0.5);
         this._applyWaitingElementLayout();
-        this._startWaitingElementAnimation();
+        // El spinner de espera se eliminó: la cuenta atrás 3-2-1 arranca directamente.
+        // Para restaurar el spinner: descomentar _startWaitingElementAnimation() y
+        // eliminar la llamada a _beginNumericCountdown() del final de create().
+        // this._startWaitingElementAnimation();
 
         this._countdownText = this.add.text(w / 2, h / 2, '3', {
             fontFamily: 'Archivo Black, sans-serif',
@@ -60,14 +63,11 @@ export class CountdownScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this._applyCountdownTextStyle();
         this._countdownText.setVisible(false);
-        console.log('[SEQ][COUNTDOWN] Waiting element visible, waiting for net:questionChanged...');
 
         PhaserEventBus.on('net:questionChanged', this._onQuestionChanged);
 
-        if (getSticky('net:questionChanged')) {
-            console.log('[SEQ][COUNTDOWN] Sticky questionChanged found. Starting numeric countdown now.');
-            this._beginNumericCountdown();
-        }
+        // La cuenta atrás arranca de inmediato al entrar en la pantalla de juego.
+        this._beginNumericCountdown();
     }
 
     _startWaitingElementAnimation() {
@@ -119,8 +119,8 @@ export class CountdownScene extends Phaser.Scene {
         if (this._isDone || this._countdownStarted) {
             return;
         }
-        console.log('[SEQ][COUNTDOWN] net:questionChanged received. Switching waiting element -> numeric countdown.');
-        this._beginNumericCountdown();
+        // El countdown ya está corriendo desde create() — este evento no necesita hacer nada.
+        console.log('[SEQ][COUNTDOWN] net:questionChanged received (countdown already running).');
     }
 
     _beginNumericCountdown() {

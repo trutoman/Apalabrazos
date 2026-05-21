@@ -37,7 +37,7 @@ public final class AIQuestionConfig {
     private static final int  DEFAULT_QUESTIONS_TO_GENERATE_PER_LETTER_IN_BATCH = 2;
     private static final int  DEFAULT_LETTERS_PER_BATCH                        = 25;
     private static final int  DEFAULT_MAX_ATTEMPTS_PER_BATCH                   = 1;
-    private static final int  DEFAULT_MAX_TOKENS                               = 6000;
+    private static final int  DEFAULT_MAX_TOKENS                               = 2000;
 
     private static final String DEFAULT_APP_NAME = "Apalabrazos";
     private static final String DEFAULT_APP_URL  = "https://github.com/Apalabrazos";
