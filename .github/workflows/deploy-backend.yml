@@ -80,26 +80,18 @@ jobs:
           GHCR_OWNER=${{ github.repository_owner }}
           COSMOS_DB_ENDPOINT=${{ secrets.COSMOS_DB_ENDPOINT }}
           COSMOS_DB_KEY=${{ secrets.COSMOS_DB_KEY }}
-          COSMOS_DB_DATABASE=${{ secrets.COSMOS_DB_DATABASE }}
-          COSMOS_DB_QUESTIONS_CONTAINER=${{ vars.COSMOS_DB_QUESTIONS_CONTAINER }}
+          COSMOS_DB_DATABASE=${{ vars.COSMOS_DB_DATABASE }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           JWT_ISSUER=${{ vars.JWT_ISSUER }}
           JWT_AUDIENCE=${{ vars.JWT_AUDIENCE }}
           JWT_EXP_MINUTES=${{ vars.JWT_EXP_MINUTES }}
-          SEED_QUESTIONS_ON_START=${{ vars.SEED_QUESTIONS_ON_START }}
-          QUESTIONS_SEED_FILE=${{ vars.QUESTIONS_SEED_FILE }}
           JAVA_OPTS=${{ vars.JAVA_OPTS }}
           AI_GENERATOR_ENABLED=${{ vars.AI_GENERATOR_ENABLED }}
           AI_API_KEY=${{ secrets.AI_API_KEY }}
           AI_API_URL=${{ vars.AI_API_URL }}
           AI_MODEL=${{ vars.AI_MODEL }}
           AI_MAX_TOKENS=${{ vars.AI_MAX_TOKENS }}
-          AI_QUESTIONS_PER_LETTER=${{ vars.AI_QUESTIONS_PER_LETTER }}
-          AI_GENERATOR_HOUR=${{ vars.AI_GENERATOR_HOUR }}
-          AI_GENERATOR_MINUTE=${{ vars.AI_GENERATOR_MINUTE }}
-          AI_GENERATOR_TIMEZONE=${{ vars.AI_GENERATOR_TIMEZONE }}
           AI_GENERATOR_OUTPUT_DIR=${{ vars.AI_GENERATOR_OUTPUT_DIR }}
-          AI_GENERATOR_FILENAME=${{ vars.AI_GENERATOR_FILENAME }}
           EOF
 
       - name: Log in to GHCR
