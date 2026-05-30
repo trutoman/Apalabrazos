@@ -60,18 +60,17 @@ public class GameService implements EventListener {
     public GameService() {
         this.GlobalGameInstance = new GameGlobal();
         this.externalBus = new AsyncEventBus();
-        this.matchId = generateMatchId();
-        // Registrarse con listeners separados (evita rebotes entre buses)
-        GlobalAsyncEventBus.addListener(globalListener);
-        externalBus.addListener(externalListener);
+        init();
     }
 
     public GameService(GamePlayerConfig playerConfig) {
-        // Configurar la instancia global del juego para multijugador
         this.GlobalGameInstance = new GameGlobal(playerConfig);
         this.externalBus = new AsyncEventBus();
+        init();
+    }
+
+    private void init() {
         this.matchId = generateMatchId();
-        // Registrarse con listeners separados (evita rebotes entre buses)
         GlobalAsyncEventBus.addListener(globalListener);
         externalBus.addListener(externalListener);
     }
