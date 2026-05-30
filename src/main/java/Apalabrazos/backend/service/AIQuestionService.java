@@ -12,6 +12,7 @@ import Apalabrazos.backend.model.Question;
 import Apalabrazos.backend.model.QuestionList;
 import Apalabrazos.backend.AIQuestion.AIQuestionGenerator;
 import Apalabrazos.backend.AIQuestion.QuestionFileLoader;
+import Apalabrazos.backend.config.AIQuestionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -291,10 +292,20 @@ public class AIQuestionService implements EventListener {
     private GenerationResult generateQuestionsForNewGameWithSource(int numberOfQuestions, boolean allowFallback)
             throws Exception {
         int safeCount = normalizeQuestionCount(numberOfQuestions);
+        List<String> targetLetters = buildSpanishAlphabet().subList(0, safeCount);
+
+        log.info(
+            "[AI-REQUEST] Requesting questions from AI service. requested={}, normalizedCount={}, letters={}, allowFallback={}, endpoint={}, model={}",
+            numberOfQuestions,
+            safeCount,
+            targetLetters,
+            allowFallback,
+            AIQuestionConfig.getApiUrl(),
+            AIQuestionConfig.getModel());
 
         try {
             AIQuestionGenerator generator = new AIQuestionGenerator();
-            QuestionList generated = generator.generateBatteryForMissingLetters(buildSpanishAlphabet().subList(0, safeCount));
+            QuestionList generated = generator.generateBatteryForMissingLetters(targetLetters);
             QuestionList normalized = normalizeAndLimit(generated, safeCount);
 
             if (normalized.getCurrentLength() < safeCount) {
