@@ -77,20 +77,20 @@ public final class GlobalBusEventCatalog {
             AIQuestionPreloadRequestedEvent.class,
             new Route(
                     Category.AI_QUESTION,
-                    List.of(GAME_SERVICE),
+                    List.of(),
                     List.of(AI_QUESTION_SERVICE),
                     "Solicitud asíncrona de precarga de preguntas para una partida"),
             AIQuestionPreloadCompletedEvent.class,
             new Route(
                     Category.AI_QUESTION,
                     List.of(AI_QUESTION_SERVICE),
-                    List.of(GAME_SERVICE),
+                    List.of(),
                     "Resultado exitoso de la precarga de preguntas"),
             AIQuestionPreloadFailedEvent.class,
             new Route(
                     Category.AI_QUESTION,
                     List.of(AI_QUESTION_SERVICE),
-                    List.of(GAME_SERVICE),
+                    List.of(),
                     "Error durante la precarga de preguntas"));
 
     private GlobalBusEventCatalog() {

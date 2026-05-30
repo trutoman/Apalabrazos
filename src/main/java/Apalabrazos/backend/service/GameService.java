@@ -41,9 +41,7 @@ public class GameService implements EventListener {
     private final ScheduledExecutorService controllerReadyScheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> controllerReadyTimeout;
 
-    private final Object questionPreloadLock = new Object();
     private volatile CompletableFuture<QuestionList> questionLoadFuture;
-    private volatile QuestionList preloadedQuestions;
     private volatile boolean questionPreloadStarted = false;
 
     // Listeners separados para evitar rebotes entre buses
@@ -210,15 +208,15 @@ public class GameService implements EventListener {
                 throw new IllegalStateException("Question preload future was not initialized for match " + matchId);
             }
 
-            preloadedQuestions = future.get(QUESTION_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            QuestionList loaded = future.get(QUESTION_LOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
-            if (preloadedQuestions == null || preloadedQuestions.getCurrentLength() <= 0) {
+            if (loaded == null || loaded.getCurrentLength() <= 0) {
                 throw new IllegalStateException("No se pudieron cargar preguntas para la partida " + matchId);
             }
 
             // Asignar a cada instancia de jugador solo cuando realmente empieza la partida.
             for (GameInstance instance : GlobalGameInstance.getAllPlayerInstances()) {
-                instance.setQuestionList(cloneQuestionList(preloadedQuestions));
+                instance.setQuestionList(cloneQuestionList(loaded));
                 instance.start();
             }
 
@@ -226,7 +224,7 @@ public class GameService implements EventListener {
         } catch (TimeoutException e) {
             CompletableFuture<QuestionList> future = questionLoadFuture;
             if (future != null) {
-                future.completeExceptionally(e);
+                future.cancel(true);
             }
             throw e;
         } catch (ExecutionException e) {
@@ -251,21 +249,9 @@ public class GameService implements EventListener {
             return;
         }
 
-        synchronized (questionPreloadLock) {
-            if (questionPreloadStarted) {
-                return;
-            }
-
-            questionPreloadStarted = true;
-            questionLoadFuture = new CompletableFuture<>();
-
-            int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
-            log.info("[ASYNC-BUS][SEND][GameService->AIQuestionService] Publishing AIQuestionPreloadRequestedEvent matchId={} questions={}",
-                    matchId, numberOfQuestions);
-            GlobalAsyncEventBus.publishAndForget(
-                    new AIQuestionPreloadRequestedEvent(matchId, numberOfQuestions, true));
-        }
-
+        questionPreloadStarted = true;
+        int numberOfQuestions = GlobalGameInstance.getNumberOfQuestions();
+        questionLoadFuture = AIQuestionService.getInstance().startPreload(matchId, numberOfQuestions);
         log.info("Question preload started for match {}", matchId);
     }
 
@@ -507,54 +493,6 @@ public class GameService implements EventListener {
             return;
         }
 
-        if (event instanceof AIQuestionPreloadCompletedEvent completed) {
-            log.info("[ASYNC-BUS][RECV][AIQuestionService->GameService] Received AIQuestionPreloadCompletedEvent matchId={}",
-                    completed.getMatchId());
-            handleQuestionPreloadCompleted(completed);
-            return;
-        }
-
-        if (event instanceof AIQuestionPreloadFailedEvent failed) {
-            log.warn("[ASYNC-BUS][RECV][AIQuestionService->GameService] Received AIQuestionPreloadFailedEvent matchId={}",
-                    failed.getMatchId());
-            handleQuestionPreloadFailed(failed);
-        }
-    }
-
-    private void handleQuestionPreloadCompleted(AIQuestionPreloadCompletedEvent event) {
-        if (event == null || event.getMatchId() == null || !event.getMatchId().equals(matchId)) {
-            return;
-        }
-
-        QuestionList loaded = event.getQuestions();
-        int count = loaded != null ? loaded.getCurrentLength() : 0;
-        preloadedQuestions = loaded;
-
-        CompletableFuture<QuestionList> future = questionLoadFuture;
-        if (future != null && !future.isDone()) {
-            future.complete(loaded);
-        }
-
-        log.info("Question preload completed for match {} ({} questions, source={})",
-                matchId,
-                count,
-                event.getSource());
-    }
-
-    private void handleQuestionPreloadFailed(AIQuestionPreloadFailedEvent event) {
-        if (event == null || event.getMatchId() == null || !event.getMatchId().equals(matchId)) {
-            return;
-        }
-
-        String reason = event.getErrorReason() != null ? event.getErrorReason() : "LOAD_FAILED";
-        String message = event.getErrorMessage() != null ? event.getErrorMessage() : "Unknown AI preload error";
-
-        CompletableFuture<QuestionList> future = questionLoadFuture;
-        if (future != null && !future.isDone()) {
-            future.completeExceptionally(new IllegalStateException(message));
-        }
-
-        log.error("Question preload failed for match {}: [{}] {}", matchId, reason, message);
     }
 
     // Handles events from the external bus (published by GameController)
