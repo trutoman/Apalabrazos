@@ -29,8 +29,6 @@ public final class AIQuestionConfig {
     // ── Defaults ──────────────────────────────────────────────────────────────
 
     private static final String DEFAULT_API_URL    = "http://100.93.139.92:11434/api/chat";
-    private static final String LOCALHOST_API_URL  = "http://localhost:11434/api/chat";
-    private static final String LOOPBACK_API_URL   = "http://127.0.0.1:11434/api/chat";
     private static final String DEFAULT_MODEL      = "gemma4:e2b";
     private static final String DEFAULT_FALLBACK_MODEL = "";
     private static final String DEFAULT_WORD_DICTIONARY_PATH = "Apalabrazos/data/dictionary.txt";
@@ -68,7 +66,7 @@ public final class AIQuestionConfig {
 
     static {
         apiKey       = readEnv("AI_API_KEY", "");
-        apiUrl       = resolveKnownApiUrl(readEnv("AI_API_URL", DEFAULT_API_URL));
+        apiUrl       = readEnv("AI_API_URL", DEFAULT_API_URL);
         model        = readEnv("AI_MODEL",   DEFAULT_MODEL);
         fallbackModel = readEnv("AI_FALLBACK_MODEL", DEFAULT_FALLBACK_MODEL);
 
@@ -120,22 +118,6 @@ public final class AIQuestionConfig {
     private static String readEnv(String key, String defaultValue) {
         String value = System.getenv(key);
         return (value == null || value.trim().isEmpty()) ? defaultValue : value.trim();
-    }
-
-    private static String resolveKnownApiUrl(String rawUrl) {
-        String normalizedUrl = rawUrl == null ? "" : rawUrl.trim();
-        if (normalizedUrl.equals(DEFAULT_API_URL)) {
-            return DEFAULT_API_URL;
-        }
-        if (normalizedUrl.equals(LOCALHOST_API_URL)) {
-            return LOCALHOST_API_URL;
-        }
-        if (normalizedUrl.equals(LOOPBACK_API_URL)) {
-            return LOOPBACK_API_URL;
-        }
-        throw new IllegalStateException(
-                "AI_API_URL debe coincidir con un endpoint permitido: "
-                        + DEFAULT_API_URL + ", " + LOCALHOST_API_URL + " o " + LOOPBACK_API_URL + ".");
     }
 
     private static int readEnvInt(String key, int defaultValue) {

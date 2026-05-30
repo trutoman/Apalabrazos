@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,8 +44,6 @@ public class AIQuestionGenerator {
 
     private static final String ENYE = "ñ";
     private static final String ENYE_UPPER = "Ñ";
-    private static final String DEFAULT_WORD_DICTIONARY_RESOURCE = "Apalabrazos/data/dictionary.txt";
-    private static final Path PROJECT_ROOT = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
 
     private static final List<Charset> MOJIBAKE_SOURCE_CHARSETS = List.of(
             Charset.forName("CP437"),
@@ -56,7 +53,6 @@ public class AIQuestionGenerator {
 
     private final String apiKey;
     private final String apiUrl;
-    private final URI apiUri;
     private final String model;
     private final String fallbackModel;
     private final int questionsPerLetter;
@@ -67,7 +63,6 @@ public class AIQuestionGenerator {
     private final String appName;
     private final String appUrl;
     private final String wordDictionaryPath;
-    private final boolean verboseHttpLogs;
 
     private final HttpClient httpClient;
     private final ObjectMapper mapper;
@@ -76,7 +71,6 @@ public class AIQuestionGenerator {
     public AIQuestionGenerator() {
         this.apiKey = AIQuestionConfig.getApiKey();
         this.apiUrl = AIQuestionConfig.getApiUrl();
-        this.apiUri = URI.create(this.apiUrl);
         this.model = AIQuestionConfig.getModel();
         this.fallbackModel = AIQuestionConfig.getFallbackModel();
         this.questionsPerLetter = AIQuestionConfig.getQuestionsPerLetter();
@@ -87,7 +81,6 @@ public class AIQuestionGenerator {
         this.appName = AIQuestionConfig.getAppName();
         this.appUrl = AIQuestionConfig.getAppUrl();
         this.wordDictionaryPath = AIQuestionConfig.getWordDictionaryPath();
-        this.verboseHttpLogs = "true".equalsIgnoreCase(System.getenv("AI_HTTP_VERBOSE_LOGS"));
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -125,7 +118,7 @@ public class AIQuestionGenerator {
             String requestBody = mapper.writeValueAsString(body);
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(apiUri)
+                    .uri(URI.create(apiUrl))
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
@@ -135,22 +128,7 @@ public class AIQuestionGenerator {
                 requestBuilder.header("Authorization", "Bearer " + apiKey);
             }
 
-                HttpRequest request = requestBuilder.build();
-                long startMs = System.currentTimeMillis();
-                log.info("[AI-HTTP][WARMUP][REQ] method={} uri={} timeoutMs={} at={}",
-                    request.method(), request.uri(), 120000, Instant.now());
-                if (verboseHttpLogs) {
-                log.info("[AI-HTTP][WARMUP][REQ] curl(redacted)={} ",
-                    toCurlCommand(request.uri().toString(), requestBody, apiKey));
-                }
-
-                HttpResponse<String> warmupResponse = httpClient.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-                long elapsedMs = System.currentTimeMillis() - startMs;
-                log.info("[AI-HTTP][WARMUP][RESP] status={} elapsedMs={} bodyPreview={}",
-                    warmupResponse.statusCode(), elapsedMs,
-                    preview(warmupResponse.body(), AIQuestionConfig.DEFAULT_LOG_PREVIEW));
+            httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             log.info("AI model warmup completed — model loaded in VRAM");
         } catch (Exception e) {
             log.warn("AI model warmup failed (non-fatal): {}", e.getMessage());
@@ -454,7 +432,7 @@ public class AIQuestionGenerator {
     private String executeMessagesRequest(List<String> batchLetters, String modelToUse, String requestBody)
             throws Exception {
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(apiUri)
+                .uri(URI.create(apiUrl))
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
@@ -464,54 +442,14 @@ public class AIQuestionGenerator {
             requestBuilder.header("Authorization", "Bearer " + apiKey);
         }
 
-        HttpRequest request = requestBuilder.build();
-        long startMs = System.currentTimeMillis();
-        int requestBodySize = requestBody == null ? 0 : requestBody.getBytes(StandardCharsets.UTF_8).length;
-        log.info("[AI-HTTP][REQ] batch={} model={} method={} uri={} timeoutMs={} bodyBytes={} at={} authHeader={}",
-            batchLetters,
-            modelToUse,
-            request.method(),
-            request.uri(),
-            120000,
-            requestBodySize,
-            Instant.now(),
-            maskedAuthHeader(apiKey));
-        if (verboseHttpLogs) {
-            log.info("[AI-HTTP][REQ] headers=Content-Type: application/json, Accept: application/json, Authorization: {}",
-                maskedAuthHeader(apiKey));
-            log.info("[AI-HTTP][REQ] body={}", preview(requestBody, 12000));
-            log.info("[AI-HTTP][REQ] curl(redacted)={}",
-                toCurlCommand(request.uri().toString(), requestBody, apiKey));
-        }
-
-        HttpResponse<String> response;
-        try {
-            response = httpClient.send(
-                request,
+        HttpResponse<String> response = httpClient.send(
+                requestBuilder.build(),
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            long elapsedMs = System.currentTimeMillis() - startMs;
-            log.error("[AI-HTTP][ERR] batch={} model={} elapsedMs={} exception={} message={}",
-                batchLetters,
-                modelToUse,
-                elapsedMs,
-                e.getClass().getName(),
-                e.getMessage(),
-                e);
-            throw e;
-        }
 
         int status = response.statusCode();
         String body = response.body();
-        long elapsedMs = System.currentTimeMillis() - startMs;
 
-        log.info("[AI-HTTP][RESP] batch={} model={} status={} elapsedMs={} bodyBytes={} bodyPreview={}",
-            batchLetters,
-            modelToUse,
-            status,
-            elapsedMs,
-            body == null ? 0 : body.getBytes(StandardCharsets.UTF_8).length,
-            preview(body, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
+        log.info("Ollama HTTP status for batch {} with model '{}': {}", batchLetters, modelToUse, status);
 
         if (status == 200) {
             if (body == null || body.isBlank()) {
@@ -555,38 +493,6 @@ public class AIQuestionGenerator {
 
         throw new RuntimeException(
                 "Error llamando a la API Anthropic-compatible: HTTP " + status + ". Detalle: " + detailedMessage);
-    }
-
-    private String maskedAuthHeader(String key) {
-        if (key == null || key.isBlank()) {
-            return "<none>";
-        }
-        return "Bearer " + maskSecret(key);
-    }
-
-    private String maskSecret(String value) {
-        if (value == null || value.isBlank()) {
-            return "<empty>";
-        }
-        int len = value.length();
-        if (len <= 8) {
-            return "***";
-        }
-        int head = Math.min(4, len / 3);
-        int tail = Math.min(4, len / 3);
-        return value.substring(0, head) + "..." + value.substring(len - tail);
-    }
-
-    private String toCurlCommand(String url, String body, String key) {
-        String safeBody = body == null ? "" : body.replace("'", "'\"'\"'");
-        String authHeader = key == null || key.isBlank()
-                ? ""
-                : " -H 'Authorization: Bearer " + maskSecret(key) + "'";
-        return "curl -X POST '" + url + "'"
-                + " -H 'Content-Type: application/json'"
-                + " -H 'Accept: application/json'"
-                + authHeader
-                + " --data-raw '" + safeBody + "'";
     }
 
     private String buildBatchPrompt(
@@ -810,16 +716,16 @@ public class AIQuestionGenerator {
 
         // Intenta filesystem primero, luego classpath (Docker)
         java.io.InputStream dictStream = null;
-        Path fsPath = resolveProjectPath(wordDictionaryPath, "diccionario de palabras");
+        Path fsPath = Path.of(wordDictionaryPath).toAbsolutePath().normalize();
         if (Files.exists(fsPath)) {
             log.info("Loading dictionary from filesystem: {}", fsPath);
             dictStream = Files.newInputStream(fsPath);
         } else {
-            dictStream = getClass().getClassLoader().getResourceAsStream(DEFAULT_WORD_DICTIONARY_RESOURCE);
+            dictStream = getClass().getClassLoader().getResourceAsStream(wordDictionaryPath);
             if (dictStream == null) {
                 throw new IllegalStateException("No existe el diccionario de palabras: " + wordDictionaryPath);
             }
-            log.info("Loading dictionary from classpath: {}", DEFAULT_WORD_DICTIONARY_RESOURCE);
+            log.info("Loading dictionary from classpath: {}", wordDictionaryPath);
         }
 
         try (java.io.BufferedReader reader = new java.io.BufferedReader(
@@ -1206,26 +1112,8 @@ public class AIQuestionGenerator {
 
     public void saveToFile(QuestionList questions, String filePath) throws Exception {
         String json = mapper.writeValueAsString(questions);
-        Path outputPath = resolveProjectPath(filePath, "archivo de salida");
-        Files.createDirectories(outputPath.getParent());
-        Files.writeString(outputPath, json, StandardCharsets.UTF_8);
-        log.info("Questions saved to: {}", outputPath);
-    }
-
-    private static Path resolveProjectPath(String rawPath, String description) {
-        if (rawPath == null || rawPath.isBlank()) {
-            throw new IllegalArgumentException("Ruta vacia para " + description);
-        }
-
-        Path candidate = Path.of(rawPath.trim());
-        Path resolved = candidate.isAbsolute()
-                ? candidate.normalize()
-                : PROJECT_ROOT.resolve(candidate).normalize();
-
-        if (!resolved.startsWith(PROJECT_ROOT)) {
-            throw new IllegalArgumentException("Ruta fuera del proyecto para " + description + ": " + rawPath);
-        }
-        return resolved;
+        Files.writeString(Path.of(filePath), json, StandardCharsets.UTF_8);
+        log.info("Questions saved to: {}", filePath);
     }
 
     private boolean isQuotaException(Exception e) {

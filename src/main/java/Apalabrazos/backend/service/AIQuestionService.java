@@ -12,12 +12,10 @@ import Apalabrazos.backend.model.Question;
 import Apalabrazos.backend.model.QuestionList;
 import Apalabrazos.backend.AIQuestion.AIQuestionGenerator;
 import Apalabrazos.backend.AIQuestion.QuestionFileLoader;
-import Apalabrazos.backend.config.AIQuestionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -29,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,9 +49,6 @@ public class AIQuestionService implements EventListener {
 
     private static final String SOURCE_AI = "AI";
     private static final String SOURCE_FALLBACK = "FALLBACK_JSON";
-    private static final Path PROJECT_ROOT = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
-
-    private static final int MAX_PRELOAD_ATTEMPTS = 3;
 
     private static final AIQuestionService INSTANCE = new AIQuestionService();
 
@@ -85,10 +79,8 @@ public class AIQuestionService implements EventListener {
         this.schedulerHour = readEnvInt("AI_GENERATOR_HOUR", 8);
         this.schedulerMinute = readEnvInt("AI_GENERATOR_MINUTE", 0);
         this.schedulerZone = ZoneId.of(readEnv("AI_GENERATOR_TIMEZONE", "Europe/Madrid"));
-        this.schedulerOutputDir = resolveProjectPath(
-                readEnv("AI_GENERATOR_OUTPUT_DIR", "src/main/resources/Apalabrazos/data"),
-                "directorio de salida del generador").toString();
-        this.schedulerFilename = sanitizeFilename(readEnv("AI_GENERATOR_FILENAME", "questions2.json"));
+        this.schedulerOutputDir = readEnv("AI_GENERATOR_OUTPUT_DIR", "src/main/resources/Apalabrazos/data");
+        this.schedulerFilename = readEnv("AI_GENERATOR_FILENAME", "questions2.json");
 
         GlobalAsyncEventBus.addListener(this);
         log.info("AIQuestionService initialized. schedulerEnabled={}, schedule={}:{}, zone={}",
@@ -121,51 +113,6 @@ public class AIQuestionService implements EventListener {
         log.info("[ASYNC-BUS][RECV][GameService->AIQuestionService] Received AIQuestionPreloadRequestedEvent matchId={}",
                 requested.getMatchId());
         preloadExecutor.submit(() -> processPreloadRequest(requested));
-    }
-
-    /**
-     * Schedules an async preload of questions for a new match.
-     * Returns a CompletableFuture that completes when questions are ready (or fails after MAX_PRELOAD_ATTEMPTS).
-     */
-    public CompletableFuture<QuestionList> startPreload(String matchId, int numberOfQuestions) {
-        CompletableFuture<QuestionList> future = new CompletableFuture<>();
-        preloadExecutor.submit(() -> executePreloadWithRetry(matchId, numberOfQuestions, 1, future));
-        log.info("[AI-PRELOAD] Preload scheduled for match {} (questions={}, maxAttempts={})",
-                matchId, numberOfQuestions, MAX_PRELOAD_ATTEMPTS);
-        return future;
-    }
-
-    private void executePreloadWithRetry(String matchId, int numberOfQuestions, int attempt,
-            CompletableFuture<QuestionList> future) {
-        if (future.isDone()) {
-            return;
-        }
-        log.info("[AI-PRELOAD] Starting preload matchId={} questions={} attempt={}/{}",
-                matchId, numberOfQuestions, attempt, MAX_PRELOAD_ATTEMPTS);
-        long startNs = System.nanoTime();
-        try {
-            GenerationResult result = generateQuestionsForNewGameWithSource(numberOfQuestions, true);
-            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
-            log.info("[AI-PRELOAD] Completed preload for match {} in {} ms. count={}, source={}, attempt={}/{}",
-                    matchId, elapsedMs, result.questions().getCurrentLength(), result.source(),
-                    attempt, MAX_PRELOAD_ATTEMPTS);
-            GlobalAsyncEventBus.publishAndForget(
-                    new AIQuestionPreloadCompletedEvent(matchId, result.questions(), result.source()));
-            future.complete(result.questions());
-        } catch (Exception e) {
-            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
-            if (attempt < MAX_PRELOAD_ATTEMPTS) {
-                log.warn("[AI-PRELOAD] Failed preload for match {} in {} ms (attempt {}/{}): {}. Retrying...",
-                        matchId, elapsedMs, attempt, MAX_PRELOAD_ATTEMPTS, e.getMessage());
-                preloadExecutor.submit(() -> executePreloadWithRetry(matchId, numberOfQuestions, attempt + 1, future));
-            } else {
-                log.error("[AI-PRELOAD] Failed preload for match {} after {} attempts in {} ms: {}",
-                        matchId, MAX_PRELOAD_ATTEMPTS, elapsedMs, e.getMessage(), e);
-                GlobalAsyncEventBus.publishAndForget(
-                        new AIQuestionPreloadFailedEvent(matchId, e.getMessage(), "LOAD_FAILED"));
-                future.completeExceptionally(new IllegalStateException(e.getMessage()));
-            }
-        }
     }
 
     public QuestionList generateQuestionsForNewGame(int numberOfQuestions) throws Exception {
@@ -292,20 +239,10 @@ public class AIQuestionService implements EventListener {
     private GenerationResult generateQuestionsForNewGameWithSource(int numberOfQuestions, boolean allowFallback)
             throws Exception {
         int safeCount = normalizeQuestionCount(numberOfQuestions);
-        List<String> targetLetters = buildSpanishAlphabet().subList(0, safeCount);
-
-        log.info(
-            "[AI-REQUEST] Requesting questions from AI service. requested={}, normalizedCount={}, letters={}, allowFallback={}, endpoint={}, model={}",
-            numberOfQuestions,
-            safeCount,
-            targetLetters,
-            allowFallback,
-            AIQuestionConfig.getApiUrl(),
-            AIQuestionConfig.getModel());
 
         try {
             AIQuestionGenerator generator = new AIQuestionGenerator();
-            QuestionList generated = generator.generateBatteryForMissingLetters(targetLetters);
+            QuestionList generated = generator.generateBatteryForMissingLetters(buildSpanishAlphabet().subList(0, safeCount));
             QuestionList normalized = normalizeAndLimit(generated, safeCount);
 
             if (normalized.getCurrentLength() < safeCount) {
@@ -347,11 +284,11 @@ public class AIQuestionService implements EventListener {
                 return;
             }
 
-            String outputPath = Path.of(schedulerOutputDir).resolve(schedulerFilename).toString();
+            String outputPath = schedulerOutputDir + "/" + schedulerFilename;
             generator.saveToFile(questions, outputPath);
             log.info("[AI-SCHEDULED] Saved {} generated questions to {}", count, outputPath);
 
-            String backupPath = Path.of(schedulerOutputDir).resolve("questions_backup_" + dateTag + ".json").toString();
+            String backupPath = schedulerOutputDir + "/questions_backup_" + dateTag + ".json";
             generator.saveToFile(questions, backupPath);
             log.info("[AI-SCHEDULED] Backup saved to {}", backupPath);
         } catch (Exception e) {
@@ -443,34 +380,6 @@ public class AIQuestionService implements EventListener {
             return defaultValue;
         }
         return value.trim();
-    }
-
-    private static Path resolveProjectPath(String rawPath, String description) {
-        if (rawPath == null || rawPath.isBlank()) {
-            throw new IllegalArgumentException("Ruta vacia para " + description);
-        }
-
-        Path candidate = Path.of(rawPath.trim());
-        Path resolved = candidate.isAbsolute()
-                ? candidate.normalize()
-                : PROJECT_ROOT.resolve(candidate).normalize();
-
-        if (!resolved.startsWith(PROJECT_ROOT)) {
-            throw new IllegalArgumentException("Ruta fuera del proyecto para " + description + ": " + rawPath);
-        }
-        return resolved;
-    }
-
-    private static String sanitizeFilename(String rawFilename) {
-        if (rawFilename == null || rawFilename.isBlank()) {
-            throw new IllegalArgumentException("AI_GENERATOR_FILENAME no puede estar vacio.");
-        }
-
-        Path filename = Path.of(rawFilename.trim()).getFileName();
-        if (filename == null || !filename.toString().equals(rawFilename.trim())) {
-            throw new IllegalArgumentException("AI_GENERATOR_FILENAME debe ser solo un nombre de archivo.");
-        }
-        return filename.toString();
     }
 
     private static int readEnvInt(String key, int defaultValue) {
