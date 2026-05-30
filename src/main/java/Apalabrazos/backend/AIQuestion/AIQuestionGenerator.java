@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -66,6 +67,7 @@ public class AIQuestionGenerator {
     private final String appName;
     private final String appUrl;
     private final String wordDictionaryPath;
+    private final boolean verboseHttpLogs;
 
     private final HttpClient httpClient;
     private final ObjectMapper mapper;
@@ -85,6 +87,7 @@ public class AIQuestionGenerator {
         this.appName = AIQuestionConfig.getAppName();
         this.appUrl = AIQuestionConfig.getAppUrl();
         this.wordDictionaryPath = AIQuestionConfig.getWordDictionaryPath();
+        this.verboseHttpLogs = "true".equalsIgnoreCase(System.getenv("AI_HTTP_VERBOSE_LOGS"));
 
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
@@ -132,7 +135,22 @@ public class AIQuestionGenerator {
                 requestBuilder.header("Authorization", "Bearer " + apiKey);
             }
 
-            httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                HttpRequest request = requestBuilder.build();
+                long startMs = System.currentTimeMillis();
+                log.info("[AI-HTTP][WARMUP][REQ] method={} uri={} timeoutMs={} at={}",
+                    request.method(), request.uri(), 120000, Instant.now());
+                if (verboseHttpLogs) {
+                log.info("[AI-HTTP][WARMUP][REQ] curl(redacted)={} ",
+                    toCurlCommand(request.uri().toString(), requestBody, apiKey));
+                }
+
+                HttpResponse<String> warmupResponse = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                long elapsedMs = System.currentTimeMillis() - startMs;
+                log.info("[AI-HTTP][WARMUP][RESP] status={} elapsedMs={} bodyPreview={}",
+                    warmupResponse.statusCode(), elapsedMs,
+                    preview(warmupResponse.body(), AIQuestionConfig.DEFAULT_LOG_PREVIEW));
             log.info("AI model warmup completed — model loaded in VRAM");
         } catch (Exception e) {
             log.warn("AI model warmup failed (non-fatal): {}", e.getMessage());
@@ -446,14 +464,54 @@ public class AIQuestionGenerator {
             requestBuilder.header("Authorization", "Bearer " + apiKey);
         }
 
-        HttpResponse<String> response = httpClient.send(
-                requestBuilder.build(),
+        HttpRequest request = requestBuilder.build();
+        long startMs = System.currentTimeMillis();
+        int requestBodySize = requestBody == null ? 0 : requestBody.getBytes(StandardCharsets.UTF_8).length;
+        log.info("[AI-HTTP][REQ] batch={} model={} method={} uri={} timeoutMs={} bodyBytes={} at={} authHeader={}",
+            batchLetters,
+            modelToUse,
+            request.method(),
+            request.uri(),
+            120000,
+            requestBodySize,
+            Instant.now(),
+            maskedAuthHeader(apiKey));
+        if (verboseHttpLogs) {
+            log.info("[AI-HTTP][REQ] headers=Content-Type: application/json, Accept: application/json, Authorization: {}",
+                maskedAuthHeader(apiKey));
+            log.info("[AI-HTTP][REQ] body={}", preview(requestBody, 12000));
+            log.info("[AI-HTTP][REQ] curl(redacted)={}",
+                toCurlCommand(request.uri().toString(), requestBody, apiKey));
+        }
+
+        HttpResponse<String> response;
+        try {
+            response = httpClient.send(
+                request,
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            long elapsedMs = System.currentTimeMillis() - startMs;
+            log.error("[AI-HTTP][ERR] batch={} model={} elapsedMs={} exception={} message={}",
+                batchLetters,
+                modelToUse,
+                elapsedMs,
+                e.getClass().getName(),
+                e.getMessage(),
+                e);
+            throw e;
+        }
 
         int status = response.statusCode();
         String body = response.body();
+        long elapsedMs = System.currentTimeMillis() - startMs;
 
-        log.info("Ollama HTTP status for batch {} with model '{}': {}", batchLetters, modelToUse, status);
+        log.info("[AI-HTTP][RESP] batch={} model={} status={} elapsedMs={} bodyBytes={} bodyPreview={}",
+            batchLetters,
+            modelToUse,
+            status,
+            elapsedMs,
+            body == null ? 0 : body.getBytes(StandardCharsets.UTF_8).length,
+            preview(body, AIQuestionConfig.DEFAULT_LOG_PREVIEW));
 
         if (status == 200) {
             if (body == null || body.isBlank()) {
@@ -497,6 +555,38 @@ public class AIQuestionGenerator {
 
         throw new RuntimeException(
                 "Error llamando a la API Anthropic-compatible: HTTP " + status + ". Detalle: " + detailedMessage);
+    }
+
+    private String maskedAuthHeader(String key) {
+        if (key == null || key.isBlank()) {
+            return "<none>";
+        }
+        return "Bearer " + maskSecret(key);
+    }
+
+    private String maskSecret(String value) {
+        if (value == null || value.isBlank()) {
+            return "<empty>";
+        }
+        int len = value.length();
+        if (len <= 8) {
+            return "***";
+        }
+        int head = Math.min(4, len / 3);
+        int tail = Math.min(4, len / 3);
+        return value.substring(0, head) + "..." + value.substring(len - tail);
+    }
+
+    private String toCurlCommand(String url, String body, String key) {
+        String safeBody = body == null ? "" : body.replace("'", "'\"'\"'");
+        String authHeader = key == null || key.isBlank()
+                ? ""
+                : " -H 'Authorization: Bearer " + maskSecret(key) + "'";
+        return "curl -X POST '" + url + "'"
+                + " -H 'Content-Type: application/json'"
+                + " -H 'Accept: application/json'"
+                + authHeader
+                + " --data-raw '" + safeBody + "'";
     }
 
     private String buildBatchPrompt(
