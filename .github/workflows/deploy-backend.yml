@@ -59,7 +59,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/apalabrazos:${{ github.sha }}
 
   deploy:
-    runs-on: [apalabrazos-runner]
+    runs-on: self-hosted
     needs: docker
     environment: digitalocean-server
     permissions:
