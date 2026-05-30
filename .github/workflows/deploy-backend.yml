@@ -56,3 +56,42 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/apalabrazos:latest
             ghcr.io/${{ github.repository_owner }}/apalabrazos:${{ github.sha }}
+
+  deploy:
+    runs-on: self-hosted
+    needs: docker
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull new image
+        run: docker pull ghcr.io/${{ github.repository_owner }}/apalabrazos:latest
+
+      - name: Deploy container
+        run: |
+          docker stop apalabrazos-backend || true
+          docker rm   apalabrazos-backend || true
+          docker run -d \
+            --name apalabrazos-backend \
+            --restart unless-stopped \
+            -p 8080:8080 \
+            --env COSMOS_DB_ENDPOINT="${{ secrets.COSMOS_DB_ENDPOINT }}" \
+            --env COSMOS_DB_KEY="${{ secrets.COSMOS_DB_KEY }}" \
+            --env COSMOS_DB_DATABASE="${{ secrets.COSMOS_DB_DATABASE }}" \
+            --env JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --env JWT_ISSUER="${{ secrets.JWT_ISSUER }}" \
+            --env JWT_AUDIENCE="${{ secrets.JWT_AUDIENCE }}" \
+            --env AI_API_URL="${{ secrets.AI_API_URL }}" \
+            --env AI_API_KEY="${{ secrets.AI_API_KEY }}" \
+            --env AI_MODEL="${{ secrets.AI_MODEL }}" \
+            --env AI_GENERATOR_ENABLED="${{ secrets.AI_GENERATOR_ENABLED }}" \
+            --env JAVA_OPTS="-Xms256m -Xmx512m" \
+            ghcr.io/${{ github.repository_owner }}/apalabrazos:latest

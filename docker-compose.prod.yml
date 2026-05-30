@@ -1,18 +1,9 @@
 services:
   backend:
-    image: ghcr.io/${GHCR_OWNER}/apalabrazos:latest
+    image: ghcr.io/trutoman/apalabrazos:latest
     container_name: apalabrazos-backend
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - "8080:8080"
-
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: apalabrazos-watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /root/.docker/config.json:/config.json:ro
-    command: --interval 60 --cleanup apalabrazos-backend
+    # Los secretos se inyectan en tiempo de deploy por el runner de GitHub Actions.
+    # No se necesita .env ni Watchtower.
