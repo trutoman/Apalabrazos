@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -49,6 +50,8 @@ public class AIQuestionService implements EventListener {
 
     private static final String SOURCE_AI = "AI";
     private static final String SOURCE_FALLBACK = "FALLBACK_JSON";
+
+    private static final int MAX_PRELOAD_ATTEMPTS = 3;
 
     private static final AIQuestionService INSTANCE = new AIQuestionService();
 
@@ -113,6 +116,51 @@ public class AIQuestionService implements EventListener {
         log.info("[ASYNC-BUS][RECV][GameService->AIQuestionService] Received AIQuestionPreloadRequestedEvent matchId={}",
                 requested.getMatchId());
         preloadExecutor.submit(() -> processPreloadRequest(requested));
+    }
+
+    /**
+     * Schedules an async preload of questions for a new match.
+     * Returns a CompletableFuture that completes when questions are ready (or fails after MAX_PRELOAD_ATTEMPTS).
+     */
+    public CompletableFuture<QuestionList> startPreload(String matchId, int numberOfQuestions) {
+        CompletableFuture<QuestionList> future = new CompletableFuture<>();
+        preloadExecutor.submit(() -> executePreloadWithRetry(matchId, numberOfQuestions, 1, future));
+        log.info("[AI-PRELOAD] Preload scheduled for match {} (questions={}, maxAttempts={})",
+                matchId, numberOfQuestions, MAX_PRELOAD_ATTEMPTS);
+        return future;
+    }
+
+    private void executePreloadWithRetry(String matchId, int numberOfQuestions, int attempt,
+            CompletableFuture<QuestionList> future) {
+        if (future.isDone()) {
+            return;
+        }
+        log.info("[AI-PRELOAD] Starting preload matchId={} questions={} attempt={}/{}",
+                matchId, numberOfQuestions, attempt, MAX_PRELOAD_ATTEMPTS);
+        long startNs = System.nanoTime();
+        try {
+            GenerationResult result = generateQuestionsForNewGameWithSource(numberOfQuestions, true);
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
+            log.info("[AI-PRELOAD] Completed preload for match {} in {} ms. count={}, source={}, attempt={}/{}",
+                    matchId, elapsedMs, result.questions().getCurrentLength(), result.source(),
+                    attempt, MAX_PRELOAD_ATTEMPTS);
+            GlobalAsyncEventBus.publishAndForget(
+                    new AIQuestionPreloadCompletedEvent(matchId, result.questions(), result.source()));
+            future.complete(result.questions());
+        } catch (Exception e) {
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
+            if (attempt < MAX_PRELOAD_ATTEMPTS) {
+                log.warn("[AI-PRELOAD] Failed preload for match {} in {} ms (attempt {}/{}): {}. Retrying...",
+                        matchId, elapsedMs, attempt, MAX_PRELOAD_ATTEMPTS, e.getMessage());
+                preloadExecutor.submit(() -> executePreloadWithRetry(matchId, numberOfQuestions, attempt + 1, future));
+            } else {
+                log.error("[AI-PRELOAD] Failed preload for match {} after {} attempts in {} ms: {}",
+                        matchId, MAX_PRELOAD_ATTEMPTS, elapsedMs, e.getMessage(), e);
+                GlobalAsyncEventBus.publishAndForget(
+                        new AIQuestionPreloadFailedEvent(matchId, e.getMessage(), "LOAD_FAILED"));
+                future.completeExceptionally(new IllegalStateException(e.getMessage()));
+            }
+        }
     }
 
     public QuestionList generateQuestionsForNewGame(int numberOfQuestions) throws Exception {
