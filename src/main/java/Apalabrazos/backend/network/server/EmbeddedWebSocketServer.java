@@ -8,6 +8,7 @@ import Apalabrazos.backend.service.AIQuestionService;
 import Apalabrazos.backend.tools.JwtService;
 import Apalabrazos.backend.tools.PasswordHasher;
 import io.javalin.Javalin;
+import io.javalin.config.RoutesConfig;
 import io.javalin.http.staticfiles.Location;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +60,6 @@ public class EmbeddedWebSocketServer {
         try {
             log.info("[SERVER] Starting Javalin HTTP server...");
             initializeJavalinApp();
-            registerApiEndpoints();
-            registerWebSocketEndpoints();
             logServerStartupInfo();
         } catch (Exception e) {
             log.error("✗ Error starting WebSocket server: {}", e.getMessage(), e);
@@ -80,6 +79,8 @@ public class EmbeddedWebSocketServer {
                 staticFiles.location = Location.CLASSPATH;
                 log.debug("[SERVER] Static files configured: /public");
             });
+            registerApiEndpoints(config.routes);
+            registerWebSocketEndpoints(config.routes);
         }).start(port);
         log.info("[SERVER] HTTP server started on port {}", port);
     }
@@ -88,18 +89,18 @@ public class EmbeddedWebSocketServer {
      * Registers all REST API endpoints (login, register and admin).
      * Responsibility: API endpoint registration and initialization.
      */
-    private void registerApiEndpoints() {
-        registerLoginEndpoint();
-        registerRegisterEndpoint();
-        registerAdminEndpoints();
+    private void registerApiEndpoints(RoutesConfig routes) {
+        registerLoginEndpoint(routes);
+        registerRegisterEndpoint(routes);
+        registerAdminEndpoints(routes);
     }
 
     /**
      * Registers the POST /api/login endpoint.
      * Responsibility: Login endpoint implementation and authentication logic.
      */
-    private void registerLoginEndpoint() {
-        app.post("/api/login", ctx -> {
+    private void registerLoginEndpoint(RoutesConfig routes) {
+        routes.post("/api/login", ctx -> {
             try {
                 LoginRequest req = ctx.bodyAsClass(LoginRequest.class);
 
@@ -181,8 +182,8 @@ public class EmbeddedWebSocketServer {
      * Registers the POST /api/register endpoint.
      * Responsibility: Registration endpoint implementation and user creation logic.
      */
-    private void registerRegisterEndpoint() {
-        app.post("/api/register", ctx -> {
+    private void registerRegisterEndpoint(RoutesConfig routes) {
+        routes.post("/api/register", ctx -> {
             try {
                 RegisterRequest req = ctx.bodyAsClass(RegisterRequest.class);
 
@@ -257,8 +258,8 @@ public class EmbeddedWebSocketServer {
      * Registers admin API endpoints for AI question generation.
      * Responsibility: Admin endpoint for manual question generation trigger.
      */
-    private void registerAdminEndpoints() {
-        app.post("/api/admin/generate-questions", ctx -> {
+    private void registerAdminEndpoints(RoutesConfig routes) {
+        routes.post("/api/admin/generate-questions", ctx -> {
             log.info("[ADMIN] Manual question generation triggered");
             AIQuestionService.getInstance().forceGenerateNow();
 
@@ -276,9 +277,9 @@ public class EmbeddedWebSocketServer {
      * Responsibility: WebSocket endpoint registration and connection lifecycle
      * management.
      */
-    private void registerWebSocketEndpoints() {
+    private void registerWebSocketEndpoints(RoutesConfig routes) {
         log.info("Starting Javalin WebSocket server...");
-        app.ws("/ws/game/{userId}", ws -> {
+        routes.ws("/ws/game/{userId}", ws -> {
             log.info("[WEBSOCKET] Registering endpoint: /ws/game/{userId}");
             ws.onConnect(ctx -> {
                 log.info("[WEBSOCKET-CONNECT] Connection received for: {}", ctx.pathParam("userId"));

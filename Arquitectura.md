@@ -1,149 +1,159 @@
-# Arquitectura y Funcionamiento del Programa Apalabrazos
+# Arquitectura y Funcionamiento de Apalabrazos
 
 ## Descripción General
 
-Apalabrazos es una aplicación de juego multijugador en línea desarrollada en Java, utilizando un backend basado en Javalin y un frontend web con HTML, CSS y JavaScript. El juego permite a los usuarios registrarse, iniciar sesión, crear o unirse a salas de juego (lobbies) y participar en partidas de preguntas y respuestas en tiempo real.
+Apalabrazos es un juego multijugador en tiempo real de tipo "rosco". Los jugadores responden preguntas asociadas a cada letra del alfabeto compitiendo contra el tiempo. El backend es Java + Javalin con WebSockets; el frontend es Phaser.js servido por el propio backend.
+
+---
+
+## Stack tecnológico
+
+| Componente | Tecnología | Versión |
+|---|---|---|
+| Backend | Java + Javalin | 21 / 7.2.0 |
+| Frontend | Phaser.js | 3.x |
+| Base de datos | Azure Cosmos DB SDK | 4.80.0 |
+| Autenticación | Auth0 java-jwt | 4.4.0 |
+| Serialización | Jackson | 2.18.7 |
+| Logging | SLF4J + Logback | 2.0.13 / 1.5.25 |
+| Tests | JUnit 5 | 5.9.2 |
+| Contenedor | Docker (multi-stage build) | — |
+
+---
 
 ## Arquitectura del Sistema
 
-### Arquitectura General
+### Capas principales
 
-La aplicación sigue una arquitectura cliente-servidor con comunicación en tiempo real mediante WebSockets. Se divide en tres capas principales:
+```
+┌────────────────────────────────────────────┐
+│  Browser — Phaser.js                        │
+│  (HTML + JS servido desde /public)          │
+└──────────────────┬─────────────────────────┘
+                   │ WebSocket /ws/{userId}
+┌──────────────────▼─────────────────────────┐
+│  Backend — Javalin (puerto 8080)            │
+│                                             │
+│  JavalinConnectionHandler                  │
+│        │  GlobalAsyncEventBus              │
+│  MatchManager ── GameService               │
+│                      │                     │
+│               AIQuestionService            │
+└──────────────────────┬──────────────────────┘
+                       │
+        ┌──────────────┴───────────┐
+        │ Azure Cosmos DB          │ LLM API
+        │ (usuarios, preguntas)    │ (Ollama / OpenRouter)
+        └──────────────────────────┘
+```
 
-1. **Capa de Presentación (Frontend)**
-2. **Capa de Lógica de Negocio (Backend)**
-3. **Capa de Datos**
+### 1. Frontend (Phaser.js)
 
-### 1. Capa de Presentación (Frontend)
+**Estructura relevante:**
+- `public/index.html` — shell HTML con todas las vistas (login, lobby, juego)
+- `public/js/main.js` — punto de entrada
+- `public/js/network/socket-client.js` — cliente WebSocket
+- `public/js/network/message-handler.js` — despacho de mensajes entrantes
+- `public/js/phaser_src/scenes/MainScene.js` — escena principal del juego
+- `public/js/phaser_src/ui/` — componentes visuales del rosco, pregunta, scoreboard
 
-**Tecnologías:**
-- HTML5
-- CSS3
-- JavaScript (ES6 Modules)
+### 2. Backend — Componentes principales
 
-**Estructura:**
-- `index.html`: Página principal que contiene todas las vistas (login, registro, lobby, juego)
-- `css/`: Hojas de estilo para diferentes vistas (style.css, login.css, register.css, lobby.css)
-- `js/`: Lógica del cliente dividida en módulos:
-  - `main.js`: Punto de entrada principal
-  - `config.js`: Configuraciones de API y WebSocket
-  - `ui/`: Módulos de interfaz de usuario (login.js, lobby.js, ui-manager.js)
-  - `network/`: Cliente WebSocket (socket-client.js)
-  - `validation/`: Validaciones del lado cliente (game-validation.js)
+#### Red
+- **`EmbeddedWebSocketServer`** — arranca Javalin y registra las rutas WebSocket y HTTP
+- **`JavalinConnectionHandler`** — parsea mensajes JSON entrantes y los despacha como eventos al `GlobalAsyncEventBus`
+- **`ConnectionRegistry`** — mantiene el mapa `sessionId → Player` con el canal de salida WebSocket
 
-**Funcionalidad:**
-- Interfaz de usuario para login y registro
-- Gestión de lobbies y creación de partidas
-- Comunicación en tiempo real con el servidor vía WebSocket
-- Validación de formularios y datos del juego
-
-### 2. Capa de Lógica de Negocio (Backend)
-
-**Tecnologías:**
-- Java 21 (LTS)
-- Maven para gestión de dependencias
-- Javalin: Framework web ligero con soporte nativo para WebSocket
-- Azure Cosmos DB para persistencia de datos
-- JWT para autenticación
-- SLF4J + Logback para logging
-- JUnit 5 para pruebas
-
-**Componentes Principales:**
-
-#### Servidor WebSocket
-- `EmbeddedWebSocketServer`: Servidor embebido que maneja conexiones WebSocket en el puerto 8080
-- `JavalinConnectionHandler`: Maneja las conexiones WebSocket individuales
-
-#### Sistema de Eventos
-- `EventBus`: Bus de eventos síncrono para comunicación entre componentes
-- `AsyncEventBus`: Bus de eventos asíncrono para operaciones no bloqueantes
-- Eventos específicos: `AnswerSubmittedEvent`, `GameControllerReady`, `CreatorInitGameEvent`, etc.
+#### Bus de eventos
+- **`GlobalAsyncEventBus`** — bus global asíncrono; columna vertebral de comunicación interna
+- **`AsyncEventBus`** — bus local por partida (entre `GameService` y su bridge en `MatchManager`)
+- **`GlobalBusEventCatalog`** — catálogo declarativo de qué eventos circulan por el bus global, quién los emite y quién los consume
 
 #### Servicios
-- `MatchesManager`: Singleton que gestiona todas las sesiones de juego activas
-- `GameService`: Lógica específica de cada partida
-- `UserRepository`: Interfaz con Azure Cosmos DB para gestión de usuarios
+- **`MatchManager`** — singleton que gestiona todas las partidas activas (`matchId → GameService`), enruta eventos de red y hace de bridge entre `GameService` y los clientes WebSocket
+- **`GameService`** — lógica de negocio de una partida concreta: máquina de estados, respuestas, puntuación, timer
+- **`AIQuestionService`** — genera preguntas vía LLM de forma asíncrona; escucha `AIQuestionPreloadRequestedEvent` y responde con `AIQuestionPreloadCompletedEvent` o `AIQuestionPreloadFailedEvent`
+- **`TimeService`** — publica `TimerTickEvent` cada segundo al bus global
 
 #### Configuración
-- `CosmosDBConfig`: Configuración de conexión a Cosmos DB
-- `JwtConfig`: Configuración de tokens JWT
+- **`CosmosDBConfig`** — conexión a Azure Cosmos DB leída de variables de entorno
+- **`JwtConfig`** — secreto, issuer, audience y expiración del token JWT
+- **`AIQuestionConfig`** — todos los parámetros del generador de preguntas (URL, modelo, tokens, etc.)
 
-#### Modelos y DTOs
-- `User`, `Player`: Modelos de datos para usuarios y jugadores
-- `LoginRequest`, `RegisterRequest`: Objetos de transferencia de datos
+#### Modelos de dominio
+- **`GameGlobal`** — estado global de una partida (máquina de estados, jugadores, timer)
+- **`GameInstance`** — estado individual de un jugador dentro de la partida
+- **`QuestionList` / `Question`** — preguntas y estado de respuesta por jugador
+- **`Player`** — jugador con su canal de envío WebSocket
+- **`GameRecord`** — resultado final de un jugador
 
-### 3. Capa de Datos
+### 3. Capa de datos
 
-**Tecnologías:**
-- Azure Cosmos DB: Base de datos NoSQL en la nube
-- JSON: Archivos locales para preguntas del juego (`questions.json`, `questions2.json`)
+- **Azure Cosmos DB** — usuarios y persistencia de preguntas generadas
+- **JSON local** — seed de preguntas de arranque (`questions2.json`)
 
-**Funcionalidad:**
-- Persistencia de usuarios y datos de sesión
-- Almacenamiento de preguntas y configuraciones del juego
+---
 
-## Funcionamiento del Programa
+## Flujo de una partida
 
-### Flujo de Ejecución
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant WS as JavalinConnectionHandler
+    participant MM as MatchManager
+    participant GS as GameService
+    participant AI as AIQuestionService
 
-1. **Inicio de la Aplicación:**
-   - Se ejecuta `MainApp.main()` que inicializa el `MatchesManager` singleton
-   - Se crea y arranca el `EmbeddedWebSocketServer` en el puerto 8080
-   - El servidor sirve archivos estáticos del frontend y maneja conexiones WebSocket
+    FE->>WS: GameCreationRequest
+    WS->>MM: GameCreationRequestedEvent (bus global)
+    MM->>GS: crea GameService + startQuestionPreload()
+    GS->>AI: AIQuestionPreloadRequestedEvent (bus global)
+    AI-->>GS: AIQuestionPreloadCompletedEvent
 
-2. **Registro/Login de Usuario:**
-   - El usuario accede a la interfaz web
-   - Envía credenciales vía WebSocket
-   - El backend valida contra Cosmos DB y genera token JWT
-   - Se establece sesión autenticada
+    FE->>WS: StartMatchRequest
+    WS->>MM: GameStartedRequestEvent
+    MM->>GS: GameStartedValid()
 
-3. **Creación/Unión a Partida:**
-   - Usuario crea una nueva partida o se une a una existente
-   - `MatchesManager` registra la conexión y crea instancia de `GameService`
-   - Se inicializa el bus de eventos para la partida
+    FE->>WS: GameControllerReady
+    GS-->>FE: QuestionChangedEvent (primera pregunta)
 
-4. **Desarrollo del Juego:**
-   - Las preguntas se cargan desde archivos JSON
-   - Los jugadores responden en tiempo real
-   - Eventos se propagan a través del `AsyncEventBus`
-   - El servidor actualiza el estado del juego y notifica a todos los participantes
+    loop Por cada respuesta
+        FE->>WS: AnswerSubmitted
+        GS-->>FE: AnswerValidatedEvent + QuestionChangedEvent
+    end
 
-5. **Finalización:**
-   - Al terminar la partida, se limpian recursos
-   - Conexiones se cierran apropiadamente
+    GS-->>FE: GameFinishedEvent
+```
 
-### Comunicación en Tiempo Real
+---
 
-- **WebSocket**: Protocolo principal para comunicación bidireccional
-- **Eventos**: Sistema interno para desacoplar componentes
-- **JSON**: Formato de mensajes entre cliente y servidor
+## Sistema de eventos
 
-### Seguridad
+Ningún componente llama directamente a otro. Toda la comunicación fluye a través de eventos tipados. El `GlobalBusEventCatalog` documenta formalmente cada ruta:
 
-- Autenticación basada en JWT
-- Hashing de contraseñas
-- Validación de entrada en cliente y servidor
+| Evento | Emisor | Receptor |
+|---|---|---|
+| `GameCreationRequestedEvent` | `JavalinConnectionHandler` | `MatchManager` |
+| `GameStartedRequestEvent` | `JavalinConnectionHandler` | `MatchManager` |
+| `PlayerJoinedEvent` | `MatchManager` | `MatchManager` |
+| `TimerTickEvent` | `TimeService` | `GameService` (solo el propietario) |
+| `AIQuestionPreloadRequestedEvent` | `GameService` | `AIQuestionService` |
+| `AIQuestionPreloadCompletedEvent` | `AIQuestionService` | `GameService` |
+| `AIQuestionPreloadFailedEvent` | `AIQuestionService` | `GameService` |
 
-### Escalabilidad
+---
 
-- Arquitectura basada en eventos permite distribución horizontal
-- Singleton `MatchesManager` centraliza gestión de sesiones
-- WebSocket nativo en Javalin optimiza rendimiento
+## Seguridad
 
-## Dependencias Principales
+- Autenticación JWT en la conexión WebSocket (query param `?token=`)
+- Validación de `userId` URL vs `userId` del token para evitar suplantación
+- Secretos inyectados como variables de entorno, nunca en código ni en imagen Docker
+- Ver [`.env.example`](.env.example) para la lista completa de variables requeridas
 
-- **Javalin 6.1.3**: Framework web y WebSocket
-- **Azure Cosmos DB 4.55.0**: Base de datos
-- **Jackson 2.15.2**: Serialización JSON
-- **JWT**: Autenticación
-- **SLF4J + Logback**: Logging
-- **JUnit 5.9.2**: Pruebas unitarias
+---
 
-## Configuración y Despliegue
+## Despliegue
 
-- **Puerto**: 8080 (configurable)
-- **Base de datos**: Azure Cosmos DB (requiere configuración de conexión)
-- **Recursos estáticos**: Servidos desde `src/main/resources/public/`
-- **Compilación**: Maven con Java 21
+Ver [`docs/VPS_DEPLOY.md`](docs/VPS_DEPLOY.md) para instrucciones completas.
 
-Esta arquitectura permite un juego fluido y responsivo, con separación clara de responsabilidades y facilidad de mantenimiento.
+Pipeline resumido: `git push main` → GitHub Actions corre tests → build imagen Docker → push a GHCR → Watchtower en VPS detecta nueva imagen y reinicia el contenedor.

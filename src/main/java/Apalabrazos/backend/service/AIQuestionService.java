@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.text.Normalizer;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -50,6 +51,7 @@ public class AIQuestionService implements EventListener {
 
     private static final String SOURCE_AI = "AI";
     private static final String SOURCE_FALLBACK = "FALLBACK_JSON";
+    private static final Path PROJECT_ROOT = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
 
     private static final int MAX_PRELOAD_ATTEMPTS = 3;
 
@@ -82,8 +84,10 @@ public class AIQuestionService implements EventListener {
         this.schedulerHour = readEnvInt("AI_GENERATOR_HOUR", 8);
         this.schedulerMinute = readEnvInt("AI_GENERATOR_MINUTE", 0);
         this.schedulerZone = ZoneId.of(readEnv("AI_GENERATOR_TIMEZONE", "Europe/Madrid"));
-        this.schedulerOutputDir = readEnv("AI_GENERATOR_OUTPUT_DIR", "src/main/resources/Apalabrazos/data");
-        this.schedulerFilename = readEnv("AI_GENERATOR_FILENAME", "questions2.json");
+        this.schedulerOutputDir = resolveProjectPath(
+                readEnv("AI_GENERATOR_OUTPUT_DIR", "src/main/resources/Apalabrazos/data"),
+                "directorio de salida del generador").toString();
+        this.schedulerFilename = sanitizeFilename(readEnv("AI_GENERATOR_FILENAME", "questions2.json"));
 
         GlobalAsyncEventBus.addListener(this);
         log.info("AIQuestionService initialized. schedulerEnabled={}, schedule={}:{}, zone={}",
@@ -332,11 +336,11 @@ public class AIQuestionService implements EventListener {
                 return;
             }
 
-            String outputPath = schedulerOutputDir + "/" + schedulerFilename;
+            String outputPath = Path.of(schedulerOutputDir).resolve(schedulerFilename).toString();
             generator.saveToFile(questions, outputPath);
             log.info("[AI-SCHEDULED] Saved {} generated questions to {}", count, outputPath);
 
-            String backupPath = schedulerOutputDir + "/questions_backup_" + dateTag + ".json";
+            String backupPath = Path.of(schedulerOutputDir).resolve("questions_backup_" + dateTag + ".json").toString();
             generator.saveToFile(questions, backupPath);
             log.info("[AI-SCHEDULED] Backup saved to {}", backupPath);
         } catch (Exception e) {
@@ -428,6 +432,34 @@ public class AIQuestionService implements EventListener {
             return defaultValue;
         }
         return value.trim();
+    }
+
+    private static Path resolveProjectPath(String rawPath, String description) {
+        if (rawPath == null || rawPath.isBlank()) {
+            throw new IllegalArgumentException("Ruta vacia para " + description);
+        }
+
+        Path candidate = Path.of(rawPath.trim());
+        Path resolved = candidate.isAbsolute()
+                ? candidate.normalize()
+                : PROJECT_ROOT.resolve(candidate).normalize();
+
+        if (!resolved.startsWith(PROJECT_ROOT)) {
+            throw new IllegalArgumentException("Ruta fuera del proyecto para " + description + ": " + rawPath);
+        }
+        return resolved;
+    }
+
+    private static String sanitizeFilename(String rawFilename) {
+        if (rawFilename == null || rawFilename.isBlank()) {
+            throw new IllegalArgumentException("AI_GENERATOR_FILENAME no puede estar vacio.");
+        }
+
+        Path filename = Path.of(rawFilename.trim()).getFileName();
+        if (filename == null || !filename.toString().equals(rawFilename.trim())) {
+            throw new IllegalArgumentException("AI_GENERATOR_FILENAME debe ser solo un nombre de archivo.");
+        }
+        return filename.toString();
     }
 
     private static int readEnvInt(String key, int defaultValue) {

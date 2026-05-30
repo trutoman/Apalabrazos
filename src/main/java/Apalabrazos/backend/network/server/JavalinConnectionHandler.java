@@ -24,7 +24,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
     public void onConnect(WsConnectContext ctx) {
         try {
-            log.info("[CONNECT] WebSocket connection attempt from: {}", ctx.session.getRemoteAddress());
+            log.info("[CONNECT] WebSocket connection attempt");
 
             // Extract token from query parameter
             String token = ctx.queryParam("token");
@@ -125,8 +125,8 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                     String username = player != null ? player.getName() : "Unknown";
 
-                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
-                    if (data == null) {
+                    com.fasterxml.jackson.databind.JsonNode data = extractPayload(node);
+                    if (data.isMissingNode()) {
                         log.warn("[GAME-CREATE] GameCreationRequest missing 'data' field from '{}'", username);
                     } else {
                         String gameName = data.path("name").asText("?");
@@ -174,8 +174,8 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                     Apalabrazos.backend.model.Player player = connectionRegistry.getPlayerBySessionId(sessionId);
                     String username = player != null ? player.getName() : "Unknown";
 
-                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
-                    String roomId = data != null ? data.path("roomId").asText("").trim() : "";
+                    com.fasterxml.jackson.databind.JsonNode data = extractPayload(node);
+                    String roomId = data.path("roomId").asText("").trim();
 
                     if (player == null) {
                         log.warn("[GAME-JOIN] JoinMatchRequest received but player was not found for session {}", sessionId);
@@ -240,8 +240,8 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         return;
                     }
 
-                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
-                    String roomId = data != null ? data.path("roomId").asText("").trim() : "";
+                    com.fasterxml.jackson.databind.JsonNode data = extractPayload(node);
+                    String roomId = data.path("roomId").asText("").trim();
 
                     if (roomId.isEmpty()) {
                         player.sendMessage(java.util.Map.of(
@@ -269,8 +269,8 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         return;
                     }
 
-                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
-                    String roomId = data != null ? data.path("roomId").asText("").trim() : "";
+                    com.fasterxml.jackson.databind.JsonNode data = extractPayload(node);
+                    String roomId = data.path("roomId").asText("").trim();
 
                     if (roomId.isEmpty()) {
                         log.warn("[GAME-READY] GameControllerReady missing roomId from '{}'", player.getName());
@@ -290,10 +290,10 @@ public class JavalinConnectionHandler extends ConnectionHandler {
                         return;
                     }
 
-                    com.fasterxml.jackson.databind.JsonNode data = node.get("data");
-                    int questionIndex = data != null ? data.path("questionIndex").asInt(-1) : -1;
-                    int selectedOption = data != null ? data.path("selectedOption").asInt(-999) : -999;
-                    long submittedAt = data != null ? data.path("submittedAt").asLong(0) : 0;
+                    com.fasterxml.jackson.databind.JsonNode data = extractPayload(node);
+                    int questionIndex = data.path("questionIndex").asInt(-1);
+                    int selectedOption = data.path("selectedOption").asInt(-999);
+                    long submittedAt = data.path("submittedAt").asLong(0);
 
                     log.info("[WS-BUS][FE->BE][RECV][ANSWER] player={} playerId={} session={} qIndex={} option={} submittedAt={}",
                             player.getName(), player.getPlayerID(), sessionId, questionIndex, selectedOption, submittedAt);
@@ -326,6 +326,10 @@ public class JavalinConnectionHandler extends ConnectionHandler {
         } catch (Exception e) {
             log.error("[MESSAGE] ❌ Error processing message: {}", e.getMessage(), e);
         }
+    }
+
+    private static com.fasterxml.jackson.databind.JsonNode extractPayload(com.fasterxml.jackson.databind.JsonNode node) {
+        return node.path("data");
     }
 
     public void onClose(WsCloseContext ctx) {
