@@ -15,33 +15,37 @@ Servidor objetivo:
 
 ## 2) Variables requeridas en `.env`
 
+La lista completa y actualizada está en [`.env.example`](../.env.example) en la raíz del proyecto. Copiarlo y completar los valores:
+
+```bash
+cp .env.example .env
+# editar .env con los valores reales
+```
+
+Variables mínimas obligatorias:
+
 ```env
-GHCR_OWNER=TU_ORG_O_USUARIO_GITHUB
+# Cosmos DB
+COSMOS_DB_ENDPOINT=https://tu-cuenta.documents.azure.com:443/
+COSMOS_DB_KEY=tu_clave
+COSMOS_DB_DATABASE=apalabrazos
 
-COSMOS_DB_ENDPOINT=https://cosmos-apalabrazos.documents.azure.com:443/
-COSMOS_DB_KEY=REEMPLAZAR_POR_KEY_VIGENTE
-COSMOS_DB_DATABASE=apalabrazosDB
-COSMOS_DB_QUESTIONS_CONTAINER=Questions
-
-JWT_SECRET=REEMPLAZAR_POR_SECRETO_LARGO
-JWT_ISSUER=apalabrazos-api
+# JWT
+JWT_SECRET=secreto_largo_y_aleatorio
+JWT_ISSUER=apalabrazos
 JWT_AUDIENCE=apalabrazos-client
 
-SEED_QUESTIONS_ON_START=false
-QUESTIONS_SEED_FILE=classpath:/Apalabrazos/data/questions2.json
-JAVA_OPTS=-Xms256m -Xmx512m
-
-# AI Question Generator (opcional - genera preguntas con IA periódicamente)
+# Generador de preguntas IA (scheduler periódico)
 AI_GENERATOR_ENABLED=false
+AI_API_URL=http://localhost:11434/api/chat
 AI_API_KEY=
-AI_API_URL=https://openrouter.ai/api/v1/chat/completions
-AI_MODEL=google/gemini-2.0-flash-001
-AI_QUESTIONS_PER_LETTER=3
+AI_MODEL=gemma3:4b
 AI_GENERATOR_HOUR=8
 AI_GENERATOR_MINUTE=0
 AI_GENERATOR_TIMEZONE=Europe/Madrid
-AI_GENERATOR_OUTPUT_DIR=src/main/resources/Apalabrazos/data
-AI_GENERATOR_FILENAME=questions2.json
+
+# Docker Compose
+GHCR_OWNER=trutoman
 ```
 
 ## 3) Arranque

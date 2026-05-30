@@ -315,11 +315,11 @@ Contenido:
 
 ## 7) Observaciones técnicas importantes del comportamiento actual
 
-1. `GameFinishedEvent` se publica internamente, pero no se transforma en mensaje WebSocket en el bridge actual de `MatchManager`.
+1. `GameFinishedEvent` se publica internamente **y** se transforma en mensaje WebSocket en el bridge de `MatchManager` (`sendGameFinishedToPlayers`). El cliente web (`message-handler.js`) recibe el evento `GameFinished` y muestra el resultado final.
 
-2. En `loadQuestionsForAllPlayers()` se carga una `QuestionList` y se asigna esa misma referencia a todas las `GameInstance` de los jugadores. Dado que `handleAnswerSubmitted()` muta `Question.userResponseRecorded`, esta decisión de referencia compartida impacta directamente cómo se comparte/mezcla el estado de preguntas entre jugadores.
+2. Cada jugador recibe su **propia copia** de `QuestionList` generada por `cloneQuestionList()` en `GameService.loadQuestionsForAllPlayersWithTimeout()`. Las mutaciones sobre `Question.userResponseRecorded` de un jugador no afectan al resto.
 
-3. El cliente web (`message-handler.js`) maneja `TimerTick`, `AnswerValidated`, `QuestionChanged`, pero no maneja `GameFinished`.
+3. El cliente web (`message-handler.js`) maneja `TimerTick`, `AnswerValidated`, `QuestionChanged` y `GameFinished`.
 
 ---
 
