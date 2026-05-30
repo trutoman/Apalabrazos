@@ -2,7 +2,7 @@ name: Build and Publish Backend
 
 on:
   push:
-    branches: ["main", "leandroPII-phaser"]
+    branches: ["main"]
     paths:
       - "Dockerfile"
       - "pom.xml"
