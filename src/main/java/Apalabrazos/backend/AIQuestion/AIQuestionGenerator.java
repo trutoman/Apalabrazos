@@ -44,6 +44,8 @@ public class AIQuestionGenerator {
 
     private static final String ENYE = "ñ";
     private static final String ENYE_UPPER = "Ñ";
+    private static final String DEFAULT_WORD_DICTIONARY_RESOURCE = "Apalabrazos/data/dictionary.txt";
+    private static final Path PROJECT_ROOT = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
 
     private static final List<Charset> MOJIBAKE_SOURCE_CHARSETS = List.of(
             Charset.forName("CP437"),
@@ -53,6 +55,7 @@ public class AIQuestionGenerator {
 
     private final String apiKey;
     private final String apiUrl;
+    private final URI apiUri;
     private final String model;
     private final String fallbackModel;
     private final int questionsPerLetter;
@@ -71,6 +74,7 @@ public class AIQuestionGenerator {
     public AIQuestionGenerator() {
         this.apiKey = AIQuestionConfig.getApiKey();
         this.apiUrl = AIQuestionConfig.getApiUrl();
+        this.apiUri = URI.create(this.apiUrl);
         this.model = AIQuestionConfig.getModel();
         this.fallbackModel = AIQuestionConfig.getFallbackModel();
         this.questionsPerLetter = AIQuestionConfig.getQuestionsPerLetter();
@@ -118,7 +122,7 @@ public class AIQuestionGenerator {
             String requestBody = mapper.writeValueAsString(body);
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(apiUrl))
+                    .uri(apiUri)
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
@@ -432,7 +436,7 @@ public class AIQuestionGenerator {
     private String executeMessagesRequest(List<String> batchLetters, String modelToUse, String requestBody)
             throws Exception {
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(apiUrl))
+                .uri(apiUri)
                 .header("Content-Type", "application/json")
                 .header("Accept", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
@@ -716,16 +720,16 @@ public class AIQuestionGenerator {
 
         // Intenta filesystem primero, luego classpath (Docker)
         java.io.InputStream dictStream = null;
-        Path fsPath = Path.of(wordDictionaryPath).toAbsolutePath().normalize();
+        Path fsPath = resolveProjectPath(wordDictionaryPath, "diccionario de palabras");
         if (Files.exists(fsPath)) {
             log.info("Loading dictionary from filesystem: {}", fsPath);
             dictStream = Files.newInputStream(fsPath);
         } else {
-            dictStream = getClass().getClassLoader().getResourceAsStream(wordDictionaryPath);
+            dictStream = getClass().getClassLoader().getResourceAsStream(DEFAULT_WORD_DICTIONARY_RESOURCE);
             if (dictStream == null) {
                 throw new IllegalStateException("No existe el diccionario de palabras: " + wordDictionaryPath);
             }
-            log.info("Loading dictionary from classpath: {}", wordDictionaryPath);
+            log.info("Loading dictionary from classpath: {}", DEFAULT_WORD_DICTIONARY_RESOURCE);
         }
 
         try (java.io.BufferedReader reader = new java.io.BufferedReader(
@@ -1112,8 +1116,26 @@ public class AIQuestionGenerator {
 
     public void saveToFile(QuestionList questions, String filePath) throws Exception {
         String json = mapper.writeValueAsString(questions);
-        Files.writeString(Path.of(filePath), json, StandardCharsets.UTF_8);
-        log.info("Questions saved to: {}", filePath);
+        Path outputPath = resolveProjectPath(filePath, "archivo de salida");
+        Files.createDirectories(outputPath.getParent());
+        Files.writeString(outputPath, json, StandardCharsets.UTF_8);
+        log.info("Questions saved to: {}", outputPath);
+    }
+
+    private static Path resolveProjectPath(String rawPath, String description) {
+        if (rawPath == null || rawPath.isBlank()) {
+            throw new IllegalArgumentException("Ruta vacia para " + description);
+        }
+
+        Path candidate = Path.of(rawPath.trim());
+        Path resolved = candidate.isAbsolute()
+                ? candidate.normalize()
+                : PROJECT_ROOT.resolve(candidate).normalize();
+
+        if (!resolved.startsWith(PROJECT_ROOT)) {
+            throw new IllegalArgumentException("Ruta fuera del proyecto para " + description + ": " + rawPath);
+        }
+        return resolved;
     }
 
     private boolean isQuotaException(Exception e) {
