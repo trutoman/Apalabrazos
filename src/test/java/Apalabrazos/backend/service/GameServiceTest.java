@@ -2,12 +2,16 @@ package Apalabrazos.backend.service;
 
 import Apalabrazos.backend.events.AnswerSubmittedEvent;
 import Apalabrazos.backend.events.AnswerValidatedEvent;
+import Apalabrazos.backend.events.CreatorInitGameEvent;
 import Apalabrazos.backend.events.EventListener;
 import Apalabrazos.backend.events.ExtraTimeScoreEvent;
+import Apalabrazos.backend.events.GameControllerReady;
 import Apalabrazos.backend.events.GameEvent;
 import Apalabrazos.backend.events.GameFinishedEvent;
 import Apalabrazos.backend.events.QuestionChangedEvent;
 import Apalabrazos.backend.events.QuestionLoadErrorEvent;
+import Apalabrazos.backend.events.StandingsEvent;
+import Apalabrazos.backend.events.TimerTickEvent;
 import Apalabrazos.backend.model.GameGlobal;
 import Apalabrazos.backend.model.GameInstance;
 import Apalabrazos.backend.model.Question;
@@ -23,7 +27,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -443,6 +449,152 @@ class GameServiceTest {
         assertEquals(GameGlobal.GameGlobalState.POST, service.getGameInstance().getState());
     }
 
+    @Test
+    void checkAndInitializeDoesNothingWhenGameIsNotInitialized() throws Exception {
+        TestableGameService service = new TestableGameService();
+        service.getGameInstance().setState(GameGlobal.GameGlobalState.START_VALIDATED);
+
+        List<GameEvent> events = registerEventCollector(service);
+        invokeCheckAndInitialize(service);
+
+        CreatorInitGameEvent initEvent = waitForEvent(events, CreatorInitGameEvent.class, 250);
+        assertNull(initEvent);
+        assertEquals(0, service.initGameCalls);
+        assertFalse((boolean) getField(service, "creatorInitEventSent"));
+    }
+
+    @Test
+    void checkAndInitializePublishesCreatorInitOnlyOnceAndCancelsTimeout() throws Exception {
+        TestableGameService service = new TestableGameService();
+        service.getGameInstance().setState(GameGlobal.GameGlobalState.INITIALIZED);
+
+        ManualScheduledFuture timeout = new ManualScheduledFuture();
+        setField(service, "controllerReadyTimeout", timeout);
+
+        List<GameEvent> events = registerEventCollector(service);
+
+        invokeCheckAndInitialize(service);
+        invokeCheckAndInitialize(service);
+
+        CreatorInitGameEvent first = waitForEvent(events, CreatorInitGameEvent.class, 1000);
+        assertNotNull(first);
+        assertEquals(1, countEvents(events, CreatorInitGameEvent.class));
+        assertTrue(timeout.cancelCalled);
+        assertTrue((boolean) getField(service, "creatorInitEventSent"));
+        assertEquals(2, service.initGameCalls);
+    }
+
+    @Test
+    void handleTimerTickIgnoresTicksWhenStateIsNotPlaying() throws Exception {
+        GameService service = new GameService();
+        service.getGameInstance().setState(GameGlobal.GameGlobalState.IDLE);
+        setRemainingSeconds(service.getGameInstance(), 25);
+
+        List<GameEvent> events = registerEventCollector(service);
+        invokeHandleTimerTick(service, new TimerTickEvent(0, service.getMatchId()));
+
+        assertEquals(25, service.getGameInstance().getRemainingSeconds());
+        assertEquals(0, countEvents(events, TimerTickEvent.class));
+        assertEquals(0, countEvents(events, StandingsEvent.class));
+        assertEquals(0, countEvents(events, GameFinishedEvent.class));
+    }
+
+    @Test
+    void handleTimerTickInPlayingStatePublishesTimerAndStandings() throws Exception {
+        GameService service = new GameService();
+        service.getGameInstance().setMaxPlayers(1);
+        assertTrue(service.addPlayerToGame("p1"));
+
+        service.getGameInstance().setState(GameGlobal.GameGlobalState.PLAYING);
+        setRemainingSeconds(service.getGameInstance(), 5);
+
+        List<GameEvent> events = registerEventCollector(service);
+        invokeHandleTimerTick(service, new TimerTickEvent(0, service.getMatchId()));
+
+        TimerTickEvent tick = waitForEvent(events, TimerTickEvent.class, 1000);
+        StandingsEvent standings = waitForEvent(events, StandingsEvent.class, 1000);
+
+        assertNotNull(tick);
+        assertNotNull(standings);
+        assertEquals(4, tick.getRemainingSeconds());
+        assertEquals(4, service.getGameInstance().getRemainingSeconds());
+        assertEquals(0, countEvents(events, GameFinishedEvent.class));
+    }
+
+    @Test
+    void handleTimerTickFinishesGameWhenTimeRunsOut() throws Exception {
+        GameService service = new GameService();
+        service.getGameInstance().setMaxPlayers(1);
+        assertTrue(service.addPlayerToGame("p1"));
+
+        FakeTimeService fakeTime = new FakeTimeService();
+        setField(service, "timeService", fakeTime);
+        service.getGameInstance().setState(GameGlobal.GameGlobalState.PLAYING);
+        setRemainingSeconds(service.getGameInstance(), 1);
+
+        List<GameEvent> events = registerEventCollector(service);
+        invokeHandleTimerTick(service, new TimerTickEvent(0, service.getMatchId()));
+
+        GameFinishedEvent finished = waitForEvent(events, GameFinishedEvent.class, 1000);
+        assertNotNull(finished);
+        assertEquals(0, service.getGameInstance().getRemainingSeconds());
+        assertEquals(GameGlobal.GameGlobalState.POST, service.getGameInstance().getState());
+        assertTrue(fakeTime.stopped);
+    }
+
+    @Test
+    void handlePlayerRoscoFinishedAwardsBonusOnlyOncePerPlayer() throws Exception {
+        GameService service = new GameService();
+        service.getGameInstance().setMaxPlayers(1);
+        assertTrue(service.addPlayerToGame("p1"));
+
+        GameInstance instance = service.getGameInstance().getPlayerInstance("p1");
+        setRemainingSeconds(service.getGameInstance(), 7);
+
+        List<GameEvent> events = registerEventCollector(service);
+
+        invokeHandlePlayerRoscoFinished(service, "p1", instance);
+        invokeHandlePlayerRoscoFinished(service, "p1", instance);
+
+        ExtraTimeScoreEvent extra = waitForEvent(events, ExtraTimeScoreEvent.class, 1000);
+        assertNotNull(extra);
+        assertEquals(70, extra.getExtraTimeScore());
+        assertEquals(70, instance.getTotalScore());
+        assertEquals(1, countEvents(events, ExtraTimeScoreEvent.class));
+        assertEquals(GameInstance.GameState.FINISHED, instance.getGameInstanceState());
+        assertFalse(service.shouldReceiveTimerTick("p1"));
+    }
+
+    @Test
+    void onGlobalEventIgnoresTimerTicksForOtherMatches() throws Exception {
+        GameService service = new GameService();
+        service.getGameInstance().setMaxPlayers(1);
+        assertTrue(service.addPlayerToGame("p1"));
+        service.getGameInstance().setState(GameGlobal.GameGlobalState.PLAYING);
+        setRemainingSeconds(service.getGameInstance(), 12);
+
+        List<GameEvent> events = registerEventCollector(service);
+        invokeOnGlobalEvent(service, new TimerTickEvent(11, "other-match"));
+
+        assertEquals(12, service.getGameInstance().getRemainingSeconds());
+        assertEquals(0, countEvents(events, TimerTickEvent.class));
+        assertEquals(0, countEvents(events, StandingsEvent.class));
+    }
+
+    @Test
+    void onExternalEventGameControllerReadyTransitionsReadinessAndDoesNotEmitErrors() throws Exception {
+        GameService service = new GameService();
+        service.getGameInstance().setMaxPlayers(1);
+        assertTrue(service.addPlayerToGame("p1"));
+
+        List<GameEvent> events = registerEventCollector(service);
+        invokeOnExternalEvent(service, new GameControllerReady("p1", service.getMatchId()));
+
+        assertEquals(GameGlobal.GameGlobalState.CONTROLLER_READY, service.getGameInstance().getState());
+        assertEquals(0, countEvents(events, QuestionLoadErrorEvent.class));
+        assertEquals(0, countEvents(events, AnswerValidatedEvent.class));
+    }
+
     private static int invokeCalculateAnswerScore(GameService service, Question question, QuestionStatus status)
             throws Exception {
         Method method = GameService.class.getDeclaredMethod("calculateAnswerScore", Question.class, QuestionStatus.class);
@@ -478,6 +630,58 @@ class GameServiceTest {
         }
     }
 
+    private static void invokeCheckAndInitialize(GameService service) throws Exception {
+        Method method = GameService.class.getDeclaredMethod("checkAndInitialize");
+        method.setAccessible(true);
+        try {
+            method.invoke(service);
+        } catch (InvocationTargetException e) {
+            throw unwrap(e);
+        }
+    }
+
+    private static void invokeHandleTimerTick(GameService service, TimerTickEvent event) throws Exception {
+        Method method = GameService.class.getDeclaredMethod("handleTimerTick", TimerTickEvent.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(service, event);
+        } catch (InvocationTargetException e) {
+            throw unwrap(e);
+        }
+    }
+
+    private static void invokeHandlePlayerRoscoFinished(GameService service, String playerId, GameInstance instance)
+            throws Exception {
+        Method method = GameService.class.getDeclaredMethod("handlePlayerRoscoFinished", String.class,
+                GameInstance.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(service, playerId, instance);
+        } catch (InvocationTargetException e) {
+            throw unwrap(e);
+        }
+    }
+
+    private static void invokeOnGlobalEvent(GameService service, GameEvent event) throws Exception {
+        Method method = GameService.class.getDeclaredMethod("onGlobalEvent", GameEvent.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(service, event);
+        } catch (InvocationTargetException e) {
+            throw unwrap(e);
+        }
+    }
+
+    private static void invokeOnExternalEvent(GameService service, GameEvent event) throws Exception {
+        Method method = GameService.class.getDeclaredMethod("onExternalEvent", GameEvent.class);
+        method.setAccessible(true);
+        try {
+            method.invoke(service, event);
+        } catch (InvocationTargetException e) {
+            throw unwrap(e);
+        }
+    }
+
     private static Exception unwrap(InvocationTargetException e) {
         Throwable cause = e.getCause();
         if (cause instanceof Exception ex) {
@@ -490,6 +694,18 @@ class GameServiceTest {
         Field field = GameService.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(service, value);
+    }
+
+    private static Object getField(GameService service, String fieldName) throws Exception {
+        Field field = GameService.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(service);
+    }
+
+    private static void setRemainingSeconds(GameGlobal gameGlobal, int seconds) throws Exception {
+        Field field = GameGlobal.class.getDeclaredField("remainingSeconds");
+        field.setAccessible(true);
+        field.setInt(gameGlobal, seconds);
     }
 
     private static List<GameEvent> registerEventCollector(GameService service) {
@@ -531,6 +747,18 @@ class GameServiceTest {
         return null;
     }
 
+    private static int countEvents(List<GameEvent> events, Class<? extends GameEvent> eventType) {
+        synchronized (events) {
+            int count = 0;
+            for (GameEvent event : events) {
+                if (eventType.isInstance(event)) {
+                    count++;
+                }
+            }
+            return count;
+        }
+    }
+
     private static Question createQuestion(String letter, QuestionStatus status) {
         Question question = new Question(
                 "Pregunta " + letter,
@@ -564,6 +792,57 @@ class GameServiceTest {
         @Override
         public QuestionList get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
             throw new TimeoutException("forced-timeout");
+        }
+    }
+
+    private static final class ManualScheduledFuture implements ScheduledFuture<Object> {
+        private boolean cancelCalled;
+        private boolean done;
+
+        @Override
+        public long getDelay(TimeUnit unit) {
+            return 0;
+        }
+
+        @Override
+        public int compareTo(Delayed o) {
+            return 0;
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            cancelCalled = true;
+            done = true;
+            return true;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return cancelCalled;
+        }
+
+        @Override
+        public boolean isDone() {
+            return done;
+        }
+
+        @Override
+        public Object get() {
+            return null;
+        }
+
+        @Override
+        public Object get(long timeout, TimeUnit unit) {
+            return null;
+        }
+    }
+
+    private static final class TestableGameService extends GameService {
+        private int initGameCalls;
+
+        @Override
+        public void initGame() {
+            initGameCalls++;
         }
     }
 }
