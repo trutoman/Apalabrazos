@@ -31,6 +31,18 @@
             <version>5.9.2</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.12.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>5.2.0</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- Javalin: Framework web ligero con WebSocket nativo -->
         <dependency>
@@ -68,6 +80,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.1.2</version>
+                <configuration>
+                    <environmentVariables>
+                        <JWT_SECRET>test-secret-for-unit-tests</JWT_SECRET>
+                        <JWT_ISSUER>apalabrazos-test</JWT_ISSUER>
+                        <JWT_AUDIENCE>apalabrazos-test-audience</JWT_AUDIENCE>
+                        <JWT_EXP_MINUTES>120</JWT_EXP_MINUTES>
+                    </environmentVariables>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
