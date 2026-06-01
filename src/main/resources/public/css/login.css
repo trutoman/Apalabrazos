@@ -1,23 +1,28 @@
 /* LOGIN VIEW - Centrado en pantalla */
 #view-login {
+    --login-card-width: 400px;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
     background-color: var(--secondary);
-    background-image: url('../assets/apalabrazos_title.png');
-    background-repeat: no-repeat;
-    background-position: center 10%;
-    background-size: min(100vw, 1400px) auto;
+}
+
+#view-login .login-title-image {
+  width: min(calc(var(--login-card-width) * 1.6), calc((100vw - 40px) * 1.6), calc(100vw - 20px));
+  display: block;
+  height: auto;
+  margin-bottom: 1.5rem;
 }
 
 #view-login .login-card {
-    flex-shrink: 0;
+  width: min(var(--login-card-width), calc(100vw - 40px));
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  transform: translateY(clamp(18px, 4vh, 44px));
 }
 
 #view-login #auth-form {
@@ -37,16 +42,13 @@
 }
 
 .login-card {
-  width: 100%;
-  max-width: 400px;
-  min-width: 400px;
   border: 1px solid var(--primary);
   padding: 40px 30px;
   background-color: var(--secondary);
   box-shadow: var(--shadow);
   max-height: calc(100vh - 40px);
   overflow-y: hidden;
-  margin: 20px;
+  margin: 0;
   position: relative;
   border-radius: 12px;
   flex-shrink: 0;
