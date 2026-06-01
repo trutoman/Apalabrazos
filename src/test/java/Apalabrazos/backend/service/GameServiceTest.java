@@ -5,6 +5,7 @@ import Apalabrazos.backend.events.AnswerValidatedEvent;
 import Apalabrazos.backend.events.CreatorInitGameEvent;
 import Apalabrazos.backend.events.EventListener;
 import Apalabrazos.backend.events.ExtraTimeScoreEvent;
+import Apalabrazos.backend.config.ScoresConfig;
 import Apalabrazos.backend.events.GameControllerReady;
 import Apalabrazos.backend.events.GameEvent;
 import Apalabrazos.backend.events.GameFinishedEvent;
@@ -71,7 +72,7 @@ class GameServiceTest {
 
         int score = invokeCalculateAnswerScore(service, question, QuestionStatus.RESPONDED_OK);
 
-        assertEquals(100, score);
+        assertEquals(ScoresConfig.CORRECT_ANSWER_BASE_POINTS, score);
     }
 
     @Test
@@ -82,7 +83,7 @@ class GameServiceTest {
 
         int score = invokeCalculateAnswerScore(service, question, QuestionStatus.RESPONDED_OK);
 
-        assertEquals(70, score);
+        assertEquals(ScoresConfig.CORRECT_ANSWER_BASE_POINTS - (3 * ScoresConfig.PASS_PENALTY_PER_ROUND), score);
     }
 
     @Test
@@ -184,8 +185,8 @@ class GameServiceTest {
         assertNotNull(validated);
         assertEquals("p1", validated.getPlayerId());
         assertEquals(QuestionStatus.RESPONDED_OK, validated.getStatus());
-        assertEquals(100, validated.getScore());
-        assertEquals(100, validated.getTotalScore());
+        assertEquals(ScoresConfig.CORRECT_ANSWER_BASE_POINTS, validated.getScore());
+        assertEquals(ScoresConfig.CORRECT_ANSWER_BASE_POINTS, validated.getTotalScore());
 
         QuestionChangedEvent changed = waitForEvent(events, QuestionChangedEvent.class, 1000);
         assertNotNull(changed);
@@ -193,7 +194,7 @@ class GameServiceTest {
         assertEquals(QuestionStatus.INIT, changed.getStatus());
         assertNotNull(changed.getNextQuestion());
 
-        assertEquals(100, instance.getTotalScore());
+        assertEquals(ScoresConfig.CORRECT_ANSWER_BASE_POINTS, instance.getTotalScore());
         assertEquals(QuestionStatus.RESPONDED_OK, list.getQuestionAt(0).getQuestionStatus());
         assertEquals(QuestionStatus.RESPONDED_OK.getValue(), list.getQuestionAt(0).getUserResponseRecorded());
         assertEquals(1, instance.getCurrentQuestionIndex());
@@ -558,8 +559,8 @@ class GameServiceTest {
 
         ExtraTimeScoreEvent extra = waitForEvent(events, ExtraTimeScoreEvent.class, 1000);
         assertNotNull(extra);
-        assertEquals(70, extra.getExtraTimeScore());
-        assertEquals(70, instance.getTotalScore());
+        assertEquals(7 * ScoresConfig.EXTRA_TIME_POINTS_PER_SECOND, extra.getExtraTimeScore());
+        assertEquals(7 * ScoresConfig.EXTRA_TIME_POINTS_PER_SECOND, instance.getTotalScore());
         assertEquals(1, countEvents(events, ExtraTimeScoreEvent.class));
         assertEquals(GameInstance.GameState.FINISHED, instance.getGameInstanceState());
         assertFalse(service.shouldReceiveTimerTick("p1"));
