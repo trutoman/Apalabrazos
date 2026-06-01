@@ -2,6 +2,7 @@ package Apalabrazos.backend.service;
 
 import Apalabrazos.backend.events.*;
 import Apalabrazos.backend.model.*;
+import Apalabrazos.backend.config.ScoresConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
@@ -27,8 +28,6 @@ import java.util.concurrent.TimeoutException;
 public class GameService implements EventListener {
 
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
-    private static final int BASE_QUESTION_SCORE = 100;
-    private static final int SCORE_PENALTY_PER_PASS = 10;
     private static final int QUESTION_LOAD_TIMEOUT_SECONDS = 60;
 
     private final AsyncEventBus externalBus;
@@ -790,7 +789,8 @@ public class GameService implements EventListener {
             return 0;
         }
 
-        int score = BASE_QUESTION_SCORE - (SCORE_PENALTY_PER_PASS * question.getPassedCount());
+        int score = ScoresConfig.CORRECT_ANSWER_BASE_POINTS
+            - (ScoresConfig.PASS_PENALTY_PER_ROUND * question.getPassedCount());
         return Math.max(0, score);
     }
 
@@ -809,7 +809,7 @@ public class GameService implements EventListener {
         playerInstance.setGameInstanceState(GameInstance.GameState.FINISHED);
 
         int remainingSeconds = Math.max(0, getRemainingSeconds());
-        int extraTimeScore = Math.max(0, remainingSeconds * 10);
+        int extraTimeScore = Math.max(0, remainingSeconds * ScoresConfig.EXTRA_TIME_POINTS_PER_SECOND);
         if (extraTimeScore > 0) {
             playerInstance.addToTotalScore(extraTimeScore);
         }
