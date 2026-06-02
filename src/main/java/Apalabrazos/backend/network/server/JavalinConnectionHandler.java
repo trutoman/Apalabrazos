@@ -24,7 +24,7 @@ public class JavalinConnectionHandler extends ConnectionHandler {
 
     public void onConnect(WsConnectContext ctx) {
         try {
-            log.info("[CONNECT] WebSocket connection attempt from: {}", ctx.session.getRemoteAddress());
+            log.info("[CONNECT] WebSocket connection attempt from: {}", ctx.session.getRemoteSocketAddress());
 
             // Extract token from query parameter
             String token = ctx.queryParam("token");
