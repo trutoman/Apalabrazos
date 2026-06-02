@@ -142,7 +142,9 @@ public class AIQuestionService implements EventListener {
                 matchId, numberOfQuestions, attempt, MAX_PRELOAD_ATTEMPTS);
         long startNs = System.nanoTime();
         try {
-            GenerationResult result = generateQuestionsForNewGameWithSource(numberOfQuestions, true);
+            // Keep fallback for the final attempt only, so retries are real AI retries.
+            boolean allowFallbackThisAttempt = (attempt >= MAX_PRELOAD_ATTEMPTS);
+            GenerationResult result = generateQuestionsForNewGameWithSource(numberOfQuestions, allowFallbackThisAttempt);
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
             log.info("[AI-PRELOAD] Completed preload for match {} in {} ms. count={}, source={}, attempt={}/{}",
                     matchId, elapsedMs, result.questions().getCurrentLength(), result.source(),
