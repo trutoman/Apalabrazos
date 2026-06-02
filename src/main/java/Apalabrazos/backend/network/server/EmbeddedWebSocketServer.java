@@ -99,7 +99,7 @@ public class EmbeddedWebSocketServer {
      * Responsibility: Login endpoint implementation and authentication logic.
      */
     private void registerLoginEndpoint() {
-        app.post("/api/login", ctx -> {
+        app.unsafe.routes.post("/api/login", ctx -> {
             try {
                 LoginRequest req = ctx.bodyAsClass(LoginRequest.class);
 
@@ -182,7 +182,7 @@ public class EmbeddedWebSocketServer {
      * Responsibility: Registration endpoint implementation and user creation logic.
      */
     private void registerRegisterEndpoint() {
-        app.post("/api/register", ctx -> {
+        app.unsafe.routes.post("/api/register", ctx -> {
             try {
                 RegisterRequest req = ctx.bodyAsClass(RegisterRequest.class);
 
@@ -258,7 +258,7 @@ public class EmbeddedWebSocketServer {
      * Responsibility: Admin endpoint for manual question generation trigger.
      */
     private void registerAdminEndpoints() {
-        app.post("/api/admin/generate-questions", ctx -> {
+        app.unsafe.routes.post("/api/admin/generate-questions", ctx -> {
             log.info("[ADMIN] Manual question generation triggered");
             AIQuestionService.getInstance().forceGenerateNow();
 
@@ -278,7 +278,7 @@ public class EmbeddedWebSocketServer {
      */
     private void registerWebSocketEndpoints() {
         log.info("Starting Javalin WebSocket server...");
-        app.ws("/ws/game/{userId}", ws -> {
+        app.unsafe.routes.ws("/ws/game/{userId}", ws -> {
             log.info("[WEBSOCKET] Registering endpoint: /ws/game/{userId}");
             ws.onConnect(ctx -> {
                 log.info("[WEBSOCKET-CONNECT] Connection received for: {}", ctx.pathParam("userId"));
